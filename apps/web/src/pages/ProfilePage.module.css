@@ -1,0 +1,302 @@
+/* ProfilePage.module.css */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 900px;
+  animation: fadeIn 0.4s ease both;
+}
+
+.pageHeader { margin-bottom: var(--space-2); }
+
+.pageTitle { font-size: var(--text-3xl); font-weight: 800; margin-bottom: var(--space-1); }
+
+.pageSubtitle { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ─── Tab Nav ────────────────────────────────────────────── */
+.tabNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3);
+}
+
+.tabBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.625rem var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  width: 100%;
+}
+
+.tabBtn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-overlay);
+}
+
+.tabActive {
+  color: var(--color-text-primary);
+  background: hsla(252, 100%, 65%, 0.1);
+  border: 1px solid hsla(252, 100%, 65%, 0.2);
+}
+
+/* ─── Sections ───────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: fadeIn 0.3s ease both;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+.sectionTitle svg { color: var(--color-primary); }
+
+.sectionDesc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ─── Avatar ─────────────────────────────────────────────── */
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-bg-overlay);
+  border-radius: var(--radius-lg);
+}
+
+.bigAvatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+}
+
+.avatarHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+
+/* ─── Form ───────────────────────────────────────────────── */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.planRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.625rem 1rem;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.upgradeLink {
+  font-size: var(--text-xs);
+  color: var(--color-primary-light);
+  font-weight: 600;
+}
+
+.formActions { border-top: 1px solid var(--color-border); padding-top: var(--space-4); }
+
+/* ─── Resume List ────────────────────────────────────────── */
+.resumeList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.resumeItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.resumeItem:hover { border-color: var(--color-primary); }
+
+.resumeIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: hsla(252, 100%, 65%, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.resumeInfo { flex: 1; min-width: 0; }
+
+.resumeName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.resumeMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.resumeActions { display: flex; gap: var(--space-1); }
+
+/* ─── Security ───────────────────────────────────────────── */
+.securityItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.securityLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.securityDesc {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.dangerZone {
+  border: 1px solid hsla(0, 90%, 60%, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.dangerZone h3 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-danger);
+  font-family: var(--font-body);
+  margin-bottom: var(--space-3);
+}
+
+/* ─── Notifications ──────────────────────────────────────── */
+.notifList { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.notifItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast);
+}
+
+.notifItem:hover { border-color: var(--color-primary); }
+
+.notifLabel { font-size: var(--text-sm); font-weight: 600; margin-bottom: 2px; }
+
+.notifDesc { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* ─── Toggle ─────────────────────────────────────────────── */
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border);
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.toggleOn {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.toggleOn .toggleThumb { transform: translateX(20px); }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .mainGrid { grid-template-columns: 1fr; }
+  .tabNav { flex-direction: row; flex-wrap: wrap; }
+  .formGrid { grid-template-columns: 1fr; }
+}

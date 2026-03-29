@@ -1,0 +1,401 @@
+/* AnalyzerPage.module.css */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1100px;
+  animation: fadeIn 0.4s ease both;
+}
+
+.pageHeader { margin-bottom: var(--space-2); }
+
+.pageTitle {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--space-1);
+}
+
+.pageSubtitle {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ─── Grid ───────────────────────────────────────────────── */
+.analyzerGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.inputsCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ─── Input Cards ────────────────────────────────────────── */
+.inputCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+.cardTitle svg { color: var(--color-primary); }
+
+/* ─── Mode Tabs ──────────────────────────────────────────── */
+.resumeModeTabs {
+  display: flex;
+  background: var(--color-bg-overlay);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 3px;
+}
+
+.modeTab {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+}
+
+.modeTabActive {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Dropzone ───────────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.dropzone:hover, .dropzoneActive {
+  border-color: var(--color-primary);
+  background: hsla(252, 100%, 65%, 0.04);
+}
+
+.dropzoneFilled {
+  border-style: solid;
+  border-color: var(--color-success);
+  background: hsla(142, 76%, 55%, 0.04);
+  padding: var(--space-5);
+}
+
+.dropzoneEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.uploadIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-xl);
+  background: hsla(252, 100%, 65%, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.dropzoneText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropzoneText strong {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.dropzoneText span {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dropzoneHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-disabled);
+}
+
+.fileSelected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.fileSelected svg { color: var(--color-success); }
+
+.fileName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.fileSize {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.removeFile { color: var(--color-text-muted); }
+.removeFile:hover { color: var(--color-danger) !important; }
+
+/* ─── Resume / JD Textareas ──────────────────────────────── */
+.resumeTextarea { min-height: 160px; }
+.jdTextarea { min-height: 200px; }
+
+/* ─── URL Input ──────────────────────────────────────────── */
+.urlInput { position: relative; }
+
+.urlIcon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  display: flex;
+}
+
+.urlHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-disabled);
+}
+
+/* ─── Options ────────────────────────────────────────────── */
+.optionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.optionLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.optionHint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.senioritySelect {
+  width: auto;
+  min-width: 150px;
+  cursor: pointer;
+}
+
+/* ─── Analyze Button ─────────────────────────────────────── */
+.analyzeBtn {
+  width: 100%;
+  justify-content: center;
+  font-size: var(--text-base);
+}
+
+.analyzeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.analyzeBtn:disabled:hover { transform: none; }
+
+.validationHint {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: calc(-1 * var(--space-3));
+}
+
+.spinIcon {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ─── Right Column ───────────────────────────────────────── */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+/* ─── Agent Tracker ──────────────────────────────────────── */
+.agentTracker {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  animation: scaleIn 0.3s ease both;
+}
+
+.trackerHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-primary-light);
+}
+
+.stepList {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.stepRow:last-child { border-bottom: none; }
+
+.stepIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.step_pending .stepIconWrap {
+  background: var(--color-bg-overlay);
+  color: var(--color-text-disabled);
+}
+
+.step_running {
+  background: hsla(252, 100%, 65%, 0.04);
+}
+
+.step_running .stepIconWrap {
+  background: hsla(252, 100%, 65%, 0.15);
+  color: var(--color-primary);
+}
+
+.step_done .stepIconWrap {
+  background: hsla(142, 76%, 55%, 0.15);
+  color: var(--color-success);
+}
+
+.step_error .stepIconWrap {
+  background: hsla(0, 90%, 60%, 0.15);
+  color: var(--color-danger);
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.stepLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.step_pending .stepLabel { color: var(--color-text-disabled); }
+.step_running .stepLabel { color: var(--color-text-primary); }
+.step_done .stepLabel { color: var(--color-text-secondary); }
+
+.stepMessage {
+  font-size: var(--text-xs);
+  color: var(--color-success);
+}
+
+/* ─── Info Cards ─────────────────────────────────────────── */
+.infoCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.infoCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.infoIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--icon-color, var(--color-primary)) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon-color, var(--color-primary));
+}
+
+.infoCard h3 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+.infoCard p {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .analyzerGrid { grid-template-columns: 1fr; }
+  .rightCol { position: static; }
+  .infoCards { flex-direction: row; }
+  .infoCard { flex: 1; }
+}
+
+@media (max-width: 640px) {
+  .infoCards { flex-direction: column; }
+  .optionRow { flex-direction: column; align-items: flex-start; }
+  .senioritySelect { width: 100%; }
+}

@@ -1,0 +1,400 @@
+/* RoadmapPage.module.css */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1200px;
+  animation: fadeIn 0.4s ease both;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.roadmapMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.metaIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.roadmapTitle {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  margin-bottom: var(--space-1);
+}
+
+.metaSubtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ─── Main Grid ──────────────────────────────────────────── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ─── Column Headers ─────────────────────────────────────── */
+.colHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.colHeader svg { color: var(--color-primary); }
+
+.colHeader h2, .colHeader h3 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  font-family: var(--font-body);
+}
+
+/* ─── Timeline ───────────────────────────────────────────── */
+.timelineCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.milestoneList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Milestone Card ─────────────────────────────────────── */
+.milestoneCard {
+  display: flex;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.ms_completed .milestoneContent {
+  opacity: 0.75;
+}
+
+/* ─── Timeline Node ──────────────────────────────────────── */
+.timelineNode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  width: 56px;
+}
+
+.weekLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.statusCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: var(--color-bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.statusCircle:hover {
+  transform: scale(1.1);
+  background: var(--color-bg-card);
+}
+
+.timelineLine {
+  flex: 1;
+  width: 2px;
+  background: var(--color-border);
+  min-height: 32px;
+}
+
+/* ─── Milestone Content ──────────────────────────────────── */
+.milestoneContent {
+  flex: 1;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.milestoneContent:hover {
+  border-color: hsla(252, 100%, 65%, 0.3);
+}
+
+.milestoneHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5);
+  cursor: pointer;
+  user-select: none;
+}
+
+.milestoneLeft { flex: 1; }
+
+.milestoneTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-family: var(--font-body);
+  margin-bottom: var(--space-1);
+}
+
+.milestoneMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.milestoneMeta span { display: flex; align-items: center; gap: 3px; }
+
+.dot { opacity: 0.4; }
+
+.msStatus { font-weight: 600; }
+
+.expandIcon {
+  transition: transform var(--transition-fast);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.expanded { transform: rotate(90deg); }
+
+.milestoneBody {
+  padding: 0 var(--space-5) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  animation: fadeIn 0.2s ease both;
+}
+
+.milestoneDesc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+  padding-top: var(--space-4);
+}
+
+.msSkillTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ─── Resource Cards ─────────────────────────────────────── */
+.resourceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.resourceCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-overlay);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.resourceCard:hover {
+  border-color: var(--color-primary);
+  background: hsla(252, 100%, 65%, 0.04);
+  transform: translateX(4px);
+}
+
+.resourceIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--res-color, var(--color-primary)) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--res-color, var(--color-primary));
+  flex-shrink: 0;
+}
+
+.resourceInfo { flex: 1; min-width: 0; }
+
+.resourceTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resourceMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.free { color: var(--color-success); }
+.paid { color: var(--color-warning); }
+
+.externalIcon {
+  color: var(--color-text-disabled);
+  flex-shrink: 0;
+}
+
+/* ─── Right Panel ────────────────────────────────────────── */
+.analysisPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-4));
+}
+
+/* ─── Score Card ─────────────────────────────────────────── */
+.scoreCard { padding: var(--space-5); }
+
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.bigScore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.scoreNum {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.scoreLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.scoresMini {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.miniScore {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.miniScore:last-child { border-bottom: none; }
+
+.miniVal { font-weight: 700; color: var(--color-text-primary); }
+
+/* ─── Radar Card ─────────────────────────────────────────── */
+.radarCard { padding: var(--space-5); }
+
+.radarWrap { width: 100%; }
+
+/* ─── Skill Breakdown ────────────────────────────────────── */
+.skillBreakdown { padding: var(--space-5); }
+
+.skillGroup {
+  margin-bottom: var(--space-4);
+}
+
+.skillGroupLabel {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2);
+}
+
+.skillTagWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skillRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.demandBadge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .mainGrid { grid-template-columns: 1fr; }
+  .analysisPanel { position: static; display: grid; grid-template-columns: repeat(2, 1fr); }
+  .radarCard, .scoreCard { grid-column: 1; }
+  .skillBreakdown { grid-column: 2; grid-row: 1 / 3; }
+}
+
+@media (max-width: 640px) {
+  .analysisPanel { grid-template-columns: 1fr; }
+  .skillBreakdown { grid-column: 1; grid-row: auto; }
+  .pageHeader { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+}

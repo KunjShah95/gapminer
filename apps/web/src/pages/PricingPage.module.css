@@ -1,0 +1,248 @@
+/* PricingPage.module.css */
+.root {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.navRight { display: flex; gap: var(--space-3); }
+
+.header {
+  text-align: center;
+  padding: var(--space-24) 0 var(--space-16);
+}
+
+.headerTag {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-primary-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-4);
+}
+
+.header h1 {
+  font-size: clamp(2.5rem, 5vw, var(--text-6xl));
+  margin-bottom: var(--space-4);
+}
+
+.headerSub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-lg);
+}
+
+/* ─── Plans ──────────────────────────────────────────────── */
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-24);
+  align-items: start;
+}
+
+.planCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  transition: transform var(--transition-base);
+}
+
+.planCard:hover { transform: translateY(-4px); }
+
+.planHighlighted {
+  border-color: hsla(252, 100%, 65%, 0.5);
+  box-shadow: 0 0 60px hsla(252, 100%, 65%, 0.15);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  color: white;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 0.25rem 1rem;
+  border-radius: var(--radius-full);
+}
+
+.planIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: hsla(252, 100%, 65%, 0.1);
+  border: 1px solid hsla(252, 100%, 65%, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.planName {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+
+.planPrice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: 900;
+}
+
+.period {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.planDesc {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.featureList li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.featureList svg { color: var(--color-success); flex-shrink: 0; margin-top: 2px; }
+
+/* ─── Comparison Table ───────────────────────────────────── */
+.tableSection {
+  margin-bottom: var(--space-24);
+}
+
+.sectionHeading {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: var(--space-10);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.comparisonTable th,
+.comparisonTable td {
+  padding: var(--space-4) var(--space-6);
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.comparisonTable th:first-child,
+.comparisonTable td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.comparisonTable th {
+  background: var(--color-bg-elevated);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.comparisonTable tbody tr:hover { background: var(--color-bg-elevated); }
+
+.comparisonTable tbody tr:last-child td { border-bottom: none; }
+
+.proCol {
+  background: hsla(252, 100%, 65%, 0.04);
+  color: var(--color-primary-light) !important;
+  font-weight: 600;
+}
+
+/* ─── FAQ ────────────────────────────────────────────────── */
+.faqSection { margin-bottom: var(--space-24); }
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+
+.faqCard { padding: var(--space-6); }
+
+.faqQ {
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-family: var(--font-body);
+  margin-bottom: var(--space-2);
+}
+
+.faqA {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .plansGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .plansGrid { grid-template-columns: 1fr; }
+  .faqGrid { grid-template-columns: 1fr; }
+}

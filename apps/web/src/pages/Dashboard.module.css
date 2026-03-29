@@ -1,0 +1,267 @@
+/* Dashboard.module.css */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 1100px;
+  animation: fadeIn 0.4s ease both;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.pageTitle {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--space-1);
+}
+
+.pageSubtitle {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ─── KPI Grid ───────────────────────────────────────────── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--kpi-color, var(--color-primary)) 12%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--kpi-color, var(--color-primary));
+}
+
+.kpiValue {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.kpiLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ─── Main Grid ──────────────────────────────────────────── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ─── History Section ────────────────────────────────────── */
+.historySection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionHeader h2 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.analysisList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.analysisCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  transition: transform var(--transition-base);
+}
+
+.analysisCard:hover { transform: translateX(4px); }
+
+.analysisCardLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
+}
+
+.analysisRole {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysisMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.analysisMeta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dotSep { opacity: 0.4; }
+
+.gapCountRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.analysisCardRight {
+  flex-shrink: 0;
+}
+
+/* ─── Side Widgets ───────────────────────────────────────── */
+.sideWidgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.widgetHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.widgetHeader h3 {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.widgetHeader svg { color: var(--color-primary); }
+
+.quickStart p {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  line-height: 1.6;
+}
+
+/* ─── Gap List Widget ────────────────────────────────────── */
+.gapList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.gapItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gapItem:last-child { border-bottom: none; }
+
+.gapItemLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gapSeverityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gapSkillName {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.gapMarket {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ─── Resume Vault ───────────────────────────────────────── */
+.resumeItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-overlay);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.resumeIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: hsla(252, 100%, 65%, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.resumeName {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.resumeMeta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .mainGrid { grid-template-columns: 1fr; }
+  .kpiGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .kpiGrid { grid-template-columns: repeat(2, 1fr); }
+  .pageHeader { flex-direction: column; }
+  .analysisCard { flex-direction: column; align-items: flex-start; }
+}
