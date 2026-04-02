@@ -12,7 +12,8 @@ import {
   SkeletonStatCard,
   SkeletonCard,
   SkeletonProgress,
-  SkeletonList
+  SkeletonList,
+  SkeletonAvatar
 } from './SkeletonPrimitives'
 
 export default function DashboardSkeleton() {

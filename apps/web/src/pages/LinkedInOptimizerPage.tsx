@@ -58,7 +58,7 @@ export default function LinkedInOptimizerPage() {
 
       if (!res.ok) throw new Error("Failed to optimize");
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ optimized: null }));
       setOptimized(data.optimized);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

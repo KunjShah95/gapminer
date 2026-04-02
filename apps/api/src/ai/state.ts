@@ -59,7 +59,7 @@ export const GraphAnnotation = Annotation.Root({
     reducer: (x, y) => y ?? x,
     default: () => "",
   }),
-  coverLetter: Annotation<any>({
+  coverLetterContent: Annotation<any>({
     reducer: (x, y) => y ?? x,
     default: () => null,
   }),

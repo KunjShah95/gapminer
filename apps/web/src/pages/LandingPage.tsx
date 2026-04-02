@@ -213,13 +213,13 @@ export default function LandingPage() {
               <span className="text-primary font-bold tracking-widest uppercase text-sm">02 / Architecture</span>
               <h2 className="text-4xl font-bold mt-2 mb-8 font-headline">Multi-Agent Intelligence</h2>
               <div className="space-y-6">
-                {[
+                {([] as { title: string; status: string; active: boolean; label?: string; opacity?: string }[]).concat([
                   { title: 'Document Parser', status: 'Parses resume & job description', active: true },
                   { title: 'Skill Extractor', status: 'Extracts skills from documents', active: true },
                   { title: 'Gap Analyzer', status: 'Analyzes skill gaps', active: true },
                   { title: 'Roadmap Generator', status: 'Generates learning path', active: false },
                   { title: 'Market Intelligence', status: 'Provides salary insights', active: false },
-                ].map((agent, i) => (
+                ]).map((agent, i) => (
                   <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl glass bg-surface-container-high border-l-4 ${agent.active ? 'border-primary' : 'border-outline-variant'} ${agent.opacity || ''}`}>
                     <span className={`w-3 h-3 rounded-full ${agent.active ? 'bg-primary animate-pulse' : 'bg-primary/40'}`}></span>
                     <div>

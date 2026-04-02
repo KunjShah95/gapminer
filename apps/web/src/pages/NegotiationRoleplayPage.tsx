@@ -74,7 +74,10 @@ export default function NegotiationRoleplayPage() {
 
       if (!res.ok) throw new Error("Failed to start negotiation");
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({
+        sessionId: null,
+        recruiterMessage: "Error starting session",
+      }));
       setSessionId(data.sessionId);
       setMessages([{ role: "recruiter", content: data.recruiterMessage }]);
       setShowSetup(false);
@@ -106,7 +109,10 @@ export default function NegotiationRoleplayPage() {
 
       if (!res.ok) throw new Error("Failed to send message");
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({
+        recruiterMessage: "Error processing response",
+        isFinalized: false,
+      }));
       setMessages((prev) => [
         ...prev,
         { role: "recruiter", content: data.recruiterMessage },
@@ -130,7 +136,7 @@ export default function NegotiationRoleplayPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         setScorecard(data);
       }
     } catch (err) {

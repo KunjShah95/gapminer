@@ -51,7 +51,7 @@ export default function RecommendationsPage() {
         body: JSON.stringify({ resumeText: "" }),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ recommendations: [] }));
         setRecommendations(data.recommendations || []);
       }
     } catch (err) {

@@ -1,31 +1,31 @@
-import { Router } from 'express';
-import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { z } from 'zod';
+import { Router } from "express";
+import { ChatOpenAI } from "@langchain/openai";
+import { z } from "zod";
 
 const router = Router();
 
-// -------------------------------------------------------------------------
-// POST /api/v1/chat
-// Handler for the Vercel AI SDK useChat hook in the LaTeX Editor
-// -------------------------------------------------------------------------
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   const { messages } = req.body;
 
   try {
-    const result = await streamText({
-      model: openai('gpt-4o-mini'),
-      system: `You are an expert LaTeX and Career Consultant. 
-      You help users write professional resumes and career documents in LaTeX. 
-      Provide concise, high-quality LaTeX snippets or advice on structure, formatting, and content optimization.
-      If the user asks for a specific section, provide the raw LaTeX code for it.`,
-      messages,
+    const model = new ChatOpenAI({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
     });
 
-    return result.pipeTextStreamToResponse(res);
+    const formattedMessages = messages.map(
+      (msg: { role: string; content: string }) => [
+        msg.role === "user" ? "user" : "assistant",
+        msg.content,
+      ],
+    );
+
+    const result = await model.invoke(formattedMessages);
+
+    return res.json({ text: result.content });
   } catch (error) {
-    console.error('Chat Error:', error);
-    return res.status(500).json({ error: 'Failed to generate response' });
+    console.error("Chat Error:", error);
+    return res.status(500).json({ error: "Failed to generate response" });
   }
 });
 

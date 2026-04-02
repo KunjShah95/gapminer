@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import {
-  Search, TrendingUp, Clock, CheckCircle2, ArrowRight,
-  FileText, BarChart3, Zap, Plus, ChevronRight,
-  LayoutDashboard, FileSearch, GraduationCap, User, Settings,
-  LogOut, Bell, Sparkles, Target, Activity, History as HistoryIcon
+  Clock, ArrowRight,
+  FileText, Zap, Plus,
+  FileSearch, Target, Activity, History as HistoryIcon
 } from 'lucide-react'
-import type { Analysis } from '@gapminer/types'
 import { useEffect, useState } from 'react'
 
 interface DashboardAnalysis {

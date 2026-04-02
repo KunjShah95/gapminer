@@ -72,7 +72,7 @@ export default function InterviewSimulationPage() {
         },
         body: JSON.stringify({ url: jdUrl }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.description) {
         setJdText(data.description);
         setJdData(data);

@@ -6,6 +6,7 @@
  */
 
 import { cn } from '@/lib/utils'
+import { ReactNode } from 'react'
 
 interface SkeletonProps {
   className?: string
@@ -56,7 +57,7 @@ export function SkeletonText({ className, lines = 1 }: SkeletonProps & { lines?:
 /**
  * Skeleton card - for content cards
  */
-export function SkeletonCard({ className }: SkeletonProps) {
+export function SkeletonCard({ className, children }: SkeletonProps & { children?: ReactNode }) {
   return (
     <div
       className={cn(
@@ -64,7 +65,7 @@ export function SkeletonCard({ className }: SkeletonProps) {
         className
       )}
     >
-      <Skeleton className="h-full w-full rounded-xl" />
+      {children || <Skeleton className="h-full w-full rounded-xl" />}
     </div>
   )
 }

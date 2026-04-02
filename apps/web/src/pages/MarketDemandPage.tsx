@@ -72,7 +72,7 @@ export default function MarketDemandPage() {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({ trends: [] }));
         setTrends(data.trends || []);
       }
     } catch (err) {

@@ -2,17 +2,12 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock,
-  ArrowLeft,
-  ArrowRight,
   GitCompare,
   RotateCcw,
-  FileText,
-  ChevronDown,
   Plus,
   X,
   Save,
   AlertCircle,
-  CheckCircle2,
   Minus,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
@@ -41,7 +36,7 @@ export default function ResumeVersionsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         setVersions(data);
       }
     } catch (err) {
@@ -69,7 +64,7 @@ export default function ResumeVersionsPage() {
         body: JSON.stringify({ content1: v1.content, content2: v2.content }),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         setDiffResult(data);
       }
     } catch (err) {

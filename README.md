@@ -452,30 +452,286 @@ gapminer/
 
 ## Architecture
 
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Frontend["React Frontend (Vite)"]
+        UI[User Interface]
+        Stores[Zustand Stores]
+        Router[React Router]
+    end
+
+    subgraph Backend["Express.js Backend"]
+        API[REST API]
+        LangGraph[LangGraph Orchestrator]
+        Transformers[HuggingFace Transformers]
+        DB[(PostgreSQL)]
+        Cache[(Redis)]
+    end
+
+    subgraph AI["AI Layer"]
+        Ollama[Ollama Local LLM]
+        NER[bert-base-NER]
+        Embed[all-MiniLM-L6-v2]
+        Gen[LaMini-Flan-T5-783m]
+        Class[deberta-v3-zeroshot]
+    end
+
+    UI --> API
+    API --> LangGraph
+    API --> Transformers
+    API --> DB
+    API --> Cache
+    LangGraph --> Ollama
+    LangGraph --> Transformers
+    Transformers --> NER
+    Transformers --> Embed
+    Transformers --> Gen
+    Transformers --> Class
+```
+
 ### Multi-Agent Pipeline Flow (LangGraph)
 
-```
-START → parse → normalize → match → market → bench → eval → insights → ats → coverLetter → marketTrend → skillProficiency → END
-```
+```mermaid
+flowchart LR
+    START([START]) --> parse
 
-Each agent passes enriched state to the next, building a comprehensive talent intelligence report.
+    subgraph Analysis["Analysis Pipeline"]
+        parse[Parse Agent<br/>Skill Extraction]
+        normalize[Normalize Agent<br/>Skill Canonicalization]
+        match[Match Agent<br/>Semantic Matching]
+        market[Market Agent<br/>Salary & Demand]
+        bench[Bench Agent<br/>Strength Analysis]
+        eval[Eval Agent<br/>Interview Scoring]
+        insights[Insights Agent<br/>Career Insights]
+        ats[ATS Agent<br/>Optimization Score]
+    end
+
+    subgraph Generation["Generation Pipeline"]
+        coverLetter[Cover Letter Agent<br/>Tailored Letters]
+        marketTrend[Market Trend Agent<br/>Demand Prediction]
+        skillProf[Skill Proficiency Agent<br/>Level Estimation]
+    end
+
+    parse --> normalize
+    normalize --> match
+    match --> market
+    market --> bench
+    bench --> eval
+    eval --> insights
+    insights --> ats
+    ats --> coverLetter
+    coverLetter --> marketTrend
+    marketTrend --> skillProf
+    skillProf --> END([END])
+
+    style START fill:#10b981,color:#fff
+    style END fill:#ef4444,color:#fff
+    style parse fill:#3b82f6,color:#fff
+    style normalize fill:#3b82f6,color:#fff
+    style match fill:#3b82f6,color:#fff
+    style market fill:#3b82f6,color:#fff
+    style bench fill:#3b82f6,color:#fff
+    style eval fill:#3b82f6,color:#fff
+    style insights fill:#3b82f6,color:#fff
+    style ats fill:#3b82f6,color:#fff
+    style coverLetter fill:#8b5cf6,color:#fff
+    style marketTrend fill:#8b5cf6,color:#fff
+    style skillProf fill:#8b5cf6,color:#fff
+```
 
 ### Transformer Model Integration
 
+```mermaid
+graph TB
+    subgraph Models["HuggingFace Transformer Models"]
+        NER["bert-base-NER<br/>Named Entity Recognition"]
+        MiniLM["all-MiniLM-L6-v2<br/>Sentence Embeddings"]
+        FlanT5["LaMini-Flan-T5-783m<br/>Text Generation"]
+        DeBERTa["deberta-v3-zeroshot<br/>Zero-Shot Classification"]
+    end
+
+    subgraph Agents["Agent Integration"]
+        Parse[Parse Agent]
+        Normalize[Normalize Agent]
+        Match[Match Agent]
+        CoverLetter[Cover Letter Agent]
+        Interview[Interview Agent]
+        MarketTrend[Market Trend Agent]
+        Benchmark[Benchmark Agent]
+        Recommendations[Recommendations Agent]
+    end
+
+    NER --> Parse
+    MiniLM --> Normalize
+    MiniLM --> Match
+    MiniLM --> Benchmark
+    MiniLM --> Recommendations
+    FlanT5 --> CoverLetter
+    FlanT5 --> Interview
+    FlanT5 --> MarketTrend
+    DeBERTa --> Interview
+    DeBERTa --> MarketTrend
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Transformer Models Layer                      │
-├──────────────┬──────────────────┬──────────────────┬────────────┤
-│ bert-base-NER│ all-MiniLM-L6-v2 │ LaMini-Flan-T5   │ deberta-v3 │
-│ Skill        │ Semantic         │ Text Generation  │ Zero-Shot  │
-│ Extraction   │ Similarity       │ Cover Letters    │ JD Class.  │
-└──────┬───────┴────────┬─────────┴────────┬─────────┴──────┬─────┘
-       │                │                  │                │
-       ▼                ▼                  ▼                ▼
-┌──────────────┬──────────────────┬──────────────────┬────────────┐
-│ Parse Agent  │ Normalize Agent  │ Match Agent      │ Interview  │
-│ Market Agent │ Cover Letter     │ Roadmap Gen      │ Benchmark  │
-└──────────────┴──────────────────┴──────────────────┴────────────┘
+
+### Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant LangGraph
+    participant Transformers
+    participant Database
+    participant Redis
+
+    User->>Frontend: Upload Resume + JD
+    Frontend->>API: POST /api/v1/agent/analyze
+    API->>Redis: Check cache
+    Redis-->>API: Cache miss
+    API->>LangGraph: Start pipeline
+    LangGraph->>Transformers: Extract skills (NER)
+    Transformers-->>LangGraph: Skill list
+    LangGraph->>Transformers: Normalize skills (embeddings)
+    Transformers-->>LangGraph: Canonical skills
+    LangGraph->>Transformers: Semantic matching
+    Transformers-->>LangGraph: Match scores
+    LangGraph->>Database: Store analysis
+    Database-->>LangGraph: Analysis ID
+    LangGraph-->>API: Complete analysis
+    API->>Redis: Cache result
+    API-->>Frontend: Analysis results
+    Frontend-->>User: Display insights
+```
+
+### Feature Module Map
+
+```mermaid
+mindmap
+  root((Gapminer))
+    Analysis
+      Resume Parsing
+      JD Scraping
+      Skill Gap Analysis
+      ATS Scoring
+    Career Tools
+      Learning Roadmaps
+      LaTeX Editor
+      Interview Simulation
+      Cover Letters
+      LinkedIn Optimizer
+    Tracking
+      Job Applications
+      Skill Progress
+      Resume Versions
+      Peer Benchmarking
+    Intelligence
+      Market Demand
+      Salary Insights
+      Job Recommendations
+      Career Path Prediction
+    Practice
+      Negotiation Role-Play
+      Interview Questions
+      Sentiment Analysis
+```
+
+### Database Schema Overview
+
+```mermaid
+erDiagram
+    User ||--o{ Analysis : creates
+    User ||--o{ Resume : uploads
+    User ||--o{ JobApplication : tracks
+    User ||--o{ Feedback : submits
+    Analysis ||--o{ SkillGap : contains
+    Analysis ||--o{ Roadmap : generates
+    Analysis ||--o{ NegotiationSession : creates
+    Skill ||--o{ SkillSynonym : has
+    SkillCategory ||--o{ Skill : categorizes
+    Company ||--o{ CompanyIntelligence : has
+
+    User {
+        uuid id PK
+        string email
+        string password_hash
+        string plan
+        timestamp created_at
+    }
+
+    Analysis {
+        uuid id PK
+        uuid user_id FK
+        string status
+        int overall_score
+        json resume_data
+        json jd_data
+        json gap_analysis
+        timestamp created_at
+    }
+
+    Skill {
+        uuid id PK
+        string name
+        string[] synonyms
+        uuid parent_skill_id FK
+        uuid category_id FK
+    }
+
+    JobApplication {
+        uuid id PK
+        uuid user_id FK
+        string company
+        string role
+        string status
+        int salary
+        date applied_date
+    }
+```
+
+### Tech Stack Layers
+
+```mermaid
+graph TB
+    subgraph Client["Presentation Layer"]
+        React[React 18 + TypeScript]
+        Vite[Vite Build Tool]
+        Tailwind[TailwindCSS]
+        Framer[Framer Motion]
+        Recharts[Recharts]
+    end
+
+    subgraph Server["Application Layer"]
+        Express[Express.js]
+        LangGraph[LangGraph State Machine]
+        Zod[Zod Validation]
+        Prisma[Prisma ORM]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[(PostgreSQL 16)]
+        Redis[(Redis 7)]
+    end
+
+    subgraph AI["AI Layer"]
+        Ollama[Ollama LLM]
+        HF[HuggingFace Transformers]
+        LangChain[LangChain]
+    end
+
+    subgraph Infra["Infrastructure"]
+        Docker[Docker Compose]
+        K8s[Kubernetes]
+        Terraform[Terraform]
+        Sentry[Sentry Monitoring]
+    end
+
+    Client --> Server
+    Server --> Data
+    Server --> AI
+    Server --> Infra
 ```
 
 ### Data Privacy

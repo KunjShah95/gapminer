@@ -258,7 +258,7 @@ export default function RoadmapPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
-          const data = await res.json();
+          const data = await res.json().catch(() => null);
           setAnalysis(data);
         } else {
           setError("Analysis not found");

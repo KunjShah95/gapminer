@@ -114,7 +114,7 @@ export default function JobTrackerPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => []);
         setJobs(data);
       }
     } catch (err) {
@@ -133,7 +133,7 @@ export default function JobTrackerPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         setStats(data);
       }
     } catch (err) {

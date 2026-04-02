@@ -50,7 +50,7 @@ export default function SkillProgressPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         setProgressData(data);
       }
     } catch (err) {

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { generateCoverLetter } from "../../services/transformerModels.js";
+import { generateCoverLetter } from "../../../services/transformerModels.js";
 
 const router = Router();
 
