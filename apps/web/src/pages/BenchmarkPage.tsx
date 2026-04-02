@@ -48,7 +48,7 @@ export default function BenchmarkPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
         setBenchmark(data);
       }
     } catch (err) {
