@@ -50,9 +50,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function fetchAnalyses() {
+      const token = useAuthStore.getState().token;
+      if (!token) {
+        console.error('No token found')
+        setLoading(false)
+        return
+      }
+
       try {
         const res = await fetch('/api/v1/analysis', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          headers: { Authorization: `Bearer ${token}` }
         })
         if (res.ok) {
           const data = await res.json()

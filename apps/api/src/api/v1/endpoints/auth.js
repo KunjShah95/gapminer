@@ -39,16 +39,18 @@ router.post('/register', async (req, res, next) => {
     const access_token = createAccessToken({ sub: user.id, email: user.email });
 
     return res.status(201).json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatar ?? null,
-      plan: user.plan,
-      created_at: user.created_at,
-      analyses_used: user.analyses_used,
-      analyses_limit: user.analyses_limit,
       access_token,
       token_type: 'bearer',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar ?? null,
+        plan: user.plan,
+        created_at: user.created_at,
+        analyses_used: user.analyses_used,
+        analyses_limit: user.analyses_limit,
+      }
     });
   } catch (err) {
     next(err);
@@ -99,10 +101,16 @@ router.post('/login', async (req, res, next) => {
     return res.json({
       access_token,
       token_type: 'bearer',
-      user_id: user.id,
-      email: user.email,
-      name: user.name,
-      plan: user.plan,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar || null,
+        plan: user.plan,
+        created_at: user.created_at,
+        analyses_used: user.analyses_used,
+        analyses_limit: user.analyses_limit,
+      }
     });
   } catch (err) {
     next(err);

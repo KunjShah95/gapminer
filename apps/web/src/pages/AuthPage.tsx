@@ -20,21 +20,41 @@ export default function AuthPage() {
     setError('')
     setLoading(true)
     try {
-      await new Promise((r) => setTimeout(r, 1200))
-      const mockUser: User = {
-        id: 'usr_demo_001',
-        email: email || 'demo@gapminer.dev',
-        name: name || 'Demo User',
-        plan: 'free',
-        createdAt: new Date().toISOString(),
-        analysesUsed: 1,
-        analysesLimit: 3,
+      const endpoint = mode === 'signup' ? '/api/v1/auth/register' : '/api/v1/auth/login'
+      const body = mode === 'signup' 
+        ? { email, name, password }
+        : { email, password }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed')
       }
-      setUser(mockUser)
-      setToken('demo_token_xyz')
+
+      // Map snake_case from API to camelCase for the store
+      const userData = data.user
+      const mappedUser: User = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        avatar: userData.avatar,
+        plan: userData.plan,
+        createdAt: userData.created_at,
+        analysesUsed: userData.analyses_used,
+        analysesLimit: userData.analyses_limit,
+      }
+
+      setUser(mappedUser)
+      setToken(data.access_token)
       navigate('/dashboard')
-    } catch {
-      setError('Authentication failed. Please try again.')
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -71,14 +91,14 @@ export default function AuthPage() {
           {/* OAuth Buttons */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             <button
-              onClick={handleSubmit}
+              type="button"
               className="glass border border-outline-variant/20 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-surface-container-highest transition-colors text-sm font-semibold active:scale-[0.98]"
             >
               <Chrome size={18} />
               Google
             </button>
             <button
-              onClick={handleSubmit}
+              type="button"
               className="glass border border-outline-variant/20 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-surface-container-highest transition-colors text-sm font-semibold active:scale-[0.98]"
             >
               <Github size={18} />

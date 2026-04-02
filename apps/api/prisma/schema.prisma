@@ -11,20 +11,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+  RECRUITER
+}
+
 model User {
   id             String     @id @default(uuid())
   email          String     @unique
   name           String?
   avatar         String?
+  hashedPassword String?
   plan           String     @default("free")
+  role           UserRole   @default(USER)
+  isActive       Boolean    @default(true)
+  isVerified     Boolean    @default(false)
+  googleId       String?    @unique
+  githubId       String?    @unique
+  provider       String     @default("internal")
   analysesUsed   Int        @default(0)
   analysesLimit  Int        @default(10)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
-  
+
+  // Stripe fields
+  stripeCustomerId    String?   @unique
+  stripeSubscriptionId String? @unique
+  subscriptionStatus  String?   @default("inactive") // active, canceled, past_due, unpaid, inactive
+  subscriptionPlan    String?   // pro, teams, enterprise
+  subscriptionCurrentPeriodEnd DateTime?
+
   analyses       Analysis[]
   candidates     Candidate[]
   negotiationSessions NegotiationSession[]
+  jobs           Job[]      @relation("RecruiterJobs")
 }
 
 model Analysis {
@@ -84,6 +105,47 @@ model Candidate {
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  applications JobApplication[]
+}
+
+model Job {
+  id            String   @id @default(uuid())
+  title         String
+  company       String
+  location      String?
+  description   String?
+  type          String   @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT
+  salaryRange   String?
+  status        String   @default("OPEN")      // OPEN, CLOSED, DRAFT
+  
+  recruiterId   String?
+  recruiter     User?    @relation("RecruiterJobs", fields: [recruiterId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  applications  JobApplication[]
+
+  @@index([recruiterId])
+}
+
+model JobApplication {
+  id          String   @id @default(uuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  status      String   @default("PENDING") // PENDING, REVIEWING, INTERVIEWED, HIRED, REJECTED
+  matchScore  Float?
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([jobId, candidateId])
+  @@index([jobId])
+  @@index([candidateId])
 }
 
 model SalaryBenchmark {
@@ -145,4 +207,5 @@ model CompanyIntelligence {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 }
+
 

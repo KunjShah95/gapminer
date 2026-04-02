@@ -50,6 +50,8 @@ export async function initDb() {
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         is_verified BOOLEAN NOT NULL DEFAULT FALSE,
         google_id TEXT UNIQUE,
+        github_id TEXT UNIQUE,
+        provider TEXT DEFAULT 'internal',
         analyses_used INTEGER NOT NULL DEFAULT 0,
         analyses_limit INTEGER NOT NULL DEFAULT 3,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

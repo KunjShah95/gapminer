@@ -1,8 +1,11 @@
-import { FirecrawlApp } from 'firecrawl';
-import { GoogleSearch } from 'google-search-results';
-import { config } from '../core/config.js';
+import FirecrawlApp from "firecrawl";
+import { config } from "../core/config.js";
+import { llm } from "../ai/model.js";
+import { JDExtractionSchema } from "../ai/schemas.js";
 
-const firecrawl = config.FIRECRAWL_API_KEY ? new FirecrawlApp({ apiKey: config.FIRECRAWL_API_KEY }) : null;
+const firecrawl = config.FIRECRAWL_API_KEY
+  ? new FirecrawlApp({ apiKey: config.FIRECRAWL_API_KEY })
+  : null;
 
 export interface JobDescriptionResult {
   title: string;
@@ -13,111 +16,158 @@ export interface JobDescriptionResult {
   benefits: string[];
   salary?: string;
   url: string;
-  source: 'firecrawl' | 'scrape' | 'serp';
+  source: "firecrawl" | "scrape" | "serp";
 }
 
-export async function scrapeJobDescription(url: string): Promise<JobDescriptionResult | null> {
+export async function scrapeJobDescription(
+  url: string,
+): Promise<JobDescriptionResult | null> {
   if (firecrawl) {
     try {
       const scrapeResult = await firecrawl.scrapeUrl(url, {
-        formats: ['markdown', 'html'],
+        formats: ["markdown", "html"],
         onlyMainContent: true,
       });
 
-      if (scrapeResult.success && scrapeResult.data) {
+      const resultData = scrapeResult as any;
+      if (resultData.success && resultData.data) {
+        const text = resultData.data.markdown || resultData.data.html || "";
+        const aiData = await extractJDInfoWithAI(text);
+
         return {
-          title: extractTitle(scrapeResult.data.markdown || '') || 'Unknown Title',
-          company: extractCompany(scrapeResult.data.markdown || '') || 'Unknown Company',
-          location: extractLocation(scrapeResult.data.markdown || '') || 'Not Specified',
-          description: scrapeResult.data.markdown || '',
-          requirements: extractRequirements(scrapeResult.data.markdown || ''),
-          benefits: extractBenefits(scrapeResult.data.markdown || ''),
-          salary: extractSalary(scrapeResult.data.markdown || ''),
+          title: aiData?.title || extractTitle(text) || "Unknown Title",
+          company: extractCompany(text) || "Unknown Company",
+          location: extractLocation(text) || "Not Specified",
+          description: text,
+          requirements:
+            aiData?.requiredSkills?.map((s: any) => s.name) ||
+            extractRequirements(text),
+          benefits: extractBenefits(text),
+          salary: extractSalary(text) || undefined,
           url,
-          source: 'firecrawl',
+          source: "firecrawl",
         };
       }
     } catch (error) {
-      console.error('Firecrawl error:', error);
+      console.error("Firecrawl error:", error);
     }
   }
 
-  return fallbackScrape(url);
-}
-
-export async function searchJobListings(query: string, limit: number = 10): Promise<JobDescriptionResult[]> {
-  if (!config.SERP_API_KEY) {
-    console.warn('SERP_API_KEY not configured');
-    return [];
+  const fallback = await fallbackScrape(url);
+  if (fallback) {
+    const aiData = await extractJDInfoWithAI(fallback.description);
+    return {
+      ...fallback,
+      title: aiData?.title || fallback.title,
+      requirements:
+        aiData?.requiredSkills?.map((s: any) => s.name) ||
+        fallback.requirements,
+    };
   }
 
-  return new Promise((resolve) => {
-    const search = new GoogleSearch(config.SERP_API_KEY);
-
-    const params = {
-      q: query,
-      num: limit,
-      gl: 'us',
-      hl: 'en',
-      start: 0,
-    };
-
-    search.json(params, (data: any) => {
-      const results: JobDescriptionResult[] = [];
-
-      if (data.organic_results) {
-        for (const result of data.organic_results.slice(0, limit)) {
-          results.push({
-            title: result.title || 'Unknown Title',
-            company: result.source || 'Unknown Company',
-            location: result.location || 'Not Specified',
-            description: result.snippet || '',
-            requirements: [],
-            benefits: [],
-            url: result.link || '',
-            source: 'serp',
-          });
-        }
-      }
-
-      resolve(results);
-    });
-  });
+  return null;
 }
 
-async function fallbackScrape(url: string): Promise<JobDescriptionResult | null> {
+async function extractJDInfoWithAI(text: string): Promise<any> {
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    const response = await llm.withStructuredOutput(JDExtractionSchema).invoke([
+      {
+        role: "system",
+        content:
+          "You are an expert recruiter. Extract structured job description information from the provided text.",
       },
-    });
-
-    const html = await response.text();
-    const cheerio = await import('cheerio');
-    const $ = cheerio.load(html);
-
-    const title = $('title').text() || $('h1').first().text() || 'Unknown Title';
-    const description = $('meta[name="description"]').attr('content') || $('body').text().substring(0, 2000);
-
-    return {
-      title: title.trim(),
-      company: extractCompany(description),
-      location: extractLocation(description),
-      description,
-      requirements: extractRequirements(description),
-      benefits: extractBenefits(description),
-      salary: extractSalary(description),
-      url,
-      source: 'scrape',
-    };
+      { role: "user", content: text.substring(0, 10000) },
+    ]);
+    return response;
   } catch (error) {
-    console.error('Fallback scrape error:', error);
+    console.error("AI extraction error:", error);
     return null;
   }
 }
 
-function extractTitle(text: string): string | null {
+export async function searchJobListings(
+  query: string,
+  limit: number = 10,
+): Promise<JobDescriptionResult[]> {
+  if (!config.SERP_API_KEY) {
+    console.warn("SERP_API_KEY not configured");
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&num=${limit}&gl=us&hl=en&api_key=${config.SERP_API_KEY}`,
+    );
+
+    if (!response.ok) {
+      console.error("SERP API error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const results: JobDescriptionResult[] = [];
+
+    if (data.organic_results) {
+      for (const result of data.organic_results.slice(0, limit)) {
+        results.push({
+          title: result.title || "Unknown Title",
+          company: result.source || "Unknown Company",
+          location: result.location || "Not Specified",
+          description: result.snippet || "",
+          requirements: [],
+          benefits: [],
+          url: result.link || "",
+          source: "serp",
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error("SERP search error:", error);
+    return [];
+  }
+}
+
+async function fallbackScrape(
+  url: string,
+): Promise<JobDescriptionResult | null> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+
+    const html = await response.text();
+    const cheerio = await import("cheerio");
+    const $ = cheerio.load(html);
+
+    const title =
+      $("title").text() || $("h1").first().text() || "Unknown Title";
+    const description =
+      $('meta[name="description"]').attr("content") ||
+      $("body").text().substring(0, 2000);
+
+    return {
+      title: title.trim(),
+      company: extractCompany(description) || "Unknown Company",
+      location: extractLocation(description) || "Not Specified",
+      description,
+      requirements: extractRequirements(description),
+      benefits: extractBenefits(description),
+      salary: extractSalary(description) || undefined,
+      url,
+      source: "scrape",
+    };
+  } catch (error) {
+    console.error("Fallback scrape error:", error);
+    return null;
+  }
+}
+
+function extractTitle(text: string): string {
   const patterns = [
     /^(.+?)\s+[-|]\s*.+?(?:job|career)/i,
     /^(.+?)\s+at\s+.+/i,
@@ -128,10 +178,10 @@ function extractTitle(text: string): string | null {
     const match = text.match(pattern);
     if (match) return match[1].trim();
   }
-  return null;
+  return "Unknown Title";
 }
 
-function extractCompany(text: string): string | null {
+function extractCompany(text: string): string {
   const patterns = [
     /(?:company|employer|at)\s*[:\-]?\s*(.+)/i,
     /(?:company|employer)\s*:\s*(.+)/im,
@@ -141,10 +191,10 @@ function extractCompany(text: string): string | null {
     const match = text.match(pattern);
     if (match) return match[1].trim();
   }
-  return null;
+  return "";
 }
 
-function extractLocation(text: string): string | null {
+function extractLocation(text: string): string {
   const patterns = [
     /(?:location|remote|location:)\s*[:\-]?\s*(.+)/i,
     /(?:location|remote)\s*:\s*(.+)/im,
@@ -154,7 +204,7 @@ function extractLocation(text: string): string | null {
     const match = text.match(pattern);
     if (match) return match[1].trim();
   }
-  return null;
+  return "";
 }
 
 function extractRequirements(text: string): string[] {
@@ -167,7 +217,9 @@ function extractRequirements(text: string): string[] {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      const items = match[1].split(/[,•\n]/).filter((s: string) => s.trim().length > 5);
+      const items = match[1]
+        .split(/[,•\n]/)
+        .filter((s: string) => s.trim().length > 5);
       requirements.push(...items.slice(0, 10));
       break;
     }
@@ -186,7 +238,9 @@ function extractBenefits(text: string): string[] {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      const items = match[1].split(/[,•\n]/).filter((s: string) => s.trim().length > 5);
+      const items = match[1]
+        .split(/[,•\n]/)
+        .filter((s: string) => s.trim().length > 5);
       benefits.push(...items.slice(0, 10));
       break;
     }
@@ -195,7 +249,7 @@ function extractBenefits(text: string): string[] {
   return benefits.slice(0, 10);
 }
 
-function extractSalary(text: string): string | undefined {
+function extractSalary(text: string): string {
   const patterns = [
     /\$\d{1,3}(?:,\d{3})*(?:\s*-\s*\$?\d{1,3}(?:,\d{3})*)?(?:\s*(?:per|\/)\s*(?:year|month|hour))?/gi,
     /(?:salary|compensation|pay)[:\s]*\$?\d{1,3}(?:,\d{3})*(?:\s*-\s*\$?\d{1,3}(?:,\d{3})*)?/gi,
@@ -206,5 +260,5 @@ function extractSalary(text: string): string | undefined {
     if (match) return match[0].trim();
   }
 
-  return undefined;
+  return "";
 }

@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useAuthStore } from '@/stores/authStore'
+
 import {
   Upload, FileText, Link2, Loader2, Check, AlertCircle,
   X, Brain, Target, BarChart3, Map, Globe, ChevronRight,
@@ -130,7 +132,7 @@ export default function AnalyzerPage() {
       }
     }
 
-    const token = localStorage.getItem('token')
+    const token = useAuthStore.getState().token;
     if (!token) {
       alert('Please log in first')
       setIsAnalyzing(false)

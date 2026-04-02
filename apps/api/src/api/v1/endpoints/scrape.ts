@@ -33,7 +33,7 @@ router.post('/search', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    const results = await searchJob Listings(query, limit || 10);
+    const results = await searchJobListings(query, limit || 10);
 
     res.json({ results });
   } catch (err: any) {

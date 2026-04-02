@@ -17,7 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@gapminer/types": ["../../packages/types/src/index.ts"]
     }
   },
   "include": ["src"],
