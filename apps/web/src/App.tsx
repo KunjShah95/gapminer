@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/authStore";
 import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
+import AnalysisResultsPage from "@/pages/AnalysisResultsPage";
 import AnalyzerPage from "@/pages/AnalyzerPage";
 import RoadmapPage from "@/pages/RoadmapPage";
 import ProfilePage from "@/pages/ProfilePage";
@@ -60,6 +61,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <LatexEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/results/:id"
+          element={
+            <ProtectedRoute>
+              <AnalysisResultsPage />
             </ProtectedRoute>
           }
         />
@@ -190,3 +199,5 @@ export default function App() {
     </Routes>
   );
 }
+
+

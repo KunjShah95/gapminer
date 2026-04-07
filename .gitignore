@@ -21,6 +21,9 @@ venv
 .eggs
 build/
 public/assets/.webp
-.env
 CLAUDE.md
 feature.md
+*.png
+*.html
+stitch_assets
+

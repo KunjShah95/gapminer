@@ -8,6 +8,8 @@ export interface User {
   createdAt: string;
   analysesUsed: number;
   analysesLimit: number;
+  twoFactorEnabled?: boolean;
+  isVerified?: boolean;
 }
 
 // ─── Resume ───────────────────────────────────────────────────

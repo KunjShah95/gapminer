@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
+import { authFetch } from '@/lib/authFetch'
 import {
   User, FileText, Settings, Shield, Trash2, Upload,
   Check, Edit3, Bell, Key, Download
@@ -7,15 +8,214 @@ import {
 import styles from './ProfilePage.module.css'
 
 export default function ProfilePage() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const [tab, setTab] = useState<'profile' | 'resume' | 'security' | 'notifications'>('profile')
   const [name, setName] = useState(user?.name || '')
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [loadingProfile, setLoadingProfile] = useState(false)
+  const [securityMessage, setSecurityMessage] = useState('')
+  const [securityError, setSecurityError] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [currentPasswordFor2FA, setCurrentPasswordFor2FA] = useState('')
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(Boolean(user?.twoFactorEnabled))
+  const [twoFactorSetupSecret, setTwoFactorSetupSecret] = useState('')
+  const [twoFactorSetupUrl, setTwoFactorSetupUrl] = useState('')
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [showTwoFactorForm, setShowTwoFactorForm] = useState(false)
+  const [busyAction, setBusyAction] = useState<'profile' | 'password' | '2fa-setup' | '2fa-verify' | '2fa-disable' | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const loadTwoFactorStatus = async () => {
+      try {
+        const response = await authFetch('/api/v1/auth/2fa/status')
+        if (!response.ok) return
+        const data = await response.json()
+        if (active) {
+          setTwoFactorEnabled(Boolean(data.enabled))
+        }
+      } catch {
+        // Ignore status failures; the buttons still work.
+      }
+    }
+
+    void loadTwoFactorStatus()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleSave = async () => {
-    await new Promise((r) => setTimeout(r, 500))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setSaveError('')
+    setLoadingProfile(true)
+    try {
+      const response = await authFetch('/api/v1/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save profile')
+      }
+
+      setUser({
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        avatar: data.avatar ?? null,
+        plan: data.plan,
+        createdAt: data.created_at,
+        analysesUsed: data.analyses_used,
+        analysesLimit: data.analyses_limit,
+        twoFactorEnabled: data.two_factor_enabled,
+        isVerified: data.is_verified,
+      })
+      setName(data.name || '')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (error: any) {
+      setSaveError(error?.message || 'Failed to save profile')
+    } finally {
+      setLoadingProfile(false)
+    }
+  }
+
+  const handleChangePassword = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSecurityError('')
+    setSecurityMessage('')
+
+    if (newPassword !== confirmPassword) {
+      setSecurityError('New passwords do not match')
+      return
+    }
+
+    setBusyAction('password')
+    try {
+      const response = await authFetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password')
+      }
+
+      setSecurityMessage(data.message || 'Password changed successfully')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setShowPasswordForm(false)
+    } catch (error: any) {
+      setSecurityError(error?.message || 'Failed to change password')
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const handleStartTwoFactor = async () => {
+    setSecurityError('')
+    setSecurityMessage('')
+    setBusyAction('2fa-setup')
+    try {
+      const response = await authFetch('/api/v1/auth/2fa/setup', {
+        method: 'POST',
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to start 2FA setup')
+      }
+
+      setTwoFactorSetupSecret(data.secret || '')
+      setTwoFactorSetupUrl(data.otpauthUrl || '')
+      setTwoFactorCode('')
+      setShowTwoFactorForm(true)
+      setSecurityMessage('Scan the secret in your authenticator app, then verify the code below.')
+    } catch (error: any) {
+      setSecurityError(error?.message || 'Failed to start 2FA setup')
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const handleVerifyTwoFactor = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSecurityError('')
+    setSecurityMessage('')
+
+    if (twoFactorCode.length !== 6) {
+      setSecurityError('Enter the 6-digit code from your authenticator app')
+      return
+    }
+
+    setBusyAction('2fa-verify')
+    try {
+      const response = await authFetch('/api/v1/auth/2fa/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: twoFactorCode,
+          secret: twoFactorSetupSecret || undefined,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify 2FA code')
+      }
+
+      setTwoFactorEnabled(true)
+      setSecurityMessage(data.message || '2FA enabled successfully')
+      setTwoFactorSetupSecret('')
+      setTwoFactorSetupUrl('')
+      setTwoFactorCode('')
+      setShowTwoFactorForm(false)
+    } catch (error: any) {
+      setSecurityError(error?.message || 'Failed to verify 2FA code')
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const handleDisableTwoFactor = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSecurityError('')
+    setSecurityMessage('')
+
+    if (!currentPasswordFor2FA) {
+      setSecurityError('Enter your current password to disable 2FA')
+      return
+    }
+
+    setBusyAction('2fa-disable')
+    try {
+      const response = await authFetch('/api/v1/auth/2fa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ password: currentPasswordFor2FA }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to disable 2FA')
+      }
+
+      setTwoFactorEnabled(false)
+      setCurrentPasswordFor2FA('')
+      setShowTwoFactorForm(false)
+      setSecurityMessage(data.message || '2FA disabled successfully')
+    } catch (error: any) {
+      setSecurityError(error?.message || 'Failed to disable 2FA')
+    } finally {
+      setBusyAction(null)
+    }
   }
 
   const TABS = [
@@ -101,11 +301,13 @@ export default function ProfilePage() {
                 <button
                   className="btn btn-primary"
                   onClick={handleSave}
+                  disabled={loadingProfile}
                   id="save-profile"
                 >
-                  {saved ? <><Check size={16} /> Saved!</> : <><Edit3 size={16} /> Save changes</>}
+                  {loadingProfile ? 'Saving…' : saved ? <><Check size={16} /> Saved!</> : <><Edit3 size={16} /> Save changes</>}
                 </button>
               </div>
+              {saveError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{saveError}</p>}
             </div>
           )}
 
@@ -158,18 +360,161 @@ export default function ProfilePage() {
               <div className={styles.securityItem}>
                 <div>
                   <div className={styles.securityLabel}>Password</div>
-                  <div className={styles.securityDesc}>Last changed 3 months ago</div>
+                  <div className={styles.securityDesc}>Update the password used to sign in to Gapminer.</div>
                 </div>
-                <button className="btn btn-secondary btn-sm" id="change-password">Change password</button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id="change-password"
+                  onClick={() => setShowPasswordForm((value) => !value)}
+                >
+                  {showPasswordForm ? 'Close' : 'Change password'}
+                </button>
               </div>
+
+              {showPasswordForm && (
+                <form onSubmit={handleChangePassword} className={styles.dangerZone} style={{ borderColor: 'var(--color-border)' }}>
+                  <div className={styles.formGrid} style={{ gridTemplateColumns: '1fr' }}>
+                    <div className={styles.field}>
+                      <label htmlFor="current-password">Current password</label>
+                      <input
+                        id="current-password"
+                        className="input"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="new-password">New password</label>
+                      <input
+                        id="new-password"
+                        className="input"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="confirm-password">Confirm new password</label>
+                      <input
+                        id="confirm-password"
+                        className="input"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                  </div>
+                  {securityError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{securityError}</p>}
+                  {securityMessage && <p className={styles.sectionDesc} style={{ color: 'var(--color-primary-light)' }}>{securityMessage}</p>}
+                  <div className={styles.formActions}>
+                    <button className="btn btn-primary btn-sm" type="submit" disabled={busyAction === 'password'}>
+                      {busyAction === 'password' ? 'Updating…' : 'Update password'}
+                    </button>
+                  </div>
+                </form>
+              )}
 
               <div className={styles.securityItem}>
                 <div>
                   <div className={styles.securityLabel}>Two-factor authentication</div>
-                  <div className={styles.securityDesc}>Add an extra layer of security</div>
+                  <div className={styles.securityDesc}>{twoFactorEnabled ? '2FA is currently enabled on your account.' : 'Add an extra layer of security.'}</div>
                 </div>
-                <button className="btn btn-secondary btn-sm" id="enable-2fa">Enable 2FA</button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  id="enable-2fa"
+                  onClick={() => {
+                    setSecurityError('')
+                    setSecurityMessage('')
+                    if (twoFactorEnabled) {
+                      setShowTwoFactorForm((value) => !value)
+                    } else {
+                      void handleStartTwoFactor()
+                    }
+                  }}
+                >
+                  {twoFactorEnabled ? (showTwoFactorForm ? 'Close' : 'Disable 2FA') : 'Enable 2FA'}
+                </button>
               </div>
+
+              {showTwoFactorForm && (
+                <div className={styles.dangerZone} style={{ borderColor: 'var(--color-border)' }}>
+                  {!twoFactorEnabled ? (
+                    <>
+                      <div className={styles.sectionDesc} style={{ marginBottom: 'var(--space-3)' }}>
+                        {twoFactorSetupSecret
+                          ? 'Add the secret to your authenticator app, then verify the code below to finish setup.'
+                          : 'Start 2FA setup to generate a secret and QR/authenticator URL.'}
+                      </div>
+
+                      {!twoFactorSetupSecret && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          type="button"
+                          onClick={handleStartTwoFactor}
+                          disabled={busyAction === '2fa-setup'}
+                        >
+                          {busyAction === '2fa-setup' ? 'Preparing…' : 'Generate 2FA secret'}
+                        </button>
+                      )}
+
+                      {twoFactorSetupSecret && (
+                        <div className={styles.formGrid} style={{ gridTemplateColumns: '1fr' }}>
+                          <div className={styles.field}>
+                            <label>Secret key</label>
+                            <input className="input" type="text" value={twoFactorSetupSecret} readOnly />
+                          </div>
+                          <div className={styles.field}>
+                            <label>Authenticator URL</label>
+                            <textarea className="input" value={twoFactorSetupUrl} readOnly rows={4} />
+                          </div>
+                          <form onSubmit={handleVerifyTwoFactor} className={styles.field}>
+                            <label htmlFor="two-factor-code">Verification code</label>
+                            <input
+                              id="two-factor-code"
+                              className="input"
+                              type="text"
+                              inputMode="numeric"
+                              maxLength={6}
+                              value={twoFactorCode}
+                              onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                              placeholder="123456"
+                              required
+                            />
+                            <button className="btn btn-primary btn-sm" type="submit" disabled={busyAction === '2fa-verify'}>
+                              {busyAction === '2fa-verify' ? 'Verifying…' : 'Verify and enable'}
+                            </button>
+                          </form>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <form onSubmit={handleDisableTwoFactor} className={styles.field}>
+                      <label htmlFor="disable-2fa-password">Confirm your password to disable 2FA</label>
+                      <input
+                        id="disable-2fa-password"
+                        className="input"
+                        type="password"
+                        value={currentPasswordFor2FA}
+                        onChange={(e) => setCurrentPasswordFor2FA(e.target.value)}
+                        placeholder="Enter password"
+                        required
+                      />
+                      <button className="btn btn-danger btn-sm" type="submit" disabled={busyAction === '2fa-disable'}>
+                        {busyAction === '2fa-disable' ? 'Disabling…' : 'Disable 2FA'}
+                      </button>
+                    </form>
+                  )}
+
+                  {securityError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{securityError}</p>}
+                  {securityMessage && <p className={styles.sectionDesc} style={{ color: 'var(--color-primary-light)' }}>{securityMessage}</p>}
+                </div>
+              )}
 
               <div className={styles.dangerZone}>
                 <h3>Danger Zone</h3>

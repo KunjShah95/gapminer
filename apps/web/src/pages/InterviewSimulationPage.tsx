@@ -446,7 +446,7 @@ export default function InterviewSimulationPage() {
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(176,162,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(108,71,255,0.1); border-radius: 10px; }
         .primary-gradient { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); }
       `}</style>
     </div>

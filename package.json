@@ -12,8 +12,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
-    "web": "turbo run dev --filter=web",
-    "api": "turbo run dev --filter=api"
+    "web": "turbo run dev --filter=@gapminer/web",
+    "api": "turbo run dev --filter=@gapminer/api"
   },
   "devDependencies": {
     "@types/node": "^22.19.15",

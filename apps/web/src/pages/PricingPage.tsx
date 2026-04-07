@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom'
-import { Check, Sparkles, ArrowRight, Zap, Building2, Users, CheckCircle, HelpCircle } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Check, Sparkles, ArrowRight, Zap, Building2, Users, CheckCircle, HelpCircle, Loader2 } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 
 const PLANS = [
   {
@@ -95,6 +97,46 @@ const FAQS = [
 ]
 
 export default function PricingPage() {
+  const { user, token } = useAuthStore()
+  const navigate = useNavigate()
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
+
+  const handleSubscribe = async (planId: string) => {
+    if (planId === 'free') {
+      navigate('/auth?signup=true')
+      return
+    }
+
+    if (!user || !token) {
+      navigate(`/auth?signup=true&plan=${planId}`)
+      return
+    }
+
+    setLoadingPlan(planId)
+    try {
+      const response = await fetch('/api/v1/payments/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ planId })
+      })
+
+      const data = await response.json()
+      if (response.ok && data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'Failed to start checkout session')
+      }
+    } catch (err) {
+      console.error('Checkout error:', err)
+      alert('An error occurred. Please try again.')
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
+
   return (
     <div className="bg-surface text-on-surface min-h-screen">
       {/* Fixed Nav */}
@@ -159,13 +201,34 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to={plan.id === 'enterprise' ? '/contact' : '/auth?signup=true'}
-                  className={`w-full py-4 rounded-full font-bold text-center transition-all flex items-center justify-center gap-2 group/btn ${plan.highlighted ? 'primary-gradient text-on-primary-fixed shadow-lg hover:shadow-primary/20' : 'glass border border-outline-variant/20 hover:bg-surface-container-highest'}`}
-                >
-                  {plan.cta}
-                  <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={18} />
-                </Link>
+                {plan.id === 'enterprise' ? (
+                  <Link
+                    to="/contact"
+                    className="w-full py-4 rounded-full font-bold text-center transition-all flex items-center justify-center gap-2 group/btn glass border border-outline-variant/20 hover:bg-surface-container-highest"
+                  >
+                    {plan.cta}
+                    <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={18} />
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={loadingPlan !== null}
+                    className={`w-full py-4 rounded-full font-bold text-center transition-all flex items-center justify-center gap-2 group/btn disabled:opacity-50 ${
+                      plan.highlighted 
+                        ? 'primary-gradient text-on-primary-fixed shadow-lg hover:shadow-primary/20' 
+                        : 'glass border border-outline-variant/20 hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    {loadingPlan === plan.id ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <>
+                        {plan.cta}
+                        <ArrowRight className="group-hover/btn:translate-x-1 transition-transform" size={18} />
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             ))}
           </div>

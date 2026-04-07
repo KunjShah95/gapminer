@@ -88,4 +88,12 @@ export const config = {
   STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY ?? "",
   STRIPE_PRICE_TEAMS_MONTHLY: process.env.STRIPE_PRICE_TEAMS_MONTHLY ?? "",
   FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:3000",
+
+  // SMTP (Email)
+  SMTP_HOST: process.env.SMTP_HOST ?? "",
+  SMTP_PORT: process.env.SMTP_PORT ?? "587",
+  SMTP_SECURE: process.env.SMTP_SECURE ?? "false",
+  SMTP_USER: process.env.SMTP_USER ?? "",
+  SMTP_PASS: process.env.SMTP_PASS ?? "",
+  SMTP_FROM: process.env.SMTP_FROM ?? "noreply@gapminer.com",
 };

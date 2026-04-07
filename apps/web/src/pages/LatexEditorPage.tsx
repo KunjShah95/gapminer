@@ -639,19 +639,19 @@ export default function LatexEditorPage() {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(176,162,255,0.1);
+          background: rgba(108,71,255,0.1);
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(176,162,255,0.2);
+          background: rgba(108,71,255,0.2);
         }
         
         .latex-preview h1 { font-size: 2.25rem !important; font-weight: 800 !important; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-        .latex-preview h2 { font-size: 1.5rem !important; font-weight: 700 !important; margin-top: 2rem !important; border-left: 4px solid #b0a2ff; padding-left: 1rem; }
+        .latex-preview h2 { font-size: 1.5rem !important; font-weight: 700 !important; margin-top: 2rem !important; border-left: 4px solid #6C47FF; padding-left: 1rem; }
         .latex-preview p { line-height: 1.6; color: #334155; }
         .latex-preview ul { margin-top: 1rem; list-style-type: none; padding-left: 1.5rem; }
         .latex-preview li { margin-bottom: 0.5rem; position: relative; }
-        .latex-preview li::before { content: "•"; color: #b0a2ff; position: absolute; left: -1.2rem; font-weight: bold; }
+        .latex-preview li::before { content: "•"; color: #6C47FF; position: absolute; left: -1.2rem; font-weight: bold; }
 
         .cm-editor {
           height: 100% !important;
@@ -659,7 +659,7 @@ export default function LatexEditorPage() {
         }
         .cm-scroller {
            scrollbar-width: thin;
-           scrollbar-color: rgba(176,162,255,0.1) transparent;
+           scrollbar-color: rgba(108,71,255,0.1) transparent;
         }
       `}</style>
     </div>

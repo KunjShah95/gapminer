@@ -15,10 +15,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@gapminer/types": ["../../packages/types/src/index.ts"]
+      "@/*": ["./src/*"],
+      "@gapminer/types": ["./../../packages/types/src/index.ts"]
     }
   },
   "include": ["src"],

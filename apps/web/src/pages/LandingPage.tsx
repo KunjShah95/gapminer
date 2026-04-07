@@ -39,6 +39,163 @@ function Counter({ target, duration = 2000 }: { target: number; duration?: numbe
   return <div ref={ref}>{count}</div>
 }
 
+const radarSkills = [
+  { label: 'Strategy', value: 92 },
+  { label: 'Frontend', value: 78 },
+  { label: 'Data', value: 64 },
+  { label: 'Backend', value: 84 },
+  { label: 'Delivery', value: 71 },
+  { label: 'Leadership', value: 88 },
+]
+
+function SkillRadarPreview({ showSummary = true }: { showSummary?: boolean }) {
+  const size = 320
+  const center = size / 2
+  const radius = 118
+  const polygonPoints = radarSkills
+    .map((skill, index) => {
+      const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
+      const pointRadius = 28 + (skill.value / 100) * radius
+      const x = center + Math.cos(angle) * pointRadius
+      const y = center + Math.sin(angle) * pointRadius
+      return `${x},${y}`
+    })
+    .join(' ')
+
+  return (
+    <div className="relative rounded-[1.75rem] border border-outline-variant/15 bg-[#10111a] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.45)] overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,71,255,0.18),transparent_55%)]" />
+      <div className="relative flex items-center justify-between mb-3 text-[11px] uppercase tracking-[0.28em] text-on-surface-variant">
+        <span>Live skill radar</span>
+        <span>Updated moments ago</span>
+      </div>
+      <div className="relative aspect-square rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] border border-white/5">
+        <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full" aria-hidden="true">
+          {[0.28, 0.48, 0.68, 0.88].map((ring, ringIndex) => {
+            const r = radius * ring
+            return <circle key={ringIndex} cx={center} cy={center} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeDasharray={ringIndex === 3 ? '0' : '4 8'} />
+          })}
+          {radarSkills.map((_, index) => {
+            const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
+            const x = center + Math.cos(angle) * radius
+            const y = center + Math.sin(angle) * radius
+            return <line key={index} x1={center} y1={center} x2={x} y2={y} stroke="rgba(255,255,255,0.08)" />
+          })}
+          <polygon points={polygonPoints} fill="rgba(108,71,255,0.22)" stroke="rgba(176,162,255,0.95)" strokeWidth="2.5" />
+          {radarSkills.map((skill, index) => {
+            const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
+            const pointRadius = 28 + (skill.value / 100) * radius
+            const x = center + Math.cos(angle) * pointRadius
+            const y = center + Math.sin(angle) * pointRadius
+            const labelRadius = radius + 20
+            const labelX = center + Math.cos(angle) * labelRadius
+            const labelY = center + Math.sin(angle) * labelRadius
+            return (
+              <g key={skill.label}>
+                <circle cx={x} cy={y} r="4.5" fill="#f9f5fd" stroke="#6C47FF" strokeWidth="3" />
+                <text x={labelX} y={labelY} fill="rgba(249,245,253,0.88)" fontSize="10" textAnchor="middle" dominantBaseline="middle">
+                  {skill.label}
+                </text>
+              </g>
+            )
+          })}
+          <circle cx={center} cy={center} r="18" fill="#0e0e13" stroke="rgba(255,255,255,0.2)" />
+          <text x={center} y={center - 2} fill="#f9f5fd" fontSize="18" fontWeight="700" textAnchor="middle" dominantBaseline="middle">
+            82%
+          </text>
+          <text x={center} y={center + 18} fill="rgba(172,170,177,0.9)" fontSize="8.5" fontWeight="600" textAnchor="middle" dominantBaseline="middle" letterSpacing="1.2">
+            FIT SCORE
+          </text>
+        </svg>
+      </div>
+      {showSummary ? (
+        <div className="relative mt-4 grid grid-cols-3 gap-2 text-xs">
+          {[
+            { label: 'Matched', value: '82%', tone: 'text-primary' },
+            { label: 'Missing', value: '12%', tone: 'text-error' },
+            { label: 'Partial', value: '6%', tone: 'text-tertiary' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-2xl border border-white/5 bg-white/5 px-3 py-3 text-center backdrop-blur-sm">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.28em] text-on-surface-variant">{item.label}</div>
+              <div className={`text-lg font-bold ${item.tone}`}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SkillLandscapePreview() {
+  const skills = [
+    { label: 'Frontend Systems', value: 88 },
+    { label: 'Product Thinking', value: 76 },
+    { label: 'Data Literacy', value: 68 },
+    { label: 'Execution', value: 91 },
+    { label: 'Mentorship', value: 73 },
+  ]
+
+  return (
+    <div className="relative rounded-[2rem] border border-outline-variant/15 bg-[#11131c] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.35)] overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_36%),radial-gradient(circle_at_80%_10%,rgba(108,71,255,0.16),transparent_28%),radial-gradient(circle_at_bottom,rgba(252,132,184,0.12),transparent_46%)]" />
+      <div className="relative flex items-center justify-between gap-3 border-b border-white/5 pb-4">
+        <div>
+          <div className="text-xs uppercase tracking-[0.28em] text-on-surface-variant">Competency map</div>
+          <div className="mt-1 text-lg font-bold text-on-surface">Deep visual skill mapping</div>
+        </div>
+        <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-primary">
+          94% coverage
+        </div>
+      </div>
+
+      <div className="relative mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-[1.5rem] border border-white/5 bg-white/5 p-4">
+          <div className="mb-4 flex items-center justify-between text-xs text-on-surface-variant">
+            <span>Capability balance</span>
+            <span>Top 15% peer cohort</span>
+          </div>
+          <div className="space-y-3">
+            {skills.map((skill, index) => (
+              <div key={skill.label}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-on-surface">{skill.label}</span>
+                  <span className="text-on-surface-variant">{skill.value}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${index % 2 === 0 ? 'bg-gradient-to-r from-primary to-[#9b82ff]' : 'bg-gradient-to-r from-tertiary to-[#ffcae0]'}`}
+                    style={{ width: `${skill.value}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-white/5 bg-[linear-gradient(180deg,rgba(108,71,255,0.12),rgba(255,255,255,0.02))] p-4">
+          <div className="mb-4 text-xs uppercase tracking-[0.28em] text-on-surface-variant">Signal summary</div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'ATS match', value: '89%', tone: 'text-primary' },
+              { label: 'Gap risk', value: 'Low', tone: 'text-tertiary' },
+              { label: 'Best next step', value: 'SQL + AI', tone: 'text-on-surface' },
+              { label: 'Avg lift', value: '+23%', tone: 'text-success' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/5 bg-black/20 p-3">
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-on-surface-variant">{item.label}</div>
+                <div className={`text-sm font-bold ${item.tone}`}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-2xl border border-white/5 bg-black/20 p-3 text-sm text-on-surface-variant">
+            Gapminer turns a noisy resume into a focused, recruiter-friendly narrative in under a minute.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   return (
     <div className="bg-surface text-on-surface selection:bg-primary selection:text-on-primary">
@@ -55,8 +212,8 @@ export default function LandingPage() {
             <a className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-['Inter'] antialiased tracking-tight" href="#pricing">Pricing</a>
           </div>
           <div className="flex items-center space-x-4">
-            <Link to="/auth" className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-medium px-4">Login</Link>
-            <Link to="/auth?signup=true" className="primary-gradient text-on-primary-fixed px-6 py-2.5 rounded-full font-semibold scale-95 active:scale-90 transition-transform">Get Started</Link>
+            <Link to="/auth?mode=login" className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-medium px-4">Sign In</Link>
+            <Link to="/auth?mode=signup" className="primary-gradient text-on-primary-fixed px-6 py-2.5 rounded-full font-semibold scale-95 active:scale-90 transition-transform">Get Started</Link>
           </div>
         </div>
       </nav>
@@ -67,7 +224,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10">
           <div className="flex-1 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass bg-surface-container-low mb-6 border border-outline-variant/15">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(176,162,255,0.8)]"></span>
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(108,71,255,0.8)]"></span>
               <span className="text-xs font-medium tracking-widest uppercase text-on-surface-variant">Powered by local Ollama AI</span>
             </div>
             <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tighter leading-[1.1] mb-6 font-headline">
@@ -103,9 +260,11 @@ export default function LandingPage() {
                   </div>
                   <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Live View</span>
                 </div>
-                <div className="flex justify-center mb-8 h-64">
+                <div className="flex justify-center mb-8 h-[21rem]">
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <img alt="Skill Radar Chart" className="w-full h-full object-contain rounded-xl" src="/assets/skill_radar_chart.webp" />
+                    <div className="w-full max-w-[19rem]">
+                      <SkillRadarPreview showSummary={false} />
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -284,7 +443,9 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="flex justify-center">
-                <img alt="Full Skill Visualization" className="w-full max-w-lg aspect-square object-contain drop-shadow-[0_0_50px_rgba(176,162,255,0.3)]" src="/assets/full_skill_visualization.webp" />
+                <div className="w-full max-w-xl">
+                  <SkillLandscapePreview />
+                </div>
               </div>
             </div>
           </div>
@@ -554,10 +715,10 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
-            <a className="text-[#acaab1] hover:text-[#b0a2ff] transition-colors text-sm font-['Inter']" href="#">Privacy Policy</a>
-            <a className="text-[#acaab1] hover:text-[#b0a2ff] transition-colors text-sm font-['Inter']" href="#">Terms of Service</a>
-            <a className="text-[#acaab1] hover:text-[#b0a2ff] transition-colors text-sm font-['Inter']" href="#">Security</a>
-            <a className="text-[#acaab1] hover:text-[#b0a2ff] transition-colors text-sm font-['Inter']" href="#">Contact</a>
+            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Privacy Policy</a>
+            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Terms of Service</a>
+            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Security</a>
+            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Contact</a>
           </div>
           <div className="flex gap-4">
             <a className="w-10 h-10 rounded-full glass bg-surface-container flex items-center justify-center hover:text-primary transition-colors text-on-surface" href="#">
@@ -573,23 +734,3 @@ export default function LandingPage() {
   )
 }
 
-function AlertCircle(props: any) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
-    </svg>
-  )
-}

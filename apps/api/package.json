@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.js",
     "start": "tsx src/index.js",
+    "api": "tsx watch src/index.js",
     "build": "echo 'No build step needed'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -35,6 +36,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^8.0.4",
     "pdf-parse": "^1.1.1",
     "pg": "^8.12.0",
     "sarvamai": "^1.1.6",
@@ -50,6 +52,7 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.19.15",
+    "@types/nodemailer": "^8.0.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.7",
     "eslint": "^9.19.0",

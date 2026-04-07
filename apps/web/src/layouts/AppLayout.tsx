@@ -50,7 +50,7 @@ export default function AppLayout() {
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] transition-all group relative ${
-                  active ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(176,162,255,0.2)]' : 'text-on-surface-variant hover:bg-surface-container-high'
+                  active ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(108,71,255,0.2)]' : 'text-on-surface-variant hover:bg-surface-container-high'
                 }`}
               >
                 <item.icon size={20} className={active ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors'} />

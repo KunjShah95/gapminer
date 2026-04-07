@@ -1,5 +1,6 @@
 // JWT + bcrypt helpers — mirrors core/security.py
 
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { config } from './config.js';
@@ -12,6 +13,98 @@ const SALT_ROUNDS = 12;
 export const verifyPassword = (plain, hashed) => bcrypt.compareSync(plain, hashed);
 
 export const hashPassword = (password) => bcrypt.hashSync(password, SALT_ROUNDS);
+
+// ─── Secure tokens ──────────────────────────────────────────
+
+export function generateSecureToken(bytes = 32) {
+  return crypto.randomBytes(bytes).toString('hex');
+}
+
+export function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+// ─── TOTP / 2FA ──────────────────────────────────────────────
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(buffer) {
+  let bits = 0;
+  let value = 0;
+  let output = '';
+
+  for (const byte of buffer) {
+    value = (value << 8) | byte;
+    bits += 8;
+
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+}
+
+function base32Decode(input) {
+  const clean = input.replace(/=+$/g, '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0;
+  let value = 0;
+  const output = [];
+
+  for (const char of clean) {
+    const idx = BASE32_ALPHABET.indexOf(char);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+
+    if (bits >= 8) {
+      output.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+
+  return Buffer.from(output);
+}
+
+export function generateTotpSecret() {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+export function buildOtpAuthUrl({ issuer, accountName, secret }) {
+  const label = encodeURIComponent(`${issuer}:${accountName}`);
+  const encodedIssuer = encodeURIComponent(issuer);
+  return `otpauth://totp/${label}?secret=${secret}&issuer=${encodedIssuer}&algorithm=SHA1&digits=6&period=30`;
+}
+
+export function generateTotpCode(secret, counter = Math.floor(Date.now() / 30000), digits = 6) {
+  const key = base32Decode(secret);
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeBigUInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', key).update(counterBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = ((hmac.readUInt32BE(offset) & 0x7fffffff) % 10 ** digits).toString().padStart(digits, '0');
+  return code;
+}
+
+export function verifyTotpCode(secret, code, { window = 1, digits = 6 } = {}) {
+  if (!secret || !code) return false;
+  const normalized = String(code).trim().replace(/\s+/g, '');
+  if (!/^\d+$/.test(normalized)) return false;
+
+  const currentCounter = Math.floor(Date.now() / 30000);
+  for (let offset = -window; offset <= window; offset += 1) {
+    if (generateTotpCode(secret, currentCounter + offset, digits) === normalized) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 // ─── JWT ─────────────────────────────────────────────────────
 

@@ -1,13 +1,17 @@
 // PostgreSQL connection pool using the `pg` driver
-// Mirrors SQLAlchemy async engine + session from database.py
+// Mirrors SQLAlchemy async engine + session from database.js
 
-import pg from 'pg';
-import { config } from './config.js';
+/* global console */
+import pg from "pg";
+import { config } from "./config.js";
 
 const { Pool } = pg;
 
 // Parse DATABASE_URL (strip asyncpg driver prefix if copy-pasted from Python config)
-const connectionString = config.DATABASE_URL.replace('postgresql+asyncpg://', 'postgresql://');
+const connectionString = config.DATABASE_URL.replace(
+  "postgresql+asyncpg://",
+  "postgresql://",
+);
 
 export const pool = new Pool({
   connectionString,
@@ -16,8 +20,8 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5_000,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err);
+pool.on("error", (err) => {
+  console.error("Unexpected PostgreSQL pool error:", err);
 });
 
 /**
@@ -37,8 +41,9 @@ export const getClient = () => pool.connect();
  * Equivalent to Base.metadata.create_all() in Python.
  */
 export async function initDb() {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -54,8 +59,30 @@ export async function initDb() {
         provider TEXT DEFAULT 'internal',
         analyses_used INTEGER NOT NULL DEFAULT 0,
         analyses_limit INTEGER NOT NULL DEFAULT 3,
+        two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        two_factor_secret TEXT,
+        password_reset_token TEXT,
+        password_reset_expires TIMESTAMPTZ,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ
+      );
+
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS resumes (
@@ -176,11 +203,18 @@ export async function initDb() {
         related_skills JSONB
       );
     `);
-    console.log('✅ Database tables verified/created');
+
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_secret TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
+    `);
+
+    console.log("✅ Database tables verified/created");
   } catch (err) {
-    console.error('❌ Database init failed:', err.message);
-    // Don't crash — allow startup with no DB in dev
+    console.error("❌ Database init skipped or failed:", err.message);
   } finally {
-    client.release();
+    client?.release?.();
   }
 }
