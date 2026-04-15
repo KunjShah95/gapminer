@@ -1,12 +1,7 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { prisma } from "../core/database.js";
-
-const llm = new ChatOpenAI({
-  modelName: "gpt-4o-mini",
-  temperature: 0.2,
-});
+import { getLlm } from "./gateway/agentHelper.js";
 
 const SalaryLookupSchema = z.object({
   benchmarks: z.array(z.object({
@@ -151,6 +146,7 @@ export async function generateNegotiationStrategy(
   const openingAnchor = Math.round(marketMedian * 1.15);
   const walkAwayPoint = Math.round(marketMedian * 0.95);
 
+  const llm = await getLlm();
   const response = await llm.withStructuredOutput(NegotiationStrategySchema).invoke([
     new SystemMessage(`
       You are a senior technical recruiter and compensation expert. 
@@ -199,6 +195,7 @@ export async function analyzeOffer(
   const signing = offerDetails.signing || 0;
   const totalComp = baseSalary + bonus + stock + signing;
 
+  const llm = await getLlm();
   const response = await llm.withStructuredOutput(OfferAnalysisSchema).invoke([
     new SystemMessage(`
       You are a compensation analyst. Analyze the offer against market data.

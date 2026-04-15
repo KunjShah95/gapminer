@@ -11,6 +11,7 @@ import rateLimit from "express-rate-limit";
 import { config } from "./core/config.js";
 import { initDb } from "./core/database.js";
 import apiRouter from "./api/v1/router.js";
+import gatewayRouter from "./api/gatewayRouter.js";
 import { setupSwagger } from "./docs/swagger.js";
 import { initWebSocketServer } from "./services/websocket.js";
 
@@ -71,6 +72,8 @@ app.get("/health", (_req, res) => {
 // ─── API Routes ───────────────────────────────────────────────
 app.use("/api/v1/auth", authLimiter);
 app.use("/api/v1", apiRouter);
+// ─── AI Gateway Routes ────────────────────────────────────────
+app.use("/api/v1/ai/gateway", gatewayRouter);
 
 // ─── 404 handler ─────────────────────────────────────────────
 app.use((_req, res) => {
