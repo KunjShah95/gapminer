@@ -25,6 +25,7 @@ import resumeVersionsRouter from "./endpoints/resumeVersions.js";
 import benchmarkRouter from "./endpoints/benchmark.js";
 import negotiationRoleplayRouter from "./endpoints/negotiationRoleplay.js";
 import recommendationsRouter from "./endpoints/recommendations.js";
+import aiModelsRouter from "./endpoints/aiModels.js";
 
 const router = Router();
 
@@ -54,5 +55,6 @@ router.use("/resume-versions", resumeVersionsRouter);
 router.use("/benchmark", benchmarkRouter);
 router.use("/negotiation-roleplay", negotiationRoleplayRouter);
 router.use("/recommendations", recommendationsRouter);
+router.use("/ai-models", aiModelsRouter);
 
 export default router;

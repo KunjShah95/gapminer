@@ -15,6 +15,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import { safeReadJson } from "@/lib/authFetch";
 
 type Tone = "professional" | "casual" | "enthusiastic";
 
@@ -93,7 +94,7 @@ export function CoverLetterPage() {
         throw new Error("Failed to fetch job description");
       }
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
       setFormData((prev) => ({
         ...prev,
         jobDescription: data.description || data.text || "",
@@ -128,11 +129,11 @@ export function CoverLetterPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await safeReadJson<any>(response, {});
         throw new Error(errorData.error || "Failed to generate cover letter");
       }
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
       const letterData: GeneratedCoverLetter = {
         letter: data.coverLetter || data.coverLetter?.letter || "",
         highlights: data.coverLetter?.highlights || data.highlights || [],

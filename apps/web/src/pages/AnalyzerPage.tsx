@@ -3,6 +3,7 @@ import { useDropzone } from 'react-dropzone'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useAuthStore } from '@/stores/authStore'
+import { safeReadJson } from '@/lib/authFetch'
 
 import {
   Upload, FileText, Link2, Loader2, Check, AlertCircle,
@@ -124,7 +125,7 @@ export default function AnalyzerPage() {
           body: formData
         })
         if (parseRes.ok) {
-          const parseData = await parseRes.json()
+          const parseData = await safeReadJson<any>(parseRes, {})
           resumeContent = parseData.parsedData ? JSON.stringify(parseData.parsedData) : resumeText
         }
       } catch (err) {
@@ -190,7 +191,7 @@ export default function AnalyzerPage() {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (analysisRes.ok) {
-        const analyses = await analysisRes.json()
+        const analyses = await safeReadJson<any[]>(analysisRes, [])
         if (analyses.length > 0) {
           const latest = analyses[0]
           navigate(`/roadmap/${latest.id}`)

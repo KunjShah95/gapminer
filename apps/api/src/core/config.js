@@ -72,6 +72,20 @@ export const config = {
   // OpenAI (for Whisper and GPT-4)
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
 
+  // AI Provider API Keys
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+  GOOGLE_GENERATIVE_AI_KEY: process.env.GOOGLE_GENERATIVE_AI_KEY ?? "",
+  GROQ_API_KEY: process.env.GROQ_API_KEY ?? "",
+  HUGGINGFACE_API_KEY: process.env.HUGGINGFACE_API_KEY ?? "",
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
+  AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY ?? "",
+  AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT ?? "",
+  DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ?? "",
+
+  // Default AI Model
+  DEFAULT_MODEL: process.env.DEFAULT_MODEL ?? "anthropic/claude-3.5-sonnet",
+  DEFAULT_PROVIDER: process.env.DEFAULT_PROVIDER ?? "openrouter",
+
   // Transformers (HuggingFace)
   TRANSFORMERS_CACHE_DIR: process.env.TRANSFORMERS_CACHE_DIR ?? "./models",
   TRANSFORMERS_NER_MODEL:

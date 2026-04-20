@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
-import { authFetch } from '@/lib/authFetch'
+import { authFetch, safeReadJson } from '@/lib/authFetch'
 import {
   User, FileText, Settings, Shield, Trash2, Upload,
   Check, Edit3, Bell, Key, Download
@@ -35,7 +35,7 @@ export default function ProfilePage() {
       try {
         const response = await authFetch('/api/v1/auth/2fa/status')
         if (!response.ok) return
-        const data = await response.json()
+        const data = await safeReadJson<any>(response, {})
         if (active) {
           setTwoFactorEnabled(Boolean(data.enabled))
         }
@@ -60,7 +60,7 @@ export default function ProfilePage() {
         body: JSON.stringify({ name }),
       })
 
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
       if (!response.ok) {
         throw new Error(data.error || 'Failed to save profile')
       }
@@ -104,7 +104,7 @@ export default function ProfilePage() {
         body: JSON.stringify({ currentPassword, newPassword }),
       })
 
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
       if (!response.ok) {
         throw new Error(data.error || 'Failed to change password')
       }
@@ -129,7 +129,7 @@ export default function ProfilePage() {
       const response = await authFetch('/api/v1/auth/2fa/setup', {
         method: 'POST',
       })
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to start 2FA setup')
@@ -167,7 +167,7 @@ export default function ProfilePage() {
         }),
       })
 
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
       if (!response.ok) {
         throw new Error(data.error || 'Failed to verify 2FA code')
       }
@@ -202,7 +202,7 @@ export default function ProfilePage() {
         body: JSON.stringify({ password: currentPasswordFor2FA }),
       })
 
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
       if (!response.ok) {
         throw new Error(data.error || 'Failed to disable 2FA')
       }

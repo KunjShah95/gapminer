@@ -1,22 +1,23 @@
 /**
- * model.ts — Backwards-compatible LangChain llm export
+ * model.ts — Backwards-compatible `llm` export powered by AI Gateway.
  *
- * We keep this file so all existing agents that do `import { llm } from "../model.js"`
- * continue to work without changes.  The model is now sourced from the AI Gateway
- * registry so it benefits from caching and the fallback chain.
+ * Existing agents can keep using:
+ *   llm.invoke([...])
+ *   llm.withStructuredOutput(schema).invoke([...])
  *
- * To change the active model at runtime, set:
- *   AI_PRIMARY_MODEL=<alias>   (see gateway/registry.ts for valid aliases)
- *
- * Examples:
- *   AI_PRIMARY_MODEL=gpt-4o
- *   AI_PRIMARY_MODEL=claude-sonnet
- *   AI_PRIMARY_MODEL=groq-llama3
+ * while the underlying provider can now be OpenAI, Anthropic, Gemini, Groq,
+ * Mistral, OpenRouter, Ollama, or any OpenAI-compatible endpoint.
  */
 
-import { ChatOpenAI } from "@langchain/openai";
-import { modelFromAlias, MODELS } from "./gateway/index.js";
-import type { ProviderConfig } from "./gateway/index.js";
+import {
+  getGateway,
+  modelFromAlias,
+  MODELS,
+  defaultFallbackChain,
+  highQualityFallbackChain,
+  cheapFallbackChain,
+} from "./gateway/index.js";
+import type { ProviderConfig, GatewayMessage } from "./gateway/index.js";
 
 /**
  * Resolve the active ProviderConfig from the env or fall back to gpt-4o-mini.
@@ -33,7 +34,72 @@ function resolveActiveCfg(): ProviderConfig {
   return MODELS.openai.gpt4o_mini;
 }
 
+function resolveFallbacks(primary: ProviderConfig): ProviderConfig[] {
+  const chain = (process.env.AI_FALLBACK_CHAIN ?? "default").toLowerCase();
+  const raw =
+    chain === "highquality"
+      ? highQualityFallbackChain
+      : chain === "cheap"
+        ? cheapFallbackChain
+        : defaultFallbackChain;
+
+  // Avoid retrying same provider/model pair as primary.
+  return raw.filter(
+    (f) => !(f.provider === primary.provider && f.model === primary.model),
+  );
+}
+
+function normalizeMessages(input: any[]): GatewayMessage[] {
+  if (!Array.isArray(input)) {
+    return [{ role: "user", content: String(input ?? "") }];
+  }
+
+  return input.map((m) => {
+    // LangChain message instances usually expose getType()
+    if (m && typeof m.getType === "function") {
+      const t = m.getType();
+      const role: GatewayMessage["role"] =
+        t === "system" ? "system" : t === "ai" ? "assistant" : "user";
+      return {
+        role,
+        content: String(m.content ?? ""),
+      };
+    }
+
+    // Plain role/content objects
+    if (m && typeof m === "object" && "role" in m && "content" in m) {
+      const role: GatewayMessage["role"] =
+        m.role === "system"
+          ? "system"
+          : m.role === "assistant"
+            ? "assistant"
+            : "user";
+      return {
+        role,
+        content: String(m.content ?? ""),
+      };
+    }
+
+    // Tuple style: [role, content]
+    if (Array.isArray(m) && m.length >= 2) {
+      const role: GatewayMessage["role"] =
+        m[0] === "system"
+          ? "system"
+          : m[0] === "assistant"
+            ? "assistant"
+            : "user";
+      return {
+        role,
+        content: String(m[1] ?? ""),
+      };
+    }
+
+    return { role: "user", content: String(m ?? "") };
+  });
+}
+
 const cfg = resolveActiveCfg();
+const fallbacks = resolveFallbacks(cfg);
 
 /**
  * Legacy-compatible `llm` export.
@@ -41,10 +107,38 @@ const cfg = resolveActiveCfg();
  * NOTE: For new code, prefer using `getGateway().invoke(...)` directly which
  * gives you caching, fallbacks, and structured output in one go.
  */
-export const llm = new ChatOpenAI({
-  modelName: cfg.provider === "openai" ? cfg.model : "gpt-4o-mini",
-  temperature: cfg.temperature ?? 0,
-  openAIApiKey: process.env.OPENAI_API_KEY,
-}) as any;
+export const llm = {
+  async invoke(messages: any[]) {
+    const result = await getGateway().invoke({
+      primary: cfg,
+      fallbacks,
+      messages: normalizeMessages(messages),
+    });
+
+    return {
+      content: result.content,
+      provider: result.resolvedProvider,
+      model: result.resolvedModel,
+      fromCache: result.fromCache,
+      attempts: result.attempts,
+    };
+  },
+
+  withStructuredOutput(schema: any) {
+    return {
+      invoke: async (messages: any[]) => {
+        const result = await getGateway().invokeStructured(
+          {
+            primary: cfg,
+            fallbacks,
+            messages: normalizeMessages(messages),
+          },
+          schema,
+        );
+        return result.content;
+      },
+    };
+  },
+} as any;
 
 export { resolveActiveCfg };

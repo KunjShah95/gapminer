@@ -64,9 +64,64 @@ app.use(express.urlencoded({ extended: true }));
 // Serve uploaded files in dev
 app.use("/uploads", express.static("uploads"));
 
-// ─── Health ───────────────────────────────────────────────────
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "gapminer-api", version: "1.0.0" });
+// ─── Main health endpoint ───────────────────────────────────────
+app.get("/health", async (_req, res) => {
+  const health = {
+    status: "ok",
+    service: "gapminer-api",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks: {},
+  };
+
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    health.checks.database = "ok";
+    await prisma.$disconnect();
+  } catch {
+    health.checks.database = "error";
+    health.status = "degraded";
+  }
+
+  try {
+    const { createClient } = await import("redis");
+    const redis = createClient({ url: config.REDIS_URL });
+    await redis.connect();
+    await redis.ping();
+    health.checks.redis = "ok";
+    await redis.disconnect();
+  } catch {
+    health.checks.redis = "unavailable";
+  }
+
+  res.status(health.status === "ok" ? 200 : 503).json(health);
+});
+
+// ─── Liveness (K8s) - always returns ok if app is running ─────────
+app.get("/health/liveness", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
+// ─── Readiness (K8s) - returns ok only if dependencies are available ─
+app.get("/health/readiness", async (_req, res) => {
+  let ready = true;
+  const checks = {};
+
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = "ok";
+    await prisma.$disconnect();
+  } catch {
+    checks.database = "error";
+    ready = false;
+  }
+
+  res.status(ready ? 200 : 503).json({ ready, checks });
 });
 
 // ─── API Routes ───────────────────────────────────────────────

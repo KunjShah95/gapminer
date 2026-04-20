@@ -38,3 +38,21 @@ export async function authFetch(
     headers,
   });
 }
+
+/**
+ * Safely parse JSON from a response.
+ * Returns fallback when body is empty or invalid JSON.
+ */
+export async function safeReadJson<T = any>(
+  response: Response,
+  fallback: T,
+): Promise<T> {
+  const raw = await response.text();
+  if (!raw || !raw.trim()) return fallback;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}

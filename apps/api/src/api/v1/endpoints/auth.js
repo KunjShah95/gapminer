@@ -27,12 +27,12 @@ function serializeUser(user) {
     email: user.email,
     name: user.name,
     avatar: user.avatar ?? null,
-    plan: user.plan,
-    created_at: user.created_at,
-    analyses_used: user.analyses_used,
-    analyses_limit: user.analyses_limit,
-    two_factor_enabled: user.two_factor_enabled ?? false,
-    is_verified: user.is_verified ?? false,
+    plan: user.plan ?? "free",
+    created_at: user.createdAt,
+    analyses_used: user.analysesUsed ?? 0,
+    analyses_limit: user.analysesLimit ?? 10,
+    two_factor_enabled: user.twoFactorEnabled ?? false,
+    is_verified: user.isVerified ?? false,
   };
 }
 
@@ -50,14 +50,20 @@ router.post("/register", async (req, res, next) => {
   try {
     const { email, name, password } = req.body;
     if (!email || !name || !password) {
-      return res.status(422).json({ error: "email, name and password are required" });
+      return res
+        .status(422)
+        .json({ error: "email, name and password are required" });
     }
 
     if (password.length < 8) {
-      return res.status(422).json({ error: "Password must be at least 8 characters" });
+      return res
+        .status(422)
+        .json({ error: "Password must be at least 8 characters" });
     }
 
-    const existing = await query("SELECT id FROM users WHERE email = $1", [email]);
+    const existing = await query("SELECT id FROM users WHERE email = $1", [
+      email,
+    ]);
     if (existing.rows.length) {
       return res.status(400).json({ error: "Email already registered" });
     }
@@ -107,7 +113,9 @@ router.post("/token", async (req, res, next) => {
     const otpCode = req.body.otpCode ?? req.body.twoFactorCode ?? req.body.code;
 
     if (!email || !password) {
-      return res.status(422).json({ error: "username/email and password are required" });
+      return res
+        .status(422)
+        .json({ error: "username/email and password are required" });
     }
 
     const user = await findUserByEmail(email);
@@ -192,7 +200,9 @@ router.post("/forgot-password", async (req, res, next) => {
 
     const user = await findUserByEmail(email);
     if (!user) {
-      return res.json({ message: "If the email exists, a reset link will be sent" });
+      return res.json({
+        message: "If the email exists, a reset link will be sent",
+      });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -214,7 +224,9 @@ router.post("/forgot-password", async (req, res, next) => {
       console.warn("Failed to send password reset email:", e.message);
     }
 
-    return res.json({ message: "If the email exists, a reset link will be sent" });
+    return res.json({
+      message: "If the email exists, a reset link will be sent",
+    });
   } catch (err) {
     next(err);
   }
@@ -229,7 +241,9 @@ router.post("/reset-password", async (req, res, next) => {
     }
 
     if (password.length < 8) {
-      return res.status(422).json({ error: "Password must be at least 8 characters" });
+      return res
+        .status(422)
+        .json({ error: "Password must be at least 8 characters" });
     }
 
     const { rows } = await query(
@@ -256,7 +270,9 @@ router.post("/reset-password", async (req, res, next) => {
       [token, userId],
     );
 
-    const userResult = await query("SELECT email FROM users WHERE id = $1", [userId]);
+    const userResult = await query("SELECT email FROM users WHERE id = $1", [
+      userId,
+    ]);
     const userEmail = userResult.rows[0]?.email;
     if (userEmail) {
       try {
@@ -277,14 +293,21 @@ router.post("/change-password", requireUser, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
-      return res.status(422).json({ error: "currentPassword and newPassword are required" });
+      return res
+        .status(422)
+        .json({ error: "currentPassword and newPassword are required" });
     }
 
     if (newPassword.length < 8) {
-      return res.status(422).json({ error: "Password must be at least 8 characters" });
+      return res
+        .status(422)
+        .json({ error: "Password must be at least 8 characters" });
     }
 
-    const { rows } = await query("SELECT hashed_password FROM users WHERE id = $1", [req.userId]);
+    const { rows } = await query(
+      "SELECT hashed_password FROM users WHERE id = $1",
+      [req.userId],
+    );
     const user = rows[0];
 
     if (!user || !verifyPassword(currentPassword, user.hashed_password ?? "")) {
@@ -341,7 +364,10 @@ router.post("/2fa/verify", requireUser, async (req, res, next) => {
       return res.status(422).json({ error: "code is required" });
     }
 
-    const { rows } = await query("SELECT two_factor_secret FROM users WHERE id = $1", [req.userId]);
+    const { rows } = await query(
+      "SELECT two_factor_secret FROM users WHERE id = $1",
+      [req.userId],
+    );
     const storedSecret = rows[0]?.two_factor_secret;
 
     if (!storedSecret) {
@@ -456,7 +482,9 @@ router.post("/verify-email/confirm", async (req, res, next) => {
     );
 
     if (!rows.length) {
-      return res.status(400).json({ error: "Invalid or expired verification token" });
+      return res
+        .status(400)
+        .json({ error: "Invalid or expired verification token" });
     }
 
     const userId = rows[0].user_id;

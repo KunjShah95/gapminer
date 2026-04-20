@@ -18,7 +18,7 @@ import {
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAuthToken } from "@/lib/authFetch";
+import { getAuthToken, safeReadJson } from "@/lib/authFetch";
 
 export default function InterviewSimulationPage() {
   const [isStarted, setIsStarted] = useState(false);
@@ -72,7 +72,7 @@ export default function InterviewSimulationPage() {
         },
         body: JSON.stringify({ url: jdUrl }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await safeReadJson<any>(res, {});
       if (data.description) {
         setJdText(data.description);
         setJdData(data);
@@ -100,7 +100,7 @@ export default function InterviewSimulationPage() {
           jdData: jdData || { title: "Custom Role", description: jdText },
         }),
       });
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
       setCurrentQuestion(data.question);
       setTranscript(["AI: " + data.question]);
       setIsStarted(true);
@@ -167,7 +167,7 @@ export default function InterviewSimulationPage() {
         },
         body: formData,
       });
-      const { text } = await response.json();
+      const { text } = await safeReadJson<any>(response, {});
 
       if (text) {
         setTranscript((prev) => [...prev, "User: " + text]);
@@ -184,7 +184,7 @@ export default function InterviewSimulationPage() {
             jdData: { title: "Senior Software Engineer" },
           }),
         });
-        const { question } = await nextRes.json();
+        const { question } = await safeReadJson<any>(nextRes, {});
         setTranscript((prev) => [...prev, "AI: " + question]);
         setCurrentQuestion(question);
       }

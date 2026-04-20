@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Check, Sparkles, ArrowRight, Zap, Building2, Users, CheckCircle, HelpCircle, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { safeReadJson } from '@/lib/authFetch'
 
 const PLANS = [
   {
@@ -123,7 +124,7 @@ export default function PricingPage() {
         body: JSON.stringify({ planId })
       })
 
-      const data = await response.json()
+      const data = await safeReadJson<any>(response, {})
       if (response.ok && data.url) {
         window.location.href = data.url
       } else {

@@ -59,9 +59,15 @@ async function buildAnthropic(cfg: ProviderConfig): Promise<BaseChatModel> {
 async function buildGemini(cfg: ProviderConfig): Promise<BaseChatModel> {
   try {
     const { ChatGoogleGenerativeAI } = await import("@langchain/google-genai");
-    const apiKey = cfg.apiKey ?? process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
+    const apiKey =
+      cfg.apiKey ??
+      process.env.GOOGLE_API_KEY ??
+      process.env.GEMINI_API_KEY ??
+      process.env.GOOGLE_GENERATIVE_AI_KEY;
     if (!apiKey)
-      throw new Error("[gateway] GOOGLE_API_KEY / GEMINI_API_KEY is not set");
+      throw new Error(
+        "[gateway] GOOGLE_API_KEY / GEMINI_API_KEY / GOOGLE_GENERATIVE_AI_KEY is not set",
+      );
 
     return new ChatGoogleGenerativeAI({
       model: cfg.model,

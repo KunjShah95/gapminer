@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { safeReadJson } from "@/lib/authFetch";
 import {
   Sparkles,
   Eye,
@@ -88,7 +89,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
 
       if (!response.ok) {
         if (data.requires_2fa) {
@@ -134,7 +135,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email: pendingEmail, code: twoFactorCode }),
       });
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
 
       if (!response.ok) {
         throw new Error(data.error || "Invalid 2FA code");
@@ -176,7 +177,7 @@ export default function AuthPage() {
             body: JSON.stringify({ planId: redirectPlan }),
           },
         );
-        const checkoutData = await checkoutResponse.json();
+        const checkoutData = await safeReadJson<any>(checkoutResponse, {});
         if (checkoutResponse.ok && checkoutData.url) {
           window.location.href = checkoutData.url;
           return;
@@ -199,7 +200,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, name, password }),
       });
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
 
       if (!response.ok) {
         throw new Error(data.error || "Registration failed");
@@ -239,7 +240,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send reset email");
@@ -267,7 +268,7 @@ export default function AuthPage() {
         body: JSON.stringify({ token: resetToken, password }),
       });
 
-      const data = await response.json();
+      const data = await safeReadJson<any>(response, {});
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to reset password");

@@ -119,7 +119,11 @@ router.post('/analyze', async (req, res) => {
     res.end();
   } catch (err: any) {
     console.error('Agent Error:', err);
-    res.status(500).end();
+    if (!res.headersSent) {
+      return res.status(500).json({ error: err.message || 'Analysis failed' });
+    }
+    res.write(`event: error\ndata: ${JSON.stringify({ error: err.message || 'Analysis failed' })}\n\n`);
+    res.end();
   }
 });
 

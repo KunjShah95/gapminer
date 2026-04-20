@@ -4,7 +4,7 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  plan: 'free' | 'pro' | 'teams' | 'enterprise';
+  plan: "free" | "pro" | "teams" | "enterprise";
   createdAt: string;
   analysesUsed: number;
   analysesLimit: number;
@@ -33,7 +33,7 @@ export interface ParsedResume {
   education: Education[];
   certifications: string[];
   languages: string[];
-  seniority: 'junior' | 'mid' | 'senior' | 'lead';
+  seniority: "junior" | "mid" | "senior" | "lead";
 }
 
 export interface WorkExperience {
@@ -73,14 +73,14 @@ export interface ParsedJobDescription {
   preferredSkills: string[];
   experience: string;
   education?: string;
-  seniority: 'junior' | 'mid' | 'senior' | 'lead';
+  seniority: "junior" | "mid" | "senior" | "lead";
   responsibilities: string[];
   benefits?: string[];
 }
 
 // ─── Skill & Gap ──────────────────────────────────────────────
-export type SkillStatus = 'matched' | 'missing' | 'partial';
-export type GapSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type SkillStatus = "matched" | "missing" | "partial";
+export type GapSeverity = "critical" | "high" | "medium" | "low";
 
 export interface SkillGap {
   skill: string;
@@ -97,18 +97,18 @@ export interface SkillGap {
 
 // ─── Analysis ─────────────────────────────────────────────────
 export type AnalysisStatus =
-  | 'queued'
-  | 'parsing'
-  | 'extracting'
-  | 'comparing'
-  | 'generating'
-  | 'complete'
-  | 'failed';
+  | "queued"
+  | "parsing"
+  | "extracting"
+  | "comparing"
+  | "generating"
+  | "complete"
+  | "failed";
 
 export interface AnalysisStep {
   id: string;
   label: string;
-  status: 'pending' | 'running' | 'done' | 'error';
+  status: "pending" | "running" | "done" | "error";
   startedAt?: string;
   completedAt?: string;
   message?: string;
@@ -123,7 +123,7 @@ export interface Analysis {
   overallScore: number; // 0-100
   resumeStrengthScore: number; // 0-100
   atsScore: number; // 0-100
-  seniority: 'junior' | 'mid' | 'senior' | 'lead';
+  seniority: "junior" | "mid" | "senior" | "lead";
   peerPercentile?: number; // e.g. 70 = top 30%
   gaps: SkillGap[];
   steps: AnalysisStep[];
@@ -134,7 +134,13 @@ export interface Analysis {
 }
 
 // ─── Roadmap ──────────────────────────────────────────────────
-export type ResourceType = 'course' | 'video' | 'documentation' | 'book' | 'project' | 'article';
+export type ResourceType =
+  | "course"
+  | "video"
+  | "documentation"
+  | "book"
+  | "project"
+  | "article";
 
 export interface LearningResource {
   title: string;
@@ -146,7 +152,7 @@ export interface LearningResource {
   rating?: number;
 }
 
-export type MilestoneStatus = 'not_started' | 'learning' | 'completed';
+export type MilestoneStatus = "not_started" | "learning" | "completed";
 
 export interface RoadmapMilestone {
   id: string;
@@ -203,16 +209,67 @@ export interface AnalyzeRequest {
   jobDescriptionId?: string;
   jobDescriptionText?: string;
   jobDescriptionUrl?: string;
-  seniority?: 'junior' | 'mid' | 'senior' | 'lead';
+  seniority?: "junior" | "mid" | "senior" | "lead";
 }
 
 // ─── Pricing ──────────────────────────────────────────────────
 export interface PricingPlan {
-  id: 'free' | 'pro' | 'teams' | 'enterprise';
+  id: "free" | "pro" | "teams" | "enterprise";
   name: string;
   price: number;
-  billingCycle: 'monthly' | 'annual' | 'custom';
+  billingCycle: "monthly" | "annual" | "custom";
   features: string[];
-  analysesPerMonth: number | 'unlimited';
+  analysesPerMonth: number | "unlimited";
   highlighted?: boolean;
+}
+
+// ─── AI Models ─────────────────────────────────────────────────
+export interface AIModel {
+  id: string;
+  name: string;
+  context: number;
+  input: number;
+  output: number;
+  supports_vision?: boolean;
+  local?: boolean;
+  provider: string;
+  providerName: string;
+  providerColor: string;
+}
+
+export interface AIProvider {
+  id: string;
+  name: string;
+  color: string;
+  modelCount: number;
+}
+
+export interface AIModelInfo extends AIModel {
+  provider: string;
+  providerName: string;
+  providerColor: string;
+}
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface ChatRequest {
+  messages: ChatMessage[];
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  apiKey?: string;
+}
+
+export interface ChatResponse {
+  content: string;
+  model: string;
+  provider: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
