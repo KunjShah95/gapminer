@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -16,6 +16,11 @@ import {
   Mail,
   Download,
   FilterX,
+  Upload,
+  Play,
+  Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
@@ -39,12 +44,28 @@ interface Candidate {
   skills: string[];
 }
 
+interface ShortlistResult {
+  applicationId: string;
+  candidateId: string;
+  name: string;
+  email?: string;
+  matchScore: number;
+  status: string;
+  skills?: string[];
+  parsedData?: any;
+}
+
+interface UploadModal {
+  jobId: string;
+  jobTitle: string;
+}
+
 interface Job {
   id: string;
   title: string;
   company: string;
   location: string;
-  description: string;
+  description?: string;
   status: string;
   _count?: { applications: number };
 }
@@ -57,6 +78,12 @@ export default function RecruiterDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewJobModal, setShowNewJobModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState<UploadModal | null>(null);
+  const [shortlistResults, setShortlistResults] = useState<ShortlistResult[]>([]);
+  const [shortlistLoading, setShortlistLoading] = useState(false);
+  const [shortlistError, setShortlistError] = useState<string | null>(null);
+  const [threshold, setThreshold] = useState(60);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const token = useAuthStore((state) => state.token);
 
   // ── Fetch Data ──────────────────────────────────────────
@@ -104,6 +131,55 @@ export default function RecruiterDashboardPage() {
 
     if (token) fetchData();
   }, [token]);
+
+  // ─── Run Shortlist ──────────────────────────────────────────
+  async function runShortlist(jobId: string) {
+    setShortlistLoading(true);
+    setShortlistError(null);
+    setShortlistResults([]);
+    try {
+      const res = await fetch(`/api/v1/recruiter/jobs/${jobId}/shortlist`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getAuthToken()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ matchThreshold: threshold }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setShortlistResults(data.shortlisted || []);
+    } catch (err: any) {
+      setShortlistError(err.message);
+    } finally {
+      setShortlistLoading(false);
+    }
+  }
+
+  // ─── Bulk Upload ───────────────────────────────────────────
+  async function handleBulkUpload(jobId: string, files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setShortlistLoading(true);
+    setShortlistError(null);
+    try {
+      const formData = new FormData();
+      formData.append("jobId", jobId);
+      Array.from(files).forEach((f) => formData.append("resumes", f));
+      const res = await fetch("/api/v1/recruiter/bulk-upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      // Refresh jobs to show updated applicant counts
+      const jobsRes = await fetch("/api/v1/recruiter/jobs", { headers: { Authorization: `Bearer ${getAuthToken()}` } });
+      if (jobsRes.ok) setJobs(await jobsRes.json());
+      setShowUploadModal(null);
+      alert(`Uploaded ${data.candidates?.length || 0} resumes. Now run shortlist to score them.`);
+    } catch (err: any) {
+      setShortlistError(err.message);
+    } finally {
+      setShortlistLoading(false);
+    }
+  }
 
   const statCards: Stat[] = [
     {
@@ -154,6 +230,19 @@ export default function RecruiterDashboardPage() {
         </motion.div>
 
         <div className="flex items-center gap-4">
+          {/* Match threshold control */}
+          <div className="flex items-center gap-2 px-4 py-2 bg-surface-container/40 rounded-2xl border border-outline-variant/10">
+            <span className="text-[10px] font-black uppercase tracking-wider text-outline">Min Score</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={threshold}
+              onChange={(e) => setThreshold(Number(e.target.value))}
+              className="w-14 bg-transparent text-[13px] font-black text-primary outline-none text-center"
+            />
+            <span className="text-[10px] text-outline">%</span>
+          </div>
           <button
             onClick={() => setShowNewJobModal(true)}
             className="btn btn-primary px-8 py-3.5 rounded-2xl shadow-2xl shadow-primary/30 active:scale-95"
@@ -349,7 +438,7 @@ export default function RecruiterDashboardPage() {
                   <motion.div
                     key={job.id}
                     layoutId={job.id}
-                    className="p-6 bg-surface-container/20 border border-outline-variant/10 rounded-3xl hover:bg-surface-container/40 transition-all cursor-pointer flex items-center justify-between group"
+                    className="p-6 bg-surface-container/20 border border-outline-variant/10 rounded-3xl hover:bg-surface-container/40 transition-all flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-5">
                       <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -378,11 +467,22 @@ export default function RecruiterDashboardPage() {
                           Applicants
                         </div>
                       </div>
-                      <button className="p-3 rounded-2xl bg-white border border-outline-variant/10 group-hover:border-primary transition-all">
-                        <MoreHorizontal
-                          size={18}
-                          className="text-outline group-hover:text-primary"
-                        />
+                      {/* Upload resumes */}
+                      <button
+                        onClick={() => setShowUploadModal({ jobId: job.id, jobTitle: job.title })}
+                        className="p-3 rounded-2xl bg-white border border-outline-variant/10 hover:border-primary transition-all"
+                        title="Upload Resumes"
+                      >
+                        <Upload size={16} className="text-outline hover:text-primary" />
+                      </button>
+                      {/* Run shortlist */}
+                      <button
+                        onClick={() => runShortlist(job.id)}
+                        disabled={shortlistLoading || (job._count?.applications || 0) === 0}
+                        className="p-3 rounded-2xl bg-primary text-white hover:scale-110 transition-all disabled:opacity-40"
+                        title="Run AI Shortlist"
+                      >
+                        <Play size={16} fill="currentColor" />
                       </button>
                     </div>
                   </motion.div>
@@ -463,6 +563,149 @@ export default function RecruiterDashboardPage() {
           </div>
         </aside>
       </div>
+
+      {/* ── Shortlist Results Panel ─────────────────────────── */}
+      <AnimatePresence>
+        {shortlistResults.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[900px] max-h-[65vh] glass bg-white/90 backdrop-blur-3xl rounded-[2rem] border border-outline-variant/20 shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-8 py-5 border-b border-outline-variant/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
+                  <CheckCircle size={18} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-on-surface">AI Shortlist Results</h3>
+                  <p className="text-[10px] text-outline">{shortlistResults.length} candidates ranked by match score</p>
+                </div>
+              </div>
+              <button onClick={() => setShortlistResults([])} className="p-2 rounded-xl hover:bg-surface-container transition-all">
+                <XCircle size={18} className="text-outline" />
+              </button>
+            </div>
+            <div className="overflow-y-auto custom-scrollbar max-h-[calc(65vh-80px)]">
+              {shortlistResults.map((c, i) => (
+                <div key={c.applicationId} className="flex items-center gap-6 px-8 py-4 border-b border-outline-variant/5 last:border-0 hover:bg-surface-container/20 transition-all">
+                  <div className="w-8 text-center">
+                    <span className={`text-lg font-black ${i === 0 ? "text-primary" : "text-outline"}`}>#{i + 1}</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 flex items-center justify-center text-primary font-black text-sm">
+                    {c.name.charAt(0)}
+                  </div>
+                  <div className="flex-grow">
+                    <div className="text-[13px] font-black text-on-surface">{c.name}</div>
+                    <div className="flex gap-1.5 mt-1 flex-wrap">
+                      {(c.skills || []).slice(0, 4).map((s) => (
+                        <span key={s} className="px-2 py-0.5 rounded-md bg-surface-container text-[8px] font-black uppercase tracking-tighter text-outline">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="w-48">
+                    <div className="flex justify-between text-[10px] font-black mb-1">
+                      <span className="text-outline uppercase tracking-wider">Match</span>
+                      <span className={c.matchScore >= threshold ? "text-success" : "text-warning"}>{c.matchScore}%</span>
+                    </div>
+                    <div className="h-1.5 bg-surface-container rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${c.matchScore}%` }}
+                        className={`h-full ${c.matchScore >= threshold ? "bg-success" : "bg-warning"}`}
+                      />
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded-xl text-[8px] font-black uppercase tracking-[0.1em] border ${
+                    c.status === "REVIEWING" ? "bg-success/10 border-success/30 text-success" : "bg-warning/10 border-warning/30 text-warning"
+                  }`}>
+                    {c.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Upload Modal ───────────────────────────────────── */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowUploadModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[2rem] p-10 w-[520px] shadow-2xl border border-outline-variant/10"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-lg font-black text-on-surface">Bulk Upload Resumes</h3>
+                  <p className="text-[11px] text-outline mt-1">for <span className="text-primary font-black">{showUploadModal.jobTitle}</span></p>
+                </div>
+                <button onClick={() => setShowUploadModal(null)} className="p-2 rounded-xl hover:bg-surface-container">
+                  <XCircle size={18} className="text-outline" />
+                </button>
+              </div>
+
+              <div className="border-2 border-dashed border-primary/20 rounded-[1.5rem] p-10 text-center hover:border-primary/40 transition-all cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}>
+                <Upload size={32} className="mx-auto mb-4 text-primary/50" />
+                <p className="text-[13px] font-black text-on-surface mb-1">Drop resumes here or click to browse</p>
+                <p className="text-[10px] text-outline">PDF, DOCX, TXT — up to 50 files, 10MB each</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.docx,.doc,.txt"
+                  className="hidden"
+                  onChange={(e) => handleBulkUpload(showUploadModal.jobId, e.target.files)}
+                />
+              </div>
+
+              {shortlistLoading && (
+                <div className="flex items-center justify-center gap-3 mt-6 text-[11px] font-black text-outline">
+                  <Loader2 size={14} className="animate-spin text-primary" />
+                  Processing resumes...
+                </div>
+              )}
+
+              <div className="mt-6 flex gap-4">
+                <button
+                  onClick={() => setShowUploadModal(null)}
+                  className="flex-1 py-3 rounded-2xl bg-surface-container text-[11px] font-black uppercase tracking-widest text-outline hover:bg-surface-container/60 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Error Toast ─────────────────────────────────── */}
+      <AnimatePresence>
+        {shortlistError && (
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-6 py-4 bg-error/10 border border-error/20 rounded-2xl text-error"
+          >
+            <XCircle size={16} />
+            <span className="text-[11px] font-black">{shortlistError}</span>
+            <button onClick={() => setShortlistError(null)} className="p-1"><XCircle size={12} /></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }

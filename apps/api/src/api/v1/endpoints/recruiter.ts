@@ -1,6 +1,12 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { prisma } from '../../../core/database.js';
 import { requireAuth } from '../../../core/security.js';
+import { gapminerAgentApp } from '../../../ai/agent.js';
+import { parseDocument } from '../../../services/documentParser.js';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 
@@ -206,6 +212,265 @@ router.patch('/applications/:id', requireAuth, requireRecruiter, async (req: any
       data: { status, notes }
     });
     res.json(app);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Multer for bulk resume uploads ─────────────────────────
+const UPLOAD_DIR = 'uploads/recruiter';
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(UPLOAD_DIR);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (_req, _file, cb) => {
+    cb(null, `${uuidv4()}${path.extname(_file.originalname).toLowerCase()}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+// ─── POST /jobs/:id/shortlist ────────────────────────────────
+// Runs AI match pipeline against all PENDING applications for a job,
+// computes matchScore, upserts JobApplication records, returns ranked list.
+router.post('/jobs/:id/shortlist', requireAuth, requireRecruiter, async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    const { id: jobId } = req.params;
+    const { matchThreshold = 0 } = req.body;
+
+    // Verify job belongs to recruiter
+    const job = await prisma.job.findFirst({ where: { id: jobId, recruiterId: userId } });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    if (!job.description) {
+      return res.status(400).json({ error: 'Job has no description. Set job description before shortlisting.' });
+    }
+
+    // Get all PENDING applications for this job
+    const applications = await prisma.jobApplication.findMany({
+      where: { jobId, status: 'PENDING' },
+      include: { candidate: true },
+    });
+
+    if (applications.length === 0) {
+      return res.json({ message: 'No pending candidates to shortlist', shortlisted: [] });
+    }
+
+    // Run match pipeline per candidate, collect results
+    const results = await Promise.allSettled(
+      applications.map(async (app) => {
+        const result = await gapminerAgentApp.invoke({
+          resumeText: app.candidate.resumeText,
+          jobDescriptionText: job.description,
+        });
+
+        const matchPercentage = result.gapAnalysis?.matchPercentage ?? 0;
+
+        const updated = await prisma.jobApplication.update({
+          where: { id: app.id },
+          data: {
+            matchScore: matchPercentage,
+            status: matchPercentage >= matchThreshold ? 'REVIEWING' : 'PENDING',
+          },
+        });
+
+        return {
+          applicationId: app.id,
+          candidateId: app.candidate.id,
+          candidateName: app.candidate.name,
+          matchScore: matchPercentage,
+          status: updated.status,
+        };
+      }),
+    );
+
+    // Separate successes from failures
+    const shortlisted = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+      .map((r) => r.value)
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    const failed = results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((_, i) => applications[i].id);
+
+    return res.json({
+      message: `Shortlisted ${shortlisted.length} candidates`,
+      total: applications.length,
+      shortlisted,
+      failedCount: failed.length,
+      failedApplicationIds: failed,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /bulk-upload ──────────────────────────────────────
+// Accepts multiple resume files + jobId, parses each resume,
+// creates Candidate + JobApplication(PENDING) records.
+// Does NOT run scoring — use /jobs/:id/shortlist after.
+router.post('/bulk-upload', requireAuth, requireRecruiter, upload.array('resumes', 50), async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    const { jobId } = req.body;
+
+    if (!jobId) return res.status(400).json({ error: 'jobId is required' });
+
+    const job = await prisma.job.findFirst({ where: { id: jobId, recruiterId: userId } });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No resume files uploaded' });
+    }
+
+    const ALLOWED_TYPES = new Set([
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+    ]);
+
+    const validFiles = files.filter((f) => ALLOWED_TYPES.has(f.mimetype));
+    const skipped = files.length - validFiles.length;
+
+    const results = await Promise.allSettled(
+      validFiles.map(async (file) => {
+        const buffer = fs.readFileSync(file.path);
+        const resumeText = await parseDocument(buffer, file.mimetype);
+
+        // Extract candidate name from parsed data if possible (optional enhancement)
+        const candidate = await prisma.candidate.create({
+          data: {
+            name: file.originalname.replace(/\.[^.]+$/, ''), // use filename as provisional name
+            email: null,
+            resumeText,
+            userId: null,
+          },
+        });
+
+        const application = await prisma.jobApplication.upsert({
+          where: { jobId_candidateId: { jobId, candidateId: candidate.id } },
+          update: { status: 'PENDING' },
+          create: {
+            jobId,
+            candidateId: candidate.id,
+            status: 'PENDING',
+            matchScore: null,
+          },
+        });
+
+        // Clean up temp file
+        fs.unlinkSync(file.path);
+
+        return { candidateId: candidate.id, applicationId: application.id, filename: file.originalname };
+      }),
+    );
+
+    const created = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+      .map((r) => r.value);
+
+    const failed = results
+      .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      .map((r) => r.reason?.message || 'Unknown error');
+
+    return res.status(201).json({
+      message: `Uploaded ${created.length} resumes${skipped > 0 ? `, skipped ${skipped} unsupported files` : ''}`,
+      candidates: created,
+      failed,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── GET /jobs/:id/shortlist ────────────────────────────────
+// Returns all applications for a job, sorted by matchScore descending.
+router.get('/jobs/:id/shortlist', requireAuth, requireRecruiter, async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    const { id: jobId } = req.params;
+    const { minScore, status } = req.query;
+
+    const job = await prisma.job.findFirst({ where: { id: jobId, recruiterId: userId } });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    const where: any = { jobId };
+    if (status) where.status = status;
+    if (minScore) where.matchScore = { gte: Number(minScore) };
+
+    const applications = await prisma.jobApplication.findMany({
+      where,
+      include: { candidate: true },
+      orderBy: { matchScore: 'desc' },
+    });
+
+    return res.json({
+      jobId,
+      jobTitle: job.title,
+      total: applications.length,
+      candidates: applications.map((app) => ({
+        applicationId: app.id,
+        candidateId: app.candidate.id,
+        name: app.candidate.name,
+        email: app.candidate.email,
+        matchScore: app.matchScore,
+        status: app.status,
+        skills: app.candidate.skillsFound,
+        parsedData: app.candidate.parsedData,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /score ─────────────────────────────────────────────
+// Score a single candidate against a job, upsert JobApplication.
+router.post('/score', requireAuth, requireRecruiter, async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    const { candidateId, jobId } = req.body;
+
+    if (!candidateId || !jobId) {
+      return res.status(400).json({ error: 'candidateId and jobId are required' });
+    }
+
+    const [candidate, job] = await Promise.all([
+      prisma.candidate.findUnique({ where: { id: candidateId } }),
+      prisma.job.findFirst({ where: { id: jobId, recruiterId: userId } }),
+    ]);
+
+    if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    if (!job.description) return res.status(400).json({ error: 'Job has no description' });
+
+    const result = await gapminerAgentApp.invoke({
+      resumeText: candidate.resumeText,
+      jobDescriptionText: job.description,
+    });
+
+    const matchScore = result.gapAnalysis?.matchPercentage ?? 0;
+
+    const application = await prisma.jobApplication.upsert({
+      where: { jobId_candidateId: { jobId, candidateId } },
+      update: { matchScore, status: matchScore >= 60 ? 'REVIEWING' : 'PENDING' },
+      create: { jobId, candidateId, matchScore, status: matchScore >= 60 ? 'REVIEWING' : 'PENDING' },
+    });
+
+    return res.json({
+      candidateId,
+      jobId,
+      matchScore,
+      status: application.status,
+      gapAnalysis: result.gapAnalysis,
+    });
   } catch (err) {
     next(err);
   }
