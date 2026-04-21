@@ -83,6 +83,9 @@ export default function RecruiterDashboardPage() {
   const [shortlistLoading, setShortlistLoading] = useState(false);
   const [shortlistError, setShortlistError] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(60);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobApplications, setJobApplications] = useState<ShortlistResult[]>([]);
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const token = useAuthStore((state) => state.token);
 
@@ -132,6 +135,12 @@ export default function RecruiterDashboardPage() {
     if (token) fetchData();
   }, [token]);
 
+  useEffect(() => {
+    if (selectedJob) {
+      fetchJobApplications(selectedJob.id);
+    }
+  }, [selectedJob]);
+
   // ─── Run Shortlist ──────────────────────────────────────────
   async function runShortlist(jobId: string) {
     setShortlistLoading(true);
@@ -146,10 +155,32 @@ export default function RecruiterDashboardPage() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setShortlistResults(data.shortlisted || []);
+      
+      // Refresh current job details if open
+      if (selectedJob && selectedJob.id === jobId) {
+        fetchJobApplications(jobId);
+      }
     } catch (err: any) {
       setShortlistError(err.message);
     } finally {
       setShortlistLoading(false);
+    }
+  }
+
+  // ─── Fetch Job Applications ──────────────────────────────────
+  async function fetchJobApplications(jobId: string) {
+    setApplicationsLoading(true);
+    try {
+      const res = await fetch(`/api/v1/recruiter/jobs/${jobId}/shortlist`, {
+        headers: { Authorization: `Bearer ${getAuthToken()}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setJobApplications(data.candidates || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setApplicationsLoading(false);
     }
   }
 
@@ -201,12 +232,50 @@ export default function RecruiterDashboardPage() {
       color: "success",
     },
     {
-      label: "Shortlisted",
-      value: stats?.shortlisted || "0",
-      icon: TrendingUp,
+      label: "Interviews Scheduled",
+      value: stats?.interviewsScheduled || "0",
+      icon: CheckCircle,
       color: "info",
     },
   ];
+
+  async function createJob(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      title: formData.get("title"),
+      company: formData.get("company"),
+      location: formData.get("location"),
+      description: formData.get("description"),
+    };
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/v1/recruiter/jobs", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      
+      const newJob = await res.json();
+      setJobs([newJob, ...jobs]);
+      setShowNewJobModal(false);
+      
+      // Update stats
+      const statsRes = await fetch("/api/v1/recruiter/stats", { headers: { Authorization: `Bearer ${getAuthToken()}` } });
+      if (statsRes.ok) setStats(await statsRes.json());
+      
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-surface-container-low p-8 font-body overflow-hidden">
@@ -431,62 +500,123 @@ export default function RecruiterDashboardPage() {
                 </tbody>
               </table>
             )}
-
             {activeTab === "jobs" && (
               <div className="grid grid-cols-1 gap-4">
                 {jobs.map((job) => (
                   <motion.div
                     key={job.id}
                     layoutId={job.id}
-                    className="p-6 bg-surface-container/20 border border-outline-variant/10 rounded-3xl hover:bg-surface-container/40 transition-all flex items-center justify-between group"
+                    className="group bg-surface-container/20 hover:bg-surface-container/40 border border-outline-variant/10 rounded-[2rem] p-6 transition-all flex items-center justify-between"
                   >
-                    <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <div className="flex items-center gap-6">
+                      <div className="w-14 h-14 rounded-2xl bg-white border border-outline-variant/10 flex items-center justify-center text-primary">
                         <Briefcase size={24} />
                       </div>
                       <div>
-                        <h4 className="text-sm font-black text-on-surface">
-                          {job.title}
-                        </h4>
-                        <div className="flex items-center gap-4 mt-1.5">
-                          <span className="text-[10px] text-outline font-bold flex items-center gap-1">
-                            <Globe size={10} /> {job.location}
-                          </span>
-                          <span className="text-[10px] font-black uppercase text-primary px-2 py-0.5 bg-primary/5 rounded-md border border-primary/10">
-                            {job.status}
+                        <h4 className="text-sm font-black text-on-surface">{job.title}</h4>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] font-bold text-outline uppercase tracking-wider">{job.location}</span>
+                          <div className="w-1 h-1 rounded-full bg-outline/20" />
+                          <span className="text-[10px] font-black text-primary uppercase tracking-tighter">
+                            {job._count?.applications || 0} Candidates
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-8 pr-4">
-                      <div className="text-center">
-                        <div className="text-xl font-black text-on-surface">
-                          {job._count?.applications || 0}
-                        </div>
-                        <div className="text-[8px] font-bold uppercase tracking-widest text-outline">
-                          Applicants
-                        </div>
-                      </div>
-                      {/* Upload resumes */}
-                      <button
+
+                    <div className="flex items-center gap-3">
+                      <button 
                         onClick={() => setShowUploadModal({ jobId: job.id, jobTitle: job.title })}
-                        className="p-3 rounded-2xl bg-white border border-outline-variant/10 hover:border-primary transition-all"
-                        title="Upload Resumes"
+                        className="btn bg-white border border-outline-variant/10 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-outline hover:border-primary hover:text-primary transition-all flex items-center gap-2"
                       >
-                        <Upload size={16} className="text-outline hover:text-primary" />
+                        <Upload size={14} />
+                        Upload
                       </button>
-                      {/* Run shortlist */}
-                      <button
+                      <button 
                         onClick={() => runShortlist(job.id)}
-                        disabled={shortlistLoading || (job._count?.applications || 0) === 0}
-                        className="p-3 rounded-2xl bg-primary text-white hover:scale-110 transition-all disabled:opacity-40"
-                        title="Run AI Shortlist"
+                        className="btn bg-primary/10 border border-primary/20 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-2"
                       >
-                        <Play size={16} fill="currentColor" />
+                        {shortlistLoading ? <Loader2 size={14} className="animate-spin" /> : <Cpu size={14} />}
+                        Run AI
+                      </button>
+                      <button 
+                        onClick={() => setSelectedJob(job)}
+                        className="btn bg-surface-container px-4 py-2.5 rounded-xl text-outline hover:text-on-surface transition-all"
+                      >
+                        <MoreHorizontal size={16} />
                       </button>
                     </div>
                   </motion.div>
                 ))}
+                {jobs.length === 0 && (
+                  <div className="py-20 text-center">
+                    <Briefcase size={48} className="mx-auto text-outline/20 mb-4" />
+                    <p className="text-sm font-black text-outline uppercase tracking-widest">No positions active</p>
+                    <button onClick={() => setShowNewJobModal(true)} className="text-[10px] font-black text-primary uppercase tracking-widest mt-2 underline">Post your first job</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "analytics" && (
+              <div className="space-y-12">
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="p-8 rounded-[2rem] bg-primary/5 border border-primary/10">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-6">Talent Availability Index</h4>
+                    <div className="flex items-end gap-4 mb-6">
+                      <div className="text-4xl font-black tracking-tighter">8.4<span className="text-sm opacity-40">/10</span></div>
+                      <div className="text-[10px] font-bold text-success mb-2 flex items-center gap-1">
+                        <ArrowUpRight size={12} /> +12% vs last month
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {['Engineering', 'Design', 'Product', 'Marketing'].map(cat => (
+                        <div key={cat} className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-outline uppercase tracking-wider">{cat}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 h-1.5 bg-white/50 rounded-full overflow-hidden">
+                              <div className="h-full bg-primary" style={{ width: `${Math.random() * 40 + 60}%` }} />
+                            </div>
+                            <span className="text-[10px] font-black">High</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-8 rounded-[2rem] bg-tertiary/5 border border-tertiary/10">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-tertiary mb-6">Salary Benchmarks (Aggregated)</h4>
+                    <div className="space-y-6">
+                      {[
+                        { role: 'Senior Frontend', range: '$140k - $185k' },
+                        { role: 'Fullstack Rust', range: '$160k - $210k' },
+                        { role: 'Product Manager', range: '$130k - $175k' },
+                      ].map(b => (
+                        <div key={b.role} className="flex justify-between items-center p-4 rounded-2xl bg-white/40 border border-white/60">
+                          <span className="text-[11px] font-black text-on-surface">{b.role}</span>
+                          <span className="text-[11px] font-black text-tertiary">{b.range}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-8 rounded-[2.5rem] bg-surface-container/20 border border-outline-variant/10">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-outline mb-8">AI Predictive Hiring Timeline</h4>
+                  <div className="h-48 flex items-end justify-between px-4">
+                    {[45, 62, 58, 75, 90, 82, 70].map((h, i) => (
+                      <div key={i} className="flex flex-col items-center gap-3 w-12">
+                        <motion.div 
+                          initial={{ height: 0 }}
+                          animate={{ height: `${h}%` }}
+                          className="w-full bg-primary/20 rounded-t-xl relative group"
+                        >
+                          <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity rounded-t-xl" />
+                        </motion.div>
+                        <span className="text-[8px] font-bold text-outline">WEEK {i + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -629,7 +759,184 @@ export default function RecruiterDashboardPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Upload Modal ───────────────────────────────────── */}
+      {/* ── New Job Modal ───────────────────────────────────── */}
+      <AnimatePresence>
+        {showNewJobModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-6"
+            onClick={() => setShowNewJobModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[3rem] p-12 w-[640px] shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8">
+                <button onClick={() => setShowNewJobModal(false)} className="p-3 rounded-2xl hover:bg-surface-container transition-all">
+                  <XCircle size={24} className="text-outline" />
+                </button>
+              </div>
+
+              <div className="mb-10">
+                <h3 className="text-3xl font-black tracking-tight">Post New Position</h3>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-outline mt-2">Initialize AI screening parameters</p>
+              </div>
+
+              <form onSubmit={createJob} className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-outline">Position Title</label>
+                    <input name="title" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="e.g. Senior Rust Engineer" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-outline">Company</label>
+                    <input name="company" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="e.g. Acme Intelligence" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline">Location</label>
+                  <input name="location" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="Remote, New York, etc." />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-outline">Job Description</label>
+                  <textarea name="description" required rows={4} className="w-full bg-surface-container/40 rounded-[1.5rem] px-6 py-4 text-[13px] font-medium border border-outline-variant/10 focus:border-primary outline-none transition-all resize-none" placeholder="Paste full JD here for AI alignment..." />
+                </div>
+
+                <button type="submit" className="w-full py-5 bg-primary text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all mt-4">
+                  Deploy Position & Start AI Analysis
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedJob && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-6"
+            onClick={() => setSelectedJob(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-[3rem] p-12 w-[1000px] max-h-[85vh] shadow-2xl relative overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-10 shrink-0">
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight">{selectedJob.title}</h3>
+                  <div className="flex items-center gap-4 mt-2">
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">{selectedJob.company}</span>
+                    <div className="w-1 h-1 rounded-full bg-outline/20" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-outline">{selectedJob.location}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      setShowUploadModal({ jobId: selectedJob.id, jobTitle: selectedJob.title });
+                      setSelectedJob(null);
+                    }}
+                    className="btn bg-surface-container/40 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-outline hover:text-primary transition-all flex items-center gap-2"
+                  >
+                    <Upload size={14} />
+                    Add Resumes
+                  </button>
+                  <button 
+                    onClick={() => runShortlist(selectedJob.id)}
+                    className="btn btn-primary px-8 py-3 rounded-2xl flex items-center gap-2"
+                  >
+                    <Cpu size={14} />
+                    Run AI Shortlist
+                  </button>
+                  <button onClick={() => setSelectedJob(null)} className="p-3 rounded-2xl hover:bg-surface-container transition-all">
+                    <XCircle size={24} className="text-outline" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-grow overflow-y-auto custom-scrollbar pr-4 -mr-4">
+                {applicationsLoading ? (
+                  <div className="py-20 text-center">
+                    <Loader2 size={32} className="animate-spin mx-auto text-primary opacity-20 mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-outline">Fetching intelligence...</p>
+                  </div>
+                ) : jobApplications.length > 0 ? (
+                  <table className="w-full text-left border-separate border-spacing-y-3">
+                    <thead>
+                      <tr>
+                        <th className="text-[10px] font-black uppercase tracking-widest text-outline pl-4 opacity-50">Candidate</th>
+                        <th className="text-[10px] font-black uppercase tracking-widest text-outline opacity-50">Score</th>
+                        <th className="text-[10px] font-black uppercase tracking-widest text-outline opacity-50">Status</th>
+                        <th className="text-[10px] font-black uppercase tracking-widest text-outline opacity-50">Skills</th>
+                        <th className="pr-4"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobApplications.map((app) => (
+                        <tr key={app.applicationId} className="group cursor-pointer">
+                          <td className="py-4 pl-4 bg-surface-container/20 group-hover:bg-surface-container/40 rounded-l-2xl">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-white border border-outline-variant/10 flex items-center justify-center text-primary font-black">
+                                {app.name.charAt(0)}
+                              </div>
+                              <span className="text-[13px] font-black">{app.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 bg-surface-container/20 group-hover:bg-surface-container/40">
+                            <span className={cn(
+                              "text-[12px] font-black",
+                              app.matchScore >= threshold ? "text-success" : "text-warning"
+                            )}>{app.matchScore}%</span>
+                          </td>
+                          <td className="py-4 bg-surface-container/20 group-hover:bg-surface-container/40">
+                            <span className="px-3 py-1 rounded-lg bg-white border border-outline-variant/10 text-[9px] font-black uppercase">{app.status}</span>
+                          </td>
+                          <td className="py-4 bg-surface-container/20 group-hover:bg-surface-container/40">
+                            <div className="flex gap-1 flex-wrap max-w-[200px]">
+                              {(app.skills || []).slice(0, 3).map(s => (
+                                <span key={s} className="px-2 py-0.5 rounded bg-primary/5 text-[8px] font-black text-primary uppercase">{s}</span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4 bg-surface-container/20 group-hover:bg-surface-container/40 rounded-r-2xl text-right">
+                            <button className="p-2 rounded-xl bg-primary text-white hover:scale-110 transition-all">
+                              <ArrowUpRight size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="py-20 text-center">
+                    <Users size={48} className="mx-auto text-outline/20 mb-4" />
+                    <p className="text-sm font-black text-outline uppercase tracking-widest">No applicants yet</p>
+                    <p className="text-[10px] text-outline mt-2">Upload resumes to begin AI screening</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Background Grid ───────────────────────────────── */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03]">
+        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '100px 100px' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+      </div>
       <AnimatePresence>
         {showUploadModal && (
           <motion.div

@@ -4,7 +4,19 @@
 import nodemailer from "nodemailer";
 import { config } from "./config.js";
 
-const hasSmtpConfig = Boolean(config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS);
+export function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+const hasSmtpConfig = Boolean(
+  config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS,
+);
 
 const transporter = hasSmtpConfig
   ? nodemailer.createTransport({
@@ -25,7 +37,8 @@ async function sendOrLog(message) {
     return transporter.sendMail(message);
   }
 
-  const link = message?.html?.match(/https?:\/\/[^"'\s<]+/)?.[0] || message?.text || "";
+  const link =
+    message?.html?.match(/https?:\/\/[^"'\s<]+/)?.[0] || message?.text || "";
   console.log(`[email:fallback] ${message.subject} -> ${message.to}`);
   if (link) {
     console.log(`[email:fallback] ${link}`);

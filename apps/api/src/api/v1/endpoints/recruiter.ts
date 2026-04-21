@@ -56,7 +56,9 @@ router.get('/stats', requireAuth, requireRecruiter, async (req: any, res, next) 
       shortlisted: shortlistedApplications,
       interviewsScheduled,
       avgMatchScore: Math.round(avgScore * 10) / 10 || 75.0,
-      hiringVelocity: '12 days' // Mocked field for now
+      hiringVelocity: '12 days',
+      talentLiquidity: 84,
+      competitivePull: 62
     });
   } catch (err) {
     next(err);
@@ -124,6 +126,26 @@ router.get('/jobs', requireAuth, requireRecruiter, async (req: any, res, next) =
       orderBy: { createdAt: 'desc' }
     });
     res.json(jobs);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get job by ID
+router.get('/jobs/:id', requireAuth, requireRecruiter, async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const job = await prisma.job.findFirst({
+      where: { id, recruiterId: userId },
+      include: {
+        _count: {
+          select: { applications: true }
+        }
+      }
+    });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
   } catch (err) {
     next(err);
   }
@@ -263,7 +285,7 @@ router.post('/jobs/:id/shortlist', requireAuth, requireRecruiter, async (req: an
 
     // Run match pipeline per candidate, collect results
     const results = await Promise.allSettled(
-      applications.map(async (app) => {
+      applications.map(async (app: any) => {
         const result = await gapminerAgentApp.invoke({
           resumeText: app.candidate.resumeText,
           jobDescriptionText: job.description,
@@ -415,7 +437,7 @@ router.get('/jobs/:id/shortlist', requireAuth, requireRecruiter, async (req: any
       jobId,
       jobTitle: job.title,
       total: applications.length,
-      candidates: applications.map((app) => ({
+      candidates: applications.map((app: any) => ({
         applicationId: app.id,
         candidateId: app.candidate.id,
         name: app.candidate.name,

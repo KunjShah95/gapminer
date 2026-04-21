@@ -12,38 +12,55 @@ const parseList = (val, defaults) => {
 
 export const config = {
   // App
-  APP_NAME: process.env.APP_NAME ?? "GapMiner",
+  APP_NAME: process.env.APP_NAME || "GapMiner",
   DEBUG: process.env.DEBUG === "true",
-  PORT: parseInt(process.env.PORT ?? "8000", 10),
-  SECRET_KEY:
-    process.env.SECRET_KEY ?? "change-me-in-production-use-secrets-manager",
-  ACCESS_TOKEN_EXPIRE_MINUTES: parseInt(
-    process.env.ACCESS_TOKEN_EXPIRE_MINUTES ?? String(60 * 24 * 7),
-    10,
-  ),
+  ENV: process.env.NODE_ENV || process.env.ENV || "development",
+  IS_PRODUCTION:
+    process.env.NODE_ENV === "production" || process.env.ENV === "production",
 
-  // Database (Postgres)
+  // Validate critical secrets in production
+  SECRET_KEY: (() => {
+    if (!process.env.SECRET_KEY) {
+      if (
+        process.env.NODE_ENV === "production" ||
+        process.env.ENV === "production"
+      ) {
+        throw new Error("SECRET_KEY is required in production");
+      }
+      return "dev-only-secret-change-in-production";
+    }
+    if (process.env.SECRET_KEY.length < 32) {
+      throw new Error("SECRET_KEY must be at least 32 characters");
+    }
+    return process.env.SECRET_KEY;
+  })(),
+
+  // Database (Postgres) - fail fast in production if not set
   DATABASE_URL:
-    process.env.DATABASE_URL ??
-    "postgresql://postgres:postgres@localhost:5432/gapminer",
+    process.env.DATABASE_URL ||
+    (process.env.NODE_ENV === "production" || process.env.ENV === "production"
+      ? (() => {
+          throw new Error("DATABASE_URL is required in production");
+        })()
+      : "postgresql://postgres:postgres@localhost:5432/gapminer"),
 
   // Redis (future use)
-  REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379/0",
+  REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379/0",
 
   // Ollama
-  OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
-  OLLAMA_MODEL: process.env.OLLAMA_MODEL ?? "llama3.1:8b",
+  OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+  OLLAMA_MODEL: process.env.OLLAMA_MODEL || "llama3.1:8b",
 
   // Storage
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? "",
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? "",
-  AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME ?? "gapminer-resumes",
-  AWS_REGION: process.env.AWS_REGION ?? "us-east-1",
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || "",
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || "",
+  AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME || "gapminer-resumes",
+  AWS_REGION: process.env.AWS_REGION || "us-east-1",
 
   // Auth
-  AUTH_PROVIDER: process.env.AUTH_PROVIDER ?? "internal",
-  SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ?? "",
+  AUTH_PROVIDER: process.env.AUTH_PROVIDER || "internal",
+  SUPABASE_URL: process.env.SUPABASE_URL || "",
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || "",
 
   // CORS
   CORS_ORIGINS: parseList(process.env.CORS_ORIGINS, [
@@ -53,61 +70,60 @@ export const config = {
   ]),
 
   // Monitoring
-  SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
 
   // Encryption / retention
-  RESUME_ENCRYPTION_KEY:
-    process.env.RESUME_ENCRYPTION_KEY ?? "generate-32-byte-key-in-production",
+  RESUME_ENCRYPTION_KEY: process.env.RESUME_ENCRYPTION_KEY || "",
   RESUME_RETENTION_DAYS: parseInt(
-    process.env.RESUME_RETENTION_DAYS ?? "30",
+    process.env.RESUME_RETENTION_DAYS || "30",
     10,
   ),
 
   // Firecrawl (Web Scraping)
-  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY ?? "",
+  FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY || "",
 
   // SERP API (for job searches)
-  SERP_API_KEY: process.env.SERP_API_KEY ?? "",
+  SERP_API_KEY: process.env.SERP_API_KEY || "",
 
   // OpenAI (for Whisper and GPT-4)
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
 
   // AI Provider API Keys
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
-  GOOGLE_GENERATIVE_AI_KEY: process.env.GOOGLE_GENERATIVE_AI_KEY ?? "",
-  GROQ_API_KEY: process.env.GROQ_API_KEY ?? "",
-  HUGGINGFACE_API_KEY: process.env.HUGGINGFACE_API_KEY ?? "",
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY ?? "",
-  AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY ?? "",
-  AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT ?? "",
-  DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ?? "",
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+  GOOGLE_GENERATIVE_AI_KEY: process.env.GOOGLE_GENERATIVE_AI_KEY || "",
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
+  HUGGINGFACE_API_KEY: process.env.HUGGINGFACE_API_KEY || "",
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || "",
+  AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY || "",
+  AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT || "",
+  DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || "",
 
   // Default AI Model
-  DEFAULT_MODEL: process.env.DEFAULT_MODEL ?? "anthropic/claude-3.5-sonnet",
-  DEFAULT_PROVIDER: process.env.DEFAULT_PROVIDER ?? "openrouter",
+  DEFAULT_MODEL: process.env.DEFAULT_MODEL || "anthropic/claude-3.5-sonnet",
+  DEFAULT_PROVIDER: process.env.DEFAULT_PROVIDER || "openrouter",
 
   // Transformers (HuggingFace)
-  TRANSFORMERS_CACHE_DIR: process.env.TRANSFORMERS_CACHE_DIR ?? "./models",
+  TRANSFORMERS_CACHE_DIR: process.env.TRANSFORMERS_CACHE_DIR || "./models",
   TRANSFORMERS_NER_MODEL:
-    process.env.TRANSFORMERS_NER_MODEL ?? "Xenova/bert-base-NER",
+    process.env.TRANSFORMERS_NER_MODEL || "Xenova/bert-base-NER",
   TRANSFORMERS_EMBEDDING_MODEL:
-    process.env.TRANSFORMERS_EMBEDDING_MODEL ?? "Xenova/all-MiniLM-L6-v2",
+    process.env.TRANSFORMERS_EMBEDDING_MODEL || "Xenova/all-MiniLM-L6-v2",
   TRANSFORMERS_GENERATION_MODEL:
-    process.env.TRANSFORMERS_GENERATION_MODEL ?? "Xenova/LaMini-Flan-T5-783m",
+    process.env.TRANSFORMERS_GENERATION_MODEL || "Xenova/LaMini-Flan-T5-783m",
 
   // Stripe
-  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
-  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY ?? "",
-  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ?? "",
-  STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY ?? "",
-  STRIPE_PRICE_TEAMS_MONTHLY: process.env.STRIPE_PRICE_TEAMS_MONTHLY ?? "",
-  FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+  STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY || "",
+  STRIPE_PRICE_TEAMS_MONTHLY: process.env.STRIPE_PRICE_TEAMS_MONTHLY || "",
+  FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
 
   // SMTP (Email)
-  SMTP_HOST: process.env.SMTP_HOST ?? "",
-  SMTP_PORT: process.env.SMTP_PORT ?? "587",
-  SMTP_SECURE: process.env.SMTP_SECURE ?? "false",
-  SMTP_USER: process.env.SMTP_USER ?? "",
-  SMTP_PASS: process.env.SMTP_PASS ?? "",
-  SMTP_FROM: process.env.SMTP_FROM ?? "noreply@gapminer.com",
+  SMTP_HOST: process.env.SMTP_HOST || "",
+  SMTP_PORT: process.env.SMTP_PORT || "587",
+  SMTP_SECURE: process.env.SMTP_SECURE || "false",
+  SMTP_USER: process.env.SMTP_USER || "",
+  SMTP_PASS: process.env.SMTP_PASS || "",
+  SMTP_FROM: process.env.SMTP_FROM || "noreply@gapminer.com",
 };

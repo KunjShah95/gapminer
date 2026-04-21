@@ -41,12 +41,37 @@ const authLimiter = rateLimit({
   },
 });
 
+const aiGatewayLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: "Too many AI requests, please try again later." },
+  keyGenerator: (req) => req.ip + ":ai",
+});
+
 const app = express();
 const server = createServer(app);
 setupSwagger(app);
 
 // ─── Middleware ───────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: config.IS_PRODUCTION ? [] : null,
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 app.use(compression({ threshold: 1000 }));
 app.use(morgan(config.DEBUG ? "dev" : "combined"));
 app.use(limiter);
@@ -55,7 +80,13 @@ app.use(
     origin: config.CORS_ORIGINS,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["*"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+    ],
+    exposedHeaders: ["X-Total-Count", "X-Page-Count"],
   }),
 );
 app.use(express.json({ limit: "10mb" }));
@@ -128,7 +159,7 @@ app.get("/health/readiness", async (_req, res) => {
 app.use("/api/v1/auth", authLimiter);
 app.use("/api/v1", apiRouter);
 // ─── AI Gateway Routes ────────────────────────────────────────
-app.use("/api/v1/ai/gateway", gatewayRouter);
+app.use("/api/v1/ai/gateway", aiGatewayLimiter, gatewayRouter);
 
 // ─── 404 handler ─────────────────────────────────────────────
 app.use((_req, res) => {
@@ -141,7 +172,13 @@ app.use((err, _req, res, _next) => {
   Sentry.captureException(err);
   console.error(err);
   const status = err.status || err.statusCode || 500;
-  res.status(status).json({ error: err.message || "Internal server error" });
+
+  // Sanitize error message in production
+  const message = config.IS_PRODUCTION
+    ? "Internal server error"
+    : err.message || "Internal server error";
+
+  res.status(status).json({ error: message });
 });
 
 // ─── Start ────────────────────────────────────────────────────

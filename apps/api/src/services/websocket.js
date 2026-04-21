@@ -1,6 +1,6 @@
-import { Server as SocketIOServer } from 'socket.io';
-import jwt from 'jsonwebtoken';
-import { config } from '../core/config.js';
+import { Server as SocketIOServer } from "socket.io";
+import jwt from "jsonwebtoken";
+import { config } from "../core/config.js";
 
 /**
  * WebSocket Collaboration Service
@@ -25,9 +25,21 @@ const userSocketMap = new Map(); // socketId -> { userId, roomId, user }
  */
 function getUserColor(userId) {
   const colors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-    '#F8C471', '#82E0AA', '#F1948A', '#85C1E9', '#D7BDE2'
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#96CEB4",
+    "#FFEAA7",
+    "#DDA0DD",
+    "#98D8C8",
+    "#F7DC6F",
+    "#BB8FCE",
+    "#85C1E9",
+    "#F8C471",
+    "#82E0AA",
+    "#F1948A",
+    "#85C1E9",
+    "#D7BDE2",
   ];
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
@@ -44,10 +56,10 @@ export function initWebSocketServer(httpServer) {
     cors: {
       origin: config.CORS_ORIGINS,
       credentials: true,
-      methods: ['GET', 'POST'],
+      methods: ["GET", "POST"],
     },
     // Use WebSocket first, fallback to polling
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
     pingTimeout: 60000,
     pingInterval: 25000,
   });
@@ -58,27 +70,46 @@ export function initWebSocketServer(httpServer) {
       const token = socket.handshake.auth.token || socket.handshake.query.token;
 
       if (!token) {
-        return next(new Error('Authentication error: No token provided'));
+        return next(new Error("Authentication error: No token provided"));
       }
 
-      // Verify JWT token
-      const decoded = jwt.verify(token, config.SECRET_KEY);
+      // Verify JWT token with expiry validation
+      const decoded = jwt.verify(token, config.SECRET_KEY, {
+        algorithms: ["HS256"],
+        complete: false,
+      });
+
+      // Additional expiry check (jwt.verify handles this, but being explicit)
+      if (decoded.exp && Date.now() >= decoded.exp * 1000) {
+        return next(new Error("Authentication error: Token expired"));
+      }
+
+      // Validate required claims
+      if (!decoded.userId && !decoded.sub) {
+        return next(new Error("Authentication error: Invalid token payload"));
+      }
+
       socket.userId = decoded.userId || decoded.sub;
       socket.userEmail = decoded.email;
       socket.userName = decoded.name || decoded.email;
 
       next();
     } catch (err) {
-      console.error('Socket authentication failed:', err.message);
-      next(new Error('Authentication error: Invalid token'));
+      console.error("Socket authentication failed:", err.message);
+      if (err.name === "TokenExpiredError") {
+        return next(new Error("Authentication error: Token expired"));
+      }
+      next(new Error("Authentication error: Invalid token"));
     }
   });
 
-  io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.userName} (${socket.userId}) - Socket: ${socket.id}`);
+  io.on("connection", (socket) => {
+    console.log(
+      `User connected: ${socket.userName} (${socket.userId}) - Socket: ${socket.id}`,
+    );
 
     // Send connection confirmation
-    socket.emit('connected', {
+    socket.emit("connected", {
       socketId: socket.id,
       user: {
         id: socket.userId,
@@ -88,11 +119,11 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Join a collaboration room
-    socket.on('join-room', (data) => {
-      const { roomId, documentId, documentType = 'latex' } = data;
+    socket.on("join-room", (data) => {
+      const { roomId, documentId, documentType = "latex" } = data;
 
       if (!roomId) {
-        socket.emit('error', { message: 'Room ID is required' });
+        socket.emit("error", { message: "Room ID is required" });
         return;
       }
 
@@ -113,7 +144,7 @@ export function initWebSocketServer(httpServer) {
           documentType,
           users: new Map(),
           document: {
-            content: data.initialContent || '',
+            content: data.initialContent || "",
             version: 0,
             lastModified: Date.now(),
           },
@@ -139,13 +170,17 @@ export function initWebSocketServer(httpServer) {
       };
 
       room.users.set(socket.userId, userInfo);
-      userSocketMap.set(socket.id, { userId: socket.userId, roomId, user: userInfo });
+      userSocketMap.set(socket.id, {
+        userId: socket.userId,
+        roomId,
+        user: userInfo,
+      });
 
       // Send current document state to joining user
-      socket.emit('room-joined', {
+      socket.emit("room-joined", {
         roomId,
         document: room.document,
-        users: Array.from(room.users.values()).map(u => ({
+        users: Array.from(room.users.values()).map((u) => ({
           id: u.id,
           name: u.name,
           color: u.color,
@@ -157,7 +192,7 @@ export function initWebSocketServer(httpServer) {
       });
 
       // Notify other users in the room
-      socket.to(roomId).emit('user-joined', {
+      socket.to(roomId).emit("user-joined", {
         user: {
           id: userInfo.id,
           name: userInfo.name,
@@ -169,18 +204,20 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle document edits (operational transform)
-    socket.on('document-operation', (data) => {
+    socket.on("document-operation", (data) => {
       const { roomId, operation } = data;
       const room = rooms.get(roomId);
 
       if (!room || !room.users.has(socket.userId)) {
-        socket.emit('error', { message: 'Not in a room or room does not exist' });
+        socket.emit("error", {
+          message: "Not in a room or room does not exist",
+        });
         return;
       }
 
       // Validate operation
       if (!operation || !operation.type) {
-        socket.emit('error', { message: 'Invalid operation' });
+        socket.emit("error", { message: "Invalid operation" });
         return;
       }
 
@@ -202,19 +239,19 @@ export function initWebSocketServer(httpServer) {
         }
 
         // Broadcast operation to other users in the room
-        socket.to(roomId).emit('operation-applied', {
+        socket.to(roomId).emit("operation-applied", {
           operation,
           userId: socket.userId,
           version: room.document.version,
         });
 
         // Acknowledge operation to sender
-        socket.emit('operation-ack', {
+        socket.emit("operation-ack", {
           operationId: operation.id,
           version: room.document.version,
         });
       } else {
-        socket.emit('operation-rejected', {
+        socket.emit("operation-rejected", {
           operation,
           error: result.error,
           currentVersion: room.document.version,
@@ -223,7 +260,7 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle cursor position updates
-    socket.on('cursor-move', (data) => {
+    socket.on("cursor-move", (data) => {
       const { roomId, cursor, selection } = data;
       const room = rooms.get(roomId);
 
@@ -235,7 +272,7 @@ export function initWebSocketServer(httpServer) {
       user.lastActivity = Date.now();
 
       // Broadcast cursor position to other users
-      socket.to(roomId).emit('cursor-update', {
+      socket.to(roomId).emit("cursor-update", {
         userId: socket.userId,
         cursor,
         selection,
@@ -245,18 +282,18 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle full document sync (for periodic sync or reconnection)
-    socket.on('request-sync', (data) => {
+    socket.on("request-sync", (data) => {
       const { roomId } = data;
       const room = rooms.get(roomId);
 
       if (!room) {
-        socket.emit('error', { message: 'Room not found' });
+        socket.emit("error", { message: "Room not found" });
         return;
       }
 
-      socket.emit('document-sync', {
+      socket.emit("document-sync", {
         document: room.document,
-        users: Array.from(room.users.values()).map(u => ({
+        users: Array.from(room.users.values()).map((u) => ({
           id: u.id,
           name: u.name,
           color: u.color,
@@ -268,7 +305,7 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle presence heartbeat
-    socket.on('presence-heartbeat', (data) => {
+    socket.on("presence-heartbeat", (data) => {
       const { roomId } = data;
       const room = rooms.get(roomId);
 
@@ -280,18 +317,18 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle typing indicators
-    socket.on('typing-start', (data) => {
+    socket.on("typing-start", (data) => {
       const { roomId } = data;
-      socket.to(roomId).emit('user-typing', {
+      socket.to(roomId).emit("user-typing", {
         userId: socket.userId,
         userName: socket.userName,
         isTyping: true,
       });
     });
 
-    socket.on('typing-stop', (data) => {
+    socket.on("typing-stop", (data) => {
       const { roomId } = data;
-      socket.to(roomId).emit('user-typing', {
+      socket.to(roomId).emit("user-typing", {
         userId: socket.userId,
         userName: socket.userName,
         isTyping: false,
@@ -299,14 +336,16 @@ export function initWebSocketServer(httpServer) {
     });
 
     // Handle leaving a room
-    socket.on('leave-room', (data) => {
+    socket.on("leave-room", (data) => {
       const { roomId } = data;
       leaveRoom(socket, io, roomId);
     });
 
     // Handle disconnection
-    socket.on('disconnect', (reason) => {
-      console.log(`User disconnected: ${socket.userName} (${socket.userId}) - Reason: ${reason}`);
+    socket.on("disconnect", (reason) => {
+      console.log(
+        `User disconnected: ${socket.userName} (${socket.userId}) - Reason: ${reason}`,
+      );
 
       const userInfo = userSocketMap.get(socket.id);
       if (userInfo) {
@@ -318,7 +357,7 @@ export function initWebSocketServer(httpServer) {
   // Set up periodic cleanup of inactive rooms
   setInterval(() => cleanupInactiveRooms(io), 5 * 60 * 1000); // Every 5 minutes
 
-  console.log('WebSocket server initialized');
+  console.log("WebSocket server initialized");
   return io;
 }
 
@@ -337,7 +376,7 @@ function leaveRoom(socket, io, roomId) {
   socket.leave(roomId);
 
   // Notify other users
-  socket.to(roomId).emit('user-left', {
+  socket.to(roomId).emit("user-left", {
     userId: socket.userId,
   });
 
@@ -360,30 +399,37 @@ function applyOperation(document, operation) {
     let content = document.content;
 
     switch (type) {
-      case 'insert':
-        if (typeof position !== 'number' || typeof text !== 'string') {
-          return { success: false, error: 'Invalid insert operation' };
+      case "insert":
+        if (typeof position !== "number" || typeof text !== "string") {
+          return { success: false, error: "Invalid insert operation" };
         }
         content = content.slice(0, position) + text + content.slice(position);
         break;
 
-      case 'delete':
-        if (typeof position !== 'number' || typeof length !== 'number') {
-          return { success: false, error: 'Invalid delete operation' };
+      case "delete":
+        if (typeof position !== "number" || typeof length !== "number") {
+          return { success: false, error: "Invalid delete operation" };
         }
         content = content.slice(0, position) + content.slice(position + length);
         break;
 
-      case 'replace':
-        if (typeof position !== 'number' || typeof length !== 'number' || typeof newText !== 'string') {
-          return { success: false, error: 'Invalid replace operation' };
+      case "replace":
+        if (
+          typeof position !== "number" ||
+          typeof length !== "number" ||
+          typeof newText !== "string"
+        ) {
+          return { success: false, error: "Invalid replace operation" };
         }
-        content = content.slice(0, position) + newText + content.slice(position + length);
+        content =
+          content.slice(0, position) +
+          newText +
+          content.slice(position + length);
         break;
 
-      case 'full-replace':
-        if (typeof newText !== 'string') {
-          return { success: false, error: 'Invalid full-replace operation' };
+      case "full-replace":
+        if (typeof newText !== "string") {
+          return { success: false, error: "Invalid full-replace operation" };
         }
         content = newText;
         break;
@@ -413,12 +459,12 @@ function cleanupInactiveRooms(io) {
     // Check if room has been inactive
     const lastActivity = Math.max(
       room.lastModified || 0,
-      ...Array.from(room.users.values()).map(u => u.lastActivity || 0)
+      ...Array.from(room.users.values()).map((u) => u.lastActivity || 0),
     );
 
     if (now - lastActivity > INACTIVE_TIMEOUT) {
       // Notify any remaining users
-      io.to(roomId).emit('room-closed', { reason: 'Inactivity timeout' });
+      io.to(roomId).emit("room-closed", { reason: "Inactivity timeout" });
 
       // Disconnect all sockets in the room
       io.in(roomId).socketsLeave(roomId);

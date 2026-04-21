@@ -7,6 +7,51 @@ const firecrawl = config.FIRECRAWL_API_KEY
   ? new FirecrawlApp({ apiKey: config.FIRECRAWL_API_KEY })
   : null;
 
+const BLOCKED_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "::1",
+  "metadata.google.internal",
+  "metadata.google",
+]);
+
+const BLOCKED_IP_PATTERNS = [
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^127\./,
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+];
+
+export function isInternalUrl(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.toLowerCase();
+
+    if (BLOCKED_HOSTS.has(hostname)) return true;
+
+    const ipPatterns = [/^(\d{1,3}\.){3}\d{1,3}$/, /^\[::1\]$/];
+
+    for (const pattern of ipPatterns) {
+      if (pattern.test(hostname)) {
+        if (BLOCKED_IP_PATTERNS.some((p) => p.test(hostname))) {
+          return true;
+        }
+      }
+    }
+
+    if (hostname === "metadata.google.internal") return true;
+
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export interface JobDescriptionResult {
   title: string;
   company: string;
@@ -22,6 +67,11 @@ export interface JobDescriptionResult {
 export async function scrapeJobDescription(
   url: string,
 ): Promise<JobDescriptionResult | null> {
+  if (isInternalUrl(url)) {
+    console.error("SSRF attempt blocked:", url);
+    return null;
+  }
+
   if (firecrawl) {
     try {
       const scrapeResult = await firecrawl.scrapeUrl(url, {
