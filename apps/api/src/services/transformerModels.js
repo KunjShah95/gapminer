@@ -54,6 +54,37 @@ async function getZeroShot() {
   return zeroShotPipeline;
 }
 
+/**
+ * Eagerly preload all transformer pipelines at application startup.
+ * Call this during initDb() or server bootstrap to eliminate cold-start
+ * latency on the first user request.
+ *
+ * Loads NER + Feature Extraction in parallel (critical path),
+ * then Text Generation + Zero-Shot in a second parallel batch.
+ */
+export async function preloadModels() {
+  const t0 = Date.now();
+  console.log("⏳ Preloading transformer models...");
+
+  try {
+    // Batch 1: High-priority models used in every analysis
+    const [ner, fe] = await Promise.all([getNER(), getFeatureExtraction()]);
+    console.log(
+      `  ✅ NER + FeatureExtraction loaded (${Date.now() - t0}ms)`,
+    );
+
+    // Batch 2: Generation + classification (used in roadmaps, JD analysis)
+    const [tg, zs] = await Promise.all([getTextGeneration(), getZeroShot()]);
+    console.log(
+      `  ✅ TextGeneration + ZeroShot loaded (${Date.now() - t0}ms)`,
+    );
+
+    console.log(`✅ All transformer models ready (${Date.now() - t0}ms total)`);
+  } catch (err) {
+    console.error("⚠️  Model preloading failed (will lazy-load on demand):", err.message || err);
+  }
+}
+
 export async function extractSkills(text) {
   const ner = await getNER();
   const result = await ner(text);

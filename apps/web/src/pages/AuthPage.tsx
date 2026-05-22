@@ -55,7 +55,7 @@ export default function AuthPage() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
   const [resetToken, setResetToken] = useState(searchParams.get("token") || "");
-  const { setUser, setToken } = useAuthStore();
+  const { user, token, setUser, setToken } = useAuthStore();
   const navigate = useNavigate();
   const redirectPlan = searchParams.get("plan");
 
@@ -73,7 +73,11 @@ export default function AuthPage() {
       return;
     }
 
-    if (!nextMode && searchParams.get("signin") === "true" && mode !== "login") {
+    if (
+      !nextMode &&
+      searchParams.get("signin") === "true" &&
+      mode !== "login"
+    ) {
       setMode("login");
     }
   }, [searchParams, mode]);
@@ -109,9 +113,12 @@ export default function AuthPage() {
         name: userData.name,
         avatar: userData.avatar,
         plan: userData.plan,
-        createdAt: userData.created_at,
-        analysesUsed: userData.analyses_used,
-        analysesLimit: userData.analyses_limit,
+        createdAt: userData.createdAt || userData.created_at,
+        analysesUsed: userData.analysesUsed || userData.analyses_used,
+        analysesLimit: userData.analysesLimit || userData.analyses_limit,
+        twoFactorEnabled:
+          userData.twoFactorEnabled || userData.two_factor_enabled,
+        isVerified: userData.isVerified || userData.is_verified,
       };
 
       setUser(mappedUser);

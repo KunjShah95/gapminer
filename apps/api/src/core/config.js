@@ -18,6 +18,12 @@ export const config = {
   IS_PRODUCTION:
     process.env.NODE_ENV === "production" || process.env.ENV === "production",
 
+  // Auth
+  ACCESS_TOKEN_EXPIRE_MINUTES: parseInt(
+    process.env.ACCESS_TOKEN_EXPIRE_MINUTES || String(60 * 24 * 7),
+    10,
+  ),
+
   // Validate critical secrets in production
   SECRET_KEY: (() => {
     if (!process.env.SECRET_KEY) {

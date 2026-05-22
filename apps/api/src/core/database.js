@@ -211,10 +211,122 @@ export async function initDb() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
     `);
 
+    // ── PL/pgSQL Vector Similarity Fallback ──
+    // Creates a pure-SQL cosine similarity function for environments
+    // where native pgvector (CREATE EXTENSION vector) is unavailable.
+    // Operates on JSONB arrays of floats, returning DOUBLE PRECISION.
+    await client.query(`
+      CREATE OR REPLACE FUNCTION pg_cosine_similarity(a JSONB, b JSONB)
+      RETURNS DOUBLE PRECISION AS $$
+      DECLARE
+          a_arr DOUBLE PRECISION[];
+          b_arr DOUBLE PRECISION[];
+          dot   DOUBLE PRECISION := 0;
+          norm_a DOUBLE PRECISION := 0;
+          norm_b DOUBLE PRECISION := 0;
+          i     INT;
+          len   INT;
+      BEGIN
+          SELECT ARRAY(SELECT jsonb_array_elements_text(a)::DOUBLE PRECISION) INTO a_arr;
+          SELECT ARRAY(SELECT jsonb_array_elements_text(b)::DOUBLE PRECISION) INTO b_arr;
+
+          len := cardinality(a_arr);
+          IF len != cardinality(b_arr) OR len = 0 THEN
+              RETURN 0;
+          END IF;
+
+          FOR i IN 1..len LOOP
+              dot    := dot    + (a_arr[i] * b_arr[i]);
+              norm_a := norm_a + (a_arr[i] * a_arr[i]);
+              norm_b := norm_b + (b_arr[i] * b_arr[i]);
+          END LOOP;
+
+          IF norm_a = 0 OR norm_b = 0 THEN
+              RETURN 0;
+          END IF;
+
+          RETURN dot / (sqrt(norm_a) * sqrt(norm_b));
+      END;
+      $$ LANGUAGE plpgsql IMMUTABLE;
+    `);
+    console.log("✅ pg_cosine_similarity fallback function created");
+
+    // Detect native pgvector availability and cache the result
+    try {
+      await client.query("CREATE EXTENSION IF NOT EXISTS vector");
+      _hasPgVector = true;
+      console.log("✅ Native pgvector extension available");
+    } catch {
+      _hasPgVector = false;
+      console.log("ℹ️  Native pgvector unavailable — using PL/pgSQL fallback");
+    }
+
     console.log("✅ Database tables verified/created");
   } catch (err) {
     console.error("❌ Database init skipped or failed:", err.message);
   } finally {
     client?.release?.();
   }
+}
+
+// ── Vector Query Infrastructure ──
+let _hasPgVector = null;
+
+/**
+ * Check whether native pgvector is available.
+ * Safe to call before initDb() — returns false if not yet detected.
+ */
+export function hasPgVector() {
+  return _hasPgVector === true;
+}
+
+/**
+ * Run a cosine-similarity vector search against any table.
+ * Automatically selects native pgvector operators or the PL/pgSQL fallback.
+ *
+ * @param {object} opts
+ * @param {string} opts.table       - Table name (e.g. 'candidates')
+ * @param {string} opts.column      - Column holding the embedding
+ * @param {number[]} opts.embedding  - Query embedding array
+ * @param {string[]} [opts.select]  - Additional columns to return (default: ['id'])
+ * @param {number}   [opts.limit]   - Max results (default: 10)
+ * @param {number}   [opts.threshold] - Minimum similarity score (default: 0)
+ * @returns {Promise<Array<{id: string, score: number}>>}
+ */
+export async function vectorQuery({
+  table,
+  column,
+  embedding,
+  select = ["id"],
+  limit = 10,
+  threshold = 0,
+}) {
+  const selectCols = select.join(", ");
+  const embJson = JSON.stringify(embedding);
+
+  if (_hasPgVector) {
+    // Native pgvector: column is type vector, use <=> cosine distance
+    const sql = `
+      SELECT ${selectCols},
+             1 - (${column} <=> $1::vector) AS score
+      FROM ${table}
+      WHERE 1 - (${column} <=> $1::vector) > $2
+      ORDER BY score DESC
+      LIMIT $3
+    `;
+    const res = await pool.query(sql, [embJson, threshold, limit]);
+    return res.rows;
+  }
+
+  // Fallback: column is JSONB, use pg_cosine_similarity()
+  const sql = `
+    SELECT ${selectCols},
+           pg_cosine_similarity(${column}, $1::jsonb) AS score
+    FROM ${table}
+    WHERE pg_cosine_similarity(${column}, $1::jsonb) > $2
+    ORDER BY score DESC
+    LIMIT $3
+  `;
+  const res = await pool.query(sql, [embJson, threshold, limit]);
+  return res.rows;
 }

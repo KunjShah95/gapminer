@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuthStore } from "@/stores/authStore";
+import { useEffect, useState } from "react";
+import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
@@ -30,7 +31,40 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const { user, token } = useAuthStore();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    async function init() {
+      if (token && !user) {
+        await initializeAuth();
+      }
+      setIsInitialized(true);
+    }
+    init();
+  }, [token, user]);
+
+  if (!isInitialized && token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
+  return (
+    <AuthInitializer>
+      <AppRoutes />
+    </AuthInitializer>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
@@ -199,5 +233,3 @@ export default function App() {
     </Routes>
   );
 }
-
-

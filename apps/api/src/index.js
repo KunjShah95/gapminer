@@ -14,6 +14,7 @@ import apiRouter from "./api/v1/router.js";
 import gatewayRouter from "./api/gatewayRouter.js";
 import { setupSwagger } from "./docs/swagger.js";
 import { initWebSocketServer } from "./services/websocket.js";
+import { preloadModels } from "./services/transformerModels.js";
 
 // ─── Sentry Initialization ────────────────────────────────────
 if (config.SENTRY_DSN) {
@@ -186,6 +187,13 @@ const PORT = config.PORT || 8000;
 
 (async () => {
   await initDb();
+
+  // Preload transformer models in the background (non-blocking for server start)
+  // Fire-and-forget: server starts accepting requests immediately,
+  // but models will be warm by the time the first analysis hits.
+  preloadModels().catch((err) =>
+    console.error("Model preload error:", err.message),
+  );
 
   // Initialize WebSocket server
   initWebSocketServer(server);

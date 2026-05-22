@@ -28,11 +28,11 @@ function serializeUser(user) {
     name: user.name,
     avatar: user.avatar ?? null,
     plan: user.plan ?? "free",
-    created_at: user.createdAt,
-    analyses_used: user.analysesUsed ?? 0,
-    analyses_limit: user.analysesLimit ?? 10,
-    two_factor_enabled: user.twoFactorEnabled ?? false,
-    is_verified: user.isVerified ?? false,
+    createdAt: user.created_at ?? user.createdAt,
+    analysesUsed: user.analyses_used ?? user.analysesUsed ?? 0,
+    analysesLimit: user.analyses_limit ?? user.analysesLimit ?? 10,
+    twoFactorEnabled: user.two_factor_enabled ?? user.twoFactorEnabled ?? false,
+    isVerified: user.is_verified ?? user.isVerified ?? false,
   };
 }
 
@@ -119,7 +119,7 @@ router.post("/token", async (req, res, next) => {
     }
 
     const user = await findUserByEmail(email);
-    if (!user || !verifyPassword(password, user.hashed_password ?? "")) {
+    if (!user || !verifyPassword(user.hashed_password ?? "", password)) {
       return res.status(401).json({ error: "Incorrect email or password" });
     }
     if (!user.is_active) {
@@ -160,7 +160,7 @@ router.post("/login", async (req, res, next) => {
     }
 
     const user = await findUserByEmail(email);
-    if (!user || !verifyPassword(password, user.hashed_password ?? "")) {
+    if (!user || !verifyPassword(user.hashed_password ?? "", password)) {
       return res.status(401).json({ error: "Incorrect email or password" });
     }
     if (!user.is_active) {
@@ -177,6 +177,39 @@ router.post("/login", async (req, res, next) => {
       if (!verifyTotpCode(user.two_factor_secret ?? "", otpCode)) {
         return res.status(401).json({ error: "Invalid 2FA code" });
       }
+    }
+
+    const access_token = await issueUserToken(user);
+    return res.json({
+      access_token,
+      token_type: "bearer",
+      user: serializeUser(user),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /2fa/login ───────────────────────────────────────
+router.post("/2fa/login", async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(422).json({ error: "email and code are required" });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: "Incorrect email or password" });
+    }
+    if (!user.is_active) {
+      return res.status(400).json({ error: "Inactive user" });
+    }
+    if (!user.two_factor_enabled) {
+      return res.status(400).json({ error: "2FA not enabled for this user" });
+    }
+    if (!verifyTotpCode(user.two_factor_secret ?? "", code)) {
+      return res.status(401).json({ error: "Invalid 2FA code" });
     }
 
     const access_token = await issueUserToken(user);
@@ -310,7 +343,7 @@ router.post("/change-password", requireUser, async (req, res, next) => {
     );
     const user = rows[0];
 
-    if (!user || !verifyPassword(currentPassword, user.hashed_password ?? "")) {
+    if (!user || !verifyPassword(user.hashed_password ?? "", currentPassword)) {
       return res.status(401).json({ error: "Current password is incorrect" });
     }
 
@@ -411,7 +444,7 @@ router.post("/2fa/disable", requireUser, async (req, res, next) => {
       return res.status(400).json({ error: "2FA is not enabled" });
     }
 
-    if (!verifyPassword(password, user.hashed_password ?? "")) {
+    if (!verifyPassword(user.hashed_password ?? "", password)) {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
@@ -543,8 +576,25 @@ router.put("/me", requireUser, async (req, res, next) => {
 });
 
 // ─── POST /refresh ────────────────────────────────────────────
-router.post("/refresh", (_req, res) => {
-  res.status(501).json({ error: "Not implemented yet" });
+router.post("/refresh", requireUser, async (req, res, next) => {
+  try {
+    const { rows } = await query("SELECT * FROM users WHERE id = $1", [
+      req.userId,
+    ]);
+    const user = rows[0];
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const access_token = await issueUserToken(user);
+    return res.json({
+      access_token,
+      token_type: "bearer",
+      user: serializeUser(user),
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ─── POST /google ─────────────────────────────────────────────
