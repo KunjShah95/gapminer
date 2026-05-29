@@ -330,34 +330,35 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex items-center justify-center p-8 relative overflow-hidden hero-mesh">
-      {/* Background Blurs */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary/10 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>
+    <div className="relative flex min-h-screen overflow-hidden bg-surface text-on-surface mesh-bg">
+      <div className="pointer-events-none absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-primary/15 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-secondary/10 blur-[100px]" />
 
       {/* Navigation */}
-      <div className="absolute top-8 left-8 right-8 flex items-center justify-between gap-4">
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between gap-4 px-6 py-6 lg:px-10">
         <Link
           to="/"
-          className="text-2xl font-bold tracking-tighter text-[#f9f5fd] flex items-center gap-2 group"
+          className="group flex items-center gap-2 text-xl font-bold tracking-tight text-on-surface"
         >
-          <div className="w-10 h-10 rounded-2xl primary-gradient flex items-center justify-center text-on-primary-fixed shadow-lg group-hover:scale-110 transition-transform">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
             <Sparkles size={20} />
           </div>
-          Gapminer
+          <span>
+            Gapminer <span className="text-on-surface-variant text-sm font-medium">Career OS</span>
+          </span>
         </Link>
 
         {(mode === "login" || mode === "signup") && (
-          <div className="flex items-center gap-2 rounded-full border border-outline-variant/15 bg-surface-container-low/70 p-1 backdrop-blur-xl shadow-lg">
+          <div className="flex items-center gap-1 rounded-full border border-outline-variant/15 bg-surface-container/80 p-1 backdrop-blur-xl">
             <Link
               to="/auth?mode=login"
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${mode === "login" ? "bg-primary text-on-primary-fixed" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${mode === "login" ? "primary-gradient text-on-primary-fixed" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Sign In
             </Link>
             <Link
               to="/auth?mode=signup"
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${mode === "signup" ? "bg-primary text-on-primary-fixed" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${mode === "signup" ? "primary-gradient text-on-primary-fixed" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Create Account
             </Link>
@@ -365,8 +366,34 @@ export default function AuthPage() {
         )}
       </div>
 
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
-        <div className="glass bg-surface-container-high p-8 lg:p-12 rounded-[2.5rem] border border-outline-variant/20 shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-10 px-6 pb-12 pt-28 lg:flex-row lg:items-stretch lg:gap-0 lg:px-10 lg:pb-10 lg:pt-24">
+        {/* Brand panel — desktop split */}
+        <aside className="hidden flex-col justify-center lg:flex lg:w-[42%] lg:pr-12">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.3em] text-primary">Gapminer Career OS</p>
+          <h2 className="mb-6 font-headline text-4xl font-black leading-tight tracking-tight xl:text-5xl">
+            Precision intelligence for your{' '}
+            <span className="text-gradient">next role.</span>
+          </h2>
+          <p className="max-w-md text-base font-light leading-relaxed text-on-surface-variant">
+            Multi-agent analysis maps your skills to market demand, surfaces gaps with severity scores, and builds a
+            verified roadmap — privately, on your infrastructure.
+          </p>
+          <ul className="mt-10 space-y-4">
+            {['Local AI · resume stays private', 'ATS + semantic skill matching', 'Roadmaps ranked by ROI'].map(
+              (item) => (
+                <li key={item} className="flex items-center gap-3 text-sm text-on-surface-variant">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <Shield size={14} />
+                  </span>
+                  {item}
+                </li>
+              ),
+            )}
+          </ul>
+        </aside>
+
+        <div className="w-full max-w-md animate-fade-in lg:max-w-none lg:flex lg:w-[58%] lg:items-center lg:justify-center">
+        <div className="glass-card w-full p-8 lg:max-w-md lg:p-12">
           {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold tracking-tight font-headline mb-3">
@@ -769,24 +796,25 @@ export default function AuthPage() {
         </div>
 
         {/* Security / Terms */}
-        <div className="mt-8 flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-1000 delay-300">
-          <div className="flex items-center gap-6 text-xs text-outline font-bold uppercase tracking-widest">
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-outline">
             <a href="#" className="hover:text-primary">
               Conditions
             </a>
-            <span className="w-1 h-1 rounded-full bg-outline/30"></span>
+            <span className="h-1 w-1 rounded-full bg-outline/30" />
             <a href="#" className="hover:text-primary">
               Privacy
             </a>
-            <span className="w-1 h-1 rounded-full bg-outline/30"></span>
+            <span className="h-1 w-1 rounded-full bg-outline/30" />
             <a href="#" className="hover:text-primary">
               Security
             </a>
           </div>
-          <p className="text-[10px] text-outline/50 flex items-center gap-1">
+          <p className="flex items-center gap-1 text-[10px] text-outline/60">
             <Shield size={10} />
-            SSL Encrypted via Ollama Infrastructure
+            SSL Encrypted · Ollama Infrastructure
           </p>
+        </div>
         </div>
       </div>
     </div>

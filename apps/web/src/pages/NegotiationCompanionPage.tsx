@@ -5,18 +5,24 @@ import {
   Target,
   AlertTriangle,
   CheckCircle,
-  ChevronRight,
-  Building2,
-  MapPin,
   Briefcase,
   Calculator,
   MessageSquare,
   FileText,
-  RefreshCw,
   Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  Input,
+  EmptyState,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 interface OfferData {
   base: number;
@@ -124,37 +130,42 @@ export default function NegotiationCompanionPage() {
   const calculateTotal = (offer: OfferData) =>
     offer.base + offer.bonus + offer.stock + offer.signing;
 
+  const timingTone = (timing: string): "error" | "warning" | "success" => {
+    if (timing === "early") return "error";
+    if (timing === "mid") return "warning";
+    return "success";
+  };
+
   return (
-    <div className="p-8 lg:p-12 max-w-7xl mx-auto">
+    <PageShell maxWidth="xl">
       <OnboardingTooltip
         pageKey="negotiate"
         icon="💰"
         title="Research market salary data"
         description="View compensation benchmarks for your role and location. Practice your negotiation strategy."
       />
-      <div className="mb-8">
-        <h1 className="text-3xl font-black tracking-tighter mb-2">
-          Negotiation Companion
-        </h1>
-        <p className="text-on-surface-variant">
-          Data-driven salary negotiation strategy powered by market intelligence
-        </p>
-      </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-6">
+      <PageHeader
+        badge="Compensation"
+        title="Negotiation Companion"
+        description="Data-driven salary negotiation strategy powered by market intelligence."
+        icon={<DollarSign className="h-6 w-6" />}
+      />
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-1">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="glass p-6 rounded-3xl border border-outline-variant/10">
-              <h2 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Briefcase size={16} className="text-primary" />
-                Target Role
-              </h2>
+            <Card padding="md">
+              <div className="mb-4 flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-primary" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                  Target Role
+                </h2>
+              </div>
 
               <div className="space-y-3">
-                <input
-                  type="text"
+                <Input
                   placeholder="e.g. Senior Software Engineer"
-                  className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
                   value={formData.roleTitle}
                   onChange={(e) =>
                     setFormData({ ...formData, roleTitle: e.target.value })
@@ -163,152 +174,127 @@ export default function NegotiationCompanionPage() {
                 />
 
                 <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
+                  <Input
                     placeholder="Location"
-                    className="bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
                     value={formData.location}
                     onChange={(e) =>
                       setFormData({ ...formData, location: e.target.value })
                     }
                     required
                   />
-                  <input
+                  <Input
                     type="number"
                     placeholder="Years Exp"
-                    className="bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
                     value={formData.yearsExperience}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        yearsExperience: parseInt(e.target.value),
+                        yearsExperience: parseInt(e.target.value, 10),
                       })
                     }
                     required
                   />
                 </div>
 
-                <input
-                  type="text"
+                <Input
                   placeholder="Target Company (optional)"
-                  className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
                   value={formData.companyName}
                   onChange={(e) =>
                     setFormData({ ...formData, companyName: e.target.value })
                   }
                 />
               </div>
-            </div>
+            </Card>
 
-            <div className="glass p-6 rounded-3xl border border-outline-variant/10">
-              <h2 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                <DollarSign size={16} className="text-primary" />
-                Current Offer
-              </h2>
+            <Card padding="md">
+              <div className="mb-4 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                  Current Offer
+                </h2>
+              </div>
 
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-outline mb-1 block">
-                      Base Salary
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="150000"
-                      className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
-                      value={formData.currentOffer.base || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          currentOffer: {
-                            ...formData.currentOffer,
-                            base: parseInt(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-outline mb-1 block">
-                      Bonus
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="20000"
-                      className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
-                      value={formData.currentOffer.bonus || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          currentOffer: {
-                            ...formData.currentOffer,
-                            bonus: parseInt(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-outline mb-1 block">
-                      Annual Stock
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="50000"
-                      className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
-                      value={formData.currentOffer.stock || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          currentOffer: {
-                            ...formData.currentOffer,
-                            stock: parseInt(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-outline mb-1 block">
-                      Signing Bonus
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="25000"
-                      className="w-full bg-surface-container-high border border-outline-variant/20 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary"
-                      value={formData.currentOffer.signing || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          currentOffer: {
-                            ...formData.currentOffer,
-                            signing: parseInt(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Base Salary"
+                  type="number"
+                  placeholder="150000"
+                  value={formData.currentOffer.base || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      currentOffer: {
+                        ...formData.currentOffer,
+                        base: parseInt(e.target.value, 10) || 0,
+                      },
+                    })
+                  }
+                />
+                <Input
+                  label="Bonus"
+                  type="number"
+                  placeholder="20000"
+                  value={formData.currentOffer.bonus || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      currentOffer: {
+                        ...formData.currentOffer,
+                        bonus: parseInt(e.target.value, 10) || 0,
+                      },
+                    })
+                  }
+                />
+                <Input
+                  label="Annual Stock"
+                  type="number"
+                  placeholder="50000"
+                  value={formData.currentOffer.stock || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      currentOffer: {
+                        ...formData.currentOffer,
+                        stock: parseInt(e.target.value, 10) || 0,
+                      },
+                    })
+                  }
+                />
+                <Input
+                  label="Signing Bonus"
+                  type="number"
+                  placeholder="25000"
+                  value={formData.currentOffer.signing || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      currentOffer: {
+                        ...formData.currentOffer,
+                        signing: parseInt(e.target.value, 10) || 0,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              {formData.currentOffer.base > 0 && (
+                <div className="mt-4 rounded-xl border border-primary/25 bg-primary/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-outline">
+                      Total Compensation
+                    </span>
+                    <span className="text-xl font-black text-primary">
+                      {formatCurrency(calculateTotal(formData.currentOffer))}
+                    </span>
                   </div>
                 </div>
+              )}
+            </Card>
 
-                {formData.currentOffer.base > 0 && (
-                  <div className="mt-4 p-4 rounded-xl bg-surface-container-highest border border-primary/20">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs font-black uppercase text-outline">
-                        Total Compensation
-                      </span>
-                      <span className="text-xl font-black text-primary">
-                        {formatCurrency(calculateTotal(formData.currentOffer))}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <label className="flex items-center gap-3 p-4 rounded-xl bg-surface-container-high cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-low p-4">
               <input
                 type="checkbox"
-                className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary"
+                className="h-5 w-5 rounded border-outline-variant/40 bg-surface-container text-primary focus:ring-primary/30"
                 checked={formData.hasCompetingOffer}
                 onChange={(e) =>
                   setFormData({
@@ -317,44 +303,39 @@ export default function NegotiationCompanionPage() {
                   })
                 }
               />
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-on-surface">
                 I have a competing offer
               </span>
             </label>
 
-            <button
+            <Button
               type="submit"
+              size="lg"
+              className="w-full"
               disabled={loading || !formData.roleTitle || !formData.location}
-              className="w-full py-4 rounded-xl primary-gradient font-black text-sm uppercase tracking-widest hover:shadow-lg hover:shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              loading={loading}
             >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Target size={18} />
-                  Generate Strategy
-                </>
-              )}
-            </button>
+              {!loading && <Target className="h-5 w-5" />}
+              Generate Strategy
+            </Button>
           </form>
         </div>
 
         <div className="lg:col-span-2">
           {strategy ? (
             <div className="space-y-6">
-              <div className="flex gap-2 p-1 bg-surface-container-high rounded-xl">
+              <div className="flex gap-1 rounded-xl border border-outline-variant/15 bg-surface-container-low p-1">
                 {(["overview", "tactics", "data"] as const).map((tab) => (
                   <button
                     key={tab}
+                    type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                    className={cn(
+                      "flex-1 rounded-lg py-2.5 text-xs font-bold uppercase tracking-wider transition-all",
                       activeTab === tab
-                        ? "bg-primary text-on-primary-fixed shadow-md"
-                        : "text-on-surface-variant hover:text-on-surface"
-                    }`}
+                        ? "primary-gradient text-on-primary-fixed shadow-md"
+                        : "text-on-surface-variant hover:text-on-surface",
+                    )}
                   >
                     {tab}
                   </button>
@@ -363,216 +344,184 @@ export default function NegotiationCompanionPage() {
 
               {activeTab === "overview" && (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="glass p-5 rounded-2xl border border-outline-variant/10">
-                      <div className="text-[10px] font-black uppercase text-outline mb-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Card padding="md">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline">
                         Opening Ask
-                      </div>
-                      <div className="text-2xl font-black text-tertiary">
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-amber-400">
                         {formatCurrency(strategy.openingAnchor)}
-                      </div>
-                    </div>
-                    <div className="glass p-5 rounded-2xl border border-outline-variant/10">
-                      <div className="text-[10px] font-black uppercase text-outline mb-2">
+                      </p>
+                    </Card>
+                    <Card padding="md" className="border-primary/25">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline">
                         Target
-                      </div>
-                      <div className="text-2xl font-black text-primary">
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-primary">
                         {formatCurrency(strategy.targetNumber)}
-                      </div>
-                    </div>
-                    <div className="glass p-5 rounded-2xl border border-outline-variant/10">
-                      <div className="text-[10px] font-black uppercase text-outline mb-2">
+                      </p>
+                    </Card>
+                    <Card padding="md">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-outline">
                         Walk Away
-                      </div>
-                      <div className="text-2xl font-black text-error">
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-error">
                         {formatCurrency(strategy.walkAwayPoint)}
-                      </div>
-                    </div>
+                      </p>
+                    </Card>
                   </div>
 
-                  <div className="glass p-6 rounded-3xl border border-outline-variant/10">
-                    <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <TrendingUp size={16} className="text-primary" />
-                      Expected Improvement
-                    </h3>
-                    <div className="text-3xl font-black primary-gradient bg-clip-text text-transparent">
+                  <Card padding="md">
+                    <div className="mb-3 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                        Expected Improvement
+                      </h3>
+                    </div>
+                    <p className="text-3xl font-black primary-gradient bg-clip-text text-transparent">
                       {strategy.estimatedImprovement}
-                    </div>
-                  </div>
+                    </p>
+                  </Card>
 
-                  <div className="glass p-6 rounded-3xl border border-outline-variant/10">
-                    <h3 className="text-sm font-black uppercase tracking-widest mb-4">
+                  <Card padding="md">
+                    <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-on-surface">
                       Key Negotiation Levers
                     </h3>
                     <div className="space-y-3">
                       {strategy.keyNegotiationLevers.map((lever, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-high"
+                          className="flex items-start gap-3 rounded-xl bg-surface-container-low p-3"
                         >
                           <div
-                            className={`w-2 h-2 rounded-full mt-1.5 ${
+                            className={cn(
+                              "mt-1.5 h-2 w-2 shrink-0 rounded-full",
                               lever.priority === "high"
                                 ? "bg-primary"
                                 : lever.priority === "medium"
-                                  ? "bg-tertiary"
-                                  : "bg-outline"
-                            }`}
+                                  ? "bg-amber-400"
+                                  : "bg-outline",
+                            )}
                           />
                           <div>
-                            <div className="font-bold text-sm">
-                              {lever.lever}
-                            </div>
-                            <div className="text-xs text-on-surface-variant">
-                              {lever.impact}
-                            </div>
+                            <p className="text-sm font-bold text-on-surface">{lever.lever}</p>
+                            <p className="text-xs text-on-surface-variant">{lever.impact}</p>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </Card>
 
                   {strategy.competingOfferStrategy.shouldUse && (
-                    <div className="glass p-6 rounded-3xl border border-tertiary/20 bg-tertiary/5">
-                      <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <FileText size={16} className="text-tertiary" />
-                        Competing Offer Strategy
-                      </h3>
-                      <p className="text-sm mb-4">
+                    <Card padding="md" className="border-amber-500/25 bg-amber-500/5">
+                      <div className="mb-4 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-amber-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                          Competing Offer Strategy
+                        </h3>
+                      </div>
+                      <p className="mb-4 text-sm text-on-surface-variant">
                         {strategy.competingOfferStrategy.howToPresent}
                       </p>
-                      <div className="space-y-2">
-                        <div className="text-xs font-black uppercase text-outline">
-                          Risks to Consider
-                        </div>
-                        {strategy.competingOfferStrategy.risks.map(
-                          (risk, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 text-xs text-on-surface-variant"
-                            >
-                              <AlertTriangle
-                                size={12}
-                                className="text-warning"
-                              />
-                              {risk}
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    </div>
+                      <p className="mb-2 text-xs font-bold uppercase text-outline">
+                        Risks to Consider
+                      </p>
+                      <ul className="space-y-2">
+                        {strategy.competingOfferStrategy.risks.map((risk, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-center gap-2 text-xs text-on-surface-variant"
+                          >
+                            <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />
+                            {risk}
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
                   )}
                 </div>
               )}
 
               {activeTab === "tactics" && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <MessageSquare size={16} className="text-primary" />
-                    Talking Points
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                      Talking Points
+                    </h3>
+                  </div>
 
                   {strategy.talkingPoints.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="glass p-5 rounded-2xl border border-outline-variant/10"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                            item.timing === "early"
-                              ? "bg-error/20 text-error"
-                              : item.timing === "mid"
-                                ? "bg-warning/20 text-warning"
-                                : "bg-success/20 text-success"
-                          }`}
-                        >
-                          {item.timing}
-                        </span>
-                      </div>
-                      <div className="font-bold text-sm mb-2">{item.point}</div>
-                      <div className="text-xs text-on-surface-variant flex items-start gap-2">
-                        <CheckCircle
-                          size={12}
-                          className="text-primary mt-0.5 shrink-0"
-                        />
+                    <Card key={idx} padding="md">
+                      <Badge tone={timingTone(item.timing)} className="mb-2">
+                        {item.timing}
+                      </Badge>
+                      <p className="mb-2 text-sm font-bold text-on-surface">{item.point}</p>
+                      <p className="flex items-start gap-2 text-xs text-on-surface-variant">
+                        <CheckCircle className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
                         {item.dataSupport}
-                      </div>
-                    </div>
+                      </p>
+                    </Card>
                   ))}
                 </div>
               )}
 
               {activeTab === "data" && benchmarks.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Calculator size={16} className="text-primary" />
-                    Market Benchmarks
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-primary" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface">
+                      Market Benchmarks
+                    </h3>
+                  </div>
 
                   {benchmarks.map((bench, idx) => (
-                    <div
-                      key={idx}
-                      className="glass p-5 rounded-2xl border border-outline-variant/10"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <Building2 size={16} className="text-primary" />
-                          <span className="font-bold text-sm">
-                            {bench.tier.toUpperCase()} Companies
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-black uppercase text-outline">
-                          n={bench.sampleSize}
+                    <Card key={idx} padding="md">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-sm font-bold text-on-surface">
+                          {bench.tier.toUpperCase()} Companies
                         </span>
+                        <Badge tone="default">n={bench.sampleSize}</Badge>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
-                          <div className="text-[10px] font-black uppercase text-outline mb-1">
-                            Base Range
-                          </div>
-                          <div className="text-sm font-bold">
-                            {formatCurrency(bench.minSalary)} -{" "}
-                            {formatCurrency(bench.maxSalary)}
-                          </div>
+                          <p className="text-[10px] font-bold uppercase text-outline">Base Range</p>
+                          <p className="mt-1 text-sm font-bold text-on-surface">
+                            {formatCurrency(bench.minSalary)} – {formatCurrency(bench.maxSalary)}
+                          </p>
                         </div>
                         <div>
-                          <div className="text-[10px] font-black uppercase text-outline mb-1">
+                          <p className="text-[10px] font-bold uppercase text-outline">
                             Median Base
-                          </div>
-                          <div className="text-sm font-bold text-primary">
+                          </p>
+                          <p className="mt-1 text-sm font-bold text-primary">
                             {formatCurrency(bench.medianSalary)}
-                          </div>
+                          </p>
                         </div>
                         <div>
-                          <div className="text-[10px] font-black uppercase text-outline mb-1">
+                          <p className="text-[10px] font-bold uppercase text-outline">
                             Total Comp
-                          </div>
-                          <div className="text-sm font-bold">
+                          </p>
+                          <p className="mt-1 text-sm font-bold text-on-surface">
                             {formatCurrency(bench.totalCompMedian)}
-                          </div>
+                          </p>
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               )}
             </div>
           ) : (
-            <div className="glass p-12 rounded-3xl border border-outline-variant/10 text-center">
-              <div className="w-20 h-20 rounded-full bg-surface-container-high mx-auto mb-6 flex items-center justify-center">
-                <Target size={32} className="text-outline" />
-              </div>
-              <h3 className="text-xl font-black mb-2">Ready to Negotiate?</h3>
-              <p className="text-on-surface-variant text-sm max-w-md mx-auto">
-                Enter your target role, location, and offer details to get a
-                personalized negotiation strategy backed by real market data.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Target className="h-8 w-8" />}
+              title="Ready to Negotiate?"
+              description="Enter your target role, location, and offer details to get a personalized negotiation strategy backed by real market data."
+            />
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

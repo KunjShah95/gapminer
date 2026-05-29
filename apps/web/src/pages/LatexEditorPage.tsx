@@ -30,6 +30,7 @@ import Latex from "react-latex-next";
 import "katex/dist/katex.min.css";
 import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/ui";
 
 const INITIAL_LATEX = `\\documentclass{article}
 \\usepackage[utf8]{inputenc}
@@ -200,6 +201,7 @@ export default function LatexEditorPage() {
   };
 
   return (
+    <PageShell noPadding maxWidth="full" className="!p-0 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
     <div className="flex flex-col h-full bg-surface-container-low overflow-hidden font-body text-on-surface">
       {/* ── Editor Toolbar ──────────────────────────────────── */}
       <header className="h-14 border-b border-outline-variant/15 flex items-center justify-between px-6 bg-surface/50 backdrop-blur-md z-30 shrink-0">
@@ -687,5 +689,6 @@ export default function LatexEditorPage() {
         }
       `}</style>
     </div>
+    </PageShell>
   );
 }

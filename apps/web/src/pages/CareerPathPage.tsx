@@ -1,31 +1,34 @@
 import { useState, useEffect } from "react";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   RadarChart,
   Radar,
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
+  ResponsiveContainer,
 } from "recharts";
 import {
   TrendingUp,
   Target,
-  ArrowUpRight,
   Map,
   Briefcase,
-  Award,
-  Zap,
   AlertCircle,
-  ChevronRight,
   Brain,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export default function CareerPathPage() {
   const [predictions, setPredictions] = useState<any>(null);
@@ -41,32 +44,27 @@ export default function CareerPathPage() {
     if (!token) return;
 
     try {
-      // Fetch user's latest analysis to get their real skills
       const analysisRes = await fetch("/api/v1/analysis", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
-      let userSkills = ["JavaScript", "Python", "React", "Node.js"]; // fallback
+      let userSkills = ["JavaScript", "Python", "React", "Node.js"];
 
       if (analysisRes.ok) {
         const analyses = await analysisRes.json();
         if (analyses.length > 0) {
-          // Get skills from the most recent analysis gap data (e.g. matched skills + some missing)
           const latest = analyses[0];
-          // We can fetch the detail of the latest analysis to get all skills, or just pass top_gaps for now as a demo if full detail isn't readily available.
-          // Let's fetch the detail:
           const detailRes = await fetch(`/api/v1/analysis/${latest.id}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           if (detailRes.ok) {
             const detail = await detailRes.json();
             if (detail.gapAnalysis?.matchedSkills?.length > 0) {
-               userSkills = detail.gapAnalysis.matchedSkills;
+              userSkills = detail.gapAnalysis.matchedSkills;
             }
           }
         }
       }
 
-      // Fetch career path predictions dynamically using the real skills
       const pathRes = await fetch("/api/v1/transformers/career-path", {
         method: "POST",
         headers: {
@@ -91,25 +89,24 @@ export default function CareerPathPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-600">Analyzing your career trajectory...</p>
+      <PageShell>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-on-surface-variant">Analyzing your career trajectory...</p>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (!predictions) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">
-            No career path data available. Run an analysis first.
-          </p>
-        </div>
-      </div>
+      <PageShell>
+        <EmptyState
+          icon={<Map size={28} />}
+          title="No career path data"
+          description="Run an analysis first to generate predictions"
+        />
+      </PageShell>
     );
   }
 
@@ -119,165 +116,147 @@ export default function CareerPathPage() {
     fullMark: 100,
   }));
 
+  const likelihoodTone = (p: number) =>
+    p >= 70 ? "success" : p >= 50 ? "primary" : "default";
+
+  const likelihoodLabel = (p: number) =>
+    p >= 70 ? "Likely" : p >= 50 ? "Possible" : "Stretch";
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Map className="w-8 h-8 text-blue-600" />
-            Career Path Predictor
-          </h1>
-          <p className="text-gray-600 mt-1">
-            AI-powered career trajectory analysis based on your skills and
-            market trends
-          </p>
+    <PageShell maxWidth="lg">
+      <PageHeader
+        title="Career Path Predictor"
+        description="AI-powered career trajectory analysis based on your skills and market trends"
+        icon={<Map size={22} />}
+      />
+
+      {error && (
+        <Card className="mb-6 border-error/30 bg-error/10" padding="md">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-error" />
+            <p className="text-sm text-error">{error}</p>
+          </div>
+        </Card>
+      )}
+
+      <Card className="mb-8" padding="lg">
+        <div className="mb-8 flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <Briefcase className="h-8 w-8" />
+          </div>
+          <div>
+            <p className="text-sm text-on-surface-variant">Current role</p>
+            <h2 className="text-2xl font-black text-on-surface">{predictions.currentRole}</h2>
+          </div>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-              <Briefcase className="w-8 h-8 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Current Role</p>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {predictions.currentRole}
-              </h2>
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
-            <div className="space-y-6">
-              {predictions.nextRoles.map((role: any, i: number) => (
+        <div className="relative">
+          <div className="absolute bottom-0 left-8 top-0 w-0.5 bg-outline-variant/20" />
+          <div className="space-y-6">
+            {predictions.nextRoles.map((role: any) => (
+              <div key={role.role} className="relative flex items-start gap-6">
                 <div
-                  key={role.role}
-                  className="relative flex items-start gap-6"
+                  className={cn(
+                    "z-10 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border text-lg font-black",
+                    role.probability >= 70 &&
+                      "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+                    role.probability >= 50 &&
+                      role.probability < 70 &&
+                      "border-primary/30 bg-primary/15 text-primary",
+                    role.probability < 50 &&
+                      "border-outline-variant/20 bg-surface-container-high text-on-surface-variant",
+                  )}
                 >
-                  <div
-                    className={`w-16 h-16 rounded-full flex items-center justify-center z-10 ${
-                      role.probability >= 70
-                        ? "bg-green-100 text-green-700"
-                        : role.probability >= 50
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <span className="text-lg font-bold">
-                      {role.probability}%
-                    </span>
-                  </div>
-                  <div className="flex-1 bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {role.role}
-                        </h3>
-                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                          <Target size={14} />
-                          {role.timeline}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          role.probability >= 70
-                            ? "bg-green-100 text-green-700"
-                            : role.probability >= 50
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {role.probability >= 70
-                          ? "Likely"
-                          : role.probability >= 50
-                            ? "Possible"
-                            : "Stretch"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {role.skills.map((skill: string) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-1 bg-gray-50 text-gray-700 text-xs rounded border border-gray-200"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  {role.probability}%
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Brain className="w-5 h-5 text-blue-600" />
-              Skill Gaps to Bridge
-            </h2>
-            <div className="space-y-3">
-              {Object.entries(predictions.skillGaps).map(
-                ([skill, data]: [string, any]) => (
-                  <div
-                    key={skill}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
+                <Card className="flex-1" hover padding="md">
+                  <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-sm text-gray-900">
-                        {skill}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Effort: {data.effort}
+                      <h3 className="font-bold text-on-surface">{role.role}</h3>
+                      <p className="mt-1 flex items-center gap-1 text-sm text-on-surface-variant">
+                        <Target size={14} />
+                        {role.timeline}
                       </p>
                     </div>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        data.priority === "high"
-                          ? "bg-red-100 text-red-700"
-                          : data.priority === "medium"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {data.priority}
-                    </span>
+                    <Badge tone={likelihoodTone(role.probability)}>
+                      {likelihoodLabel(role.probability)}
+                    </Badge>
                   </div>
-                ),
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              Role Probability
-            </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <RadarChart data={radarData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="role" tick={{ fontSize: 11 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Radar
-                  name="Probability"
-                  dataKey="probability"
-                  stroke="#3b82f6"
-                  fill="#3b82f6"
-                  fillOpacity={0.2}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-2">
+                    {role.skills.map((skill: string) => (
+                      <Badge
+                        key={skill}
+                        tone="default"
+                        className="normal-case tracking-normal"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            ))}
           </div>
         </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Brain className="h-5 w-5 text-primary" />
+            Skill gaps to bridge
+          </h2>
+          <div className="space-y-3">
+            {Object.entries(predictions.skillGaps).map(
+              ([skill, data]: [string, any]) => (
+                <div
+                  key={skill}
+                  className="flex items-center justify-between rounded-xl border border-outline-variant/15 bg-surface-container-high p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-on-surface">{skill}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      Effort: {data.effort}
+                    </p>
+                  </div>
+                  <Badge
+                    tone={
+                      data.priority === "high"
+                        ? "error"
+                        : data.priority === "medium"
+                          ? "warning"
+                          : "success"
+                    }
+                  >
+                    {data.priority}
+                  </Badge>
+                </div>
+              ),
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Role probability
+          </h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <RadarChart data={radarData}>
+              <PolarGrid stroke="rgba(148,163,184,0.2)" />
+              <PolarAngleAxis dataKey="role" tick={{ fill: "rgb(148 163 184)", fontSize: 11 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "rgb(148 163 184)", fontSize: 10 }} />
+              <Radar
+                name="Probability"
+                dataKey="probability"
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--primary))"
+                fillOpacity={0.2}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        </Card>
       </div>
-    </div>
+    </PageShell>
   );
 }

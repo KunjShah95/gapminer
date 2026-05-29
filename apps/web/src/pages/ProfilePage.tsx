@@ -5,7 +5,16 @@ import {
   User, FileText, Settings, Shield, Trash2, Upload,
   Check, Edit3, Bell, Key, Download
 } from 'lucide-react'
-import styles from './ProfilePage.module.css'
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  Input,
+  Textarea,
+} from '@/components/ui'
+import { cn } from '@/lib/utils'
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore()
@@ -226,19 +235,25 @@ export default function ProfilePage() {
   ] as const
 
   return (
-    <div className={styles.root}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Account Settings</h1>
-        <p className={styles.pageSubtitle}>Manage your profile, resumes, and preferences.</p>
-      </div>
+    <PageShell>
+      <PageHeader
+        icon={<Settings size={22} />}
+        title="Account Settings"
+        description="Manage your profile, resumes, and preferences."
+      />
 
-      <div className={styles.mainGrid}>
-        {/* ── Tab Nav ───────────────────────────────────── */}
-        <nav className={styles.tabNav} aria-label="Settings sections">
+      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+        <nav className="flex flex-row gap-1 overflow-x-auto lg:flex-col lg:overflow-visible" aria-label="Settings sections">
           {TABS.map((t) => (
             <button
               key={t.id}
-              className={`${styles.tabBtn} ${tab === t.id ? styles.tabActive : ''}`}
+              type="button"
+              className={cn(
+                'flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all',
+                tab === t.id
+                  ? 'bg-primary/15 text-primary border border-primary/30'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
+              )}
               onClick={() => setTab(t.id)}
               id={`profile-tab-${t.id}`}
             >
@@ -248,185 +263,204 @@ export default function ProfilePage() {
           ))}
         </nav>
 
-        {/* ── Content ───────────────────────────────────── */}
-        <div className={styles.tabContent}>
-
-          {/* Profile Tab */}
+        <div className="min-w-0 space-y-6">
           {tab === 'profile' && (
-            <div className={`card ${styles.section}`}>
-              <h2 className={styles.sectionTitle}><User size={18} /> Personal Information</h2>
-              <div className={styles.avatarRow}>
-                <div className={styles.bigAvatar}>
+            <Card padding="lg">
+              <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-on-surface">
+                <User size={18} className="text-primary" />
+                Personal Information
+              </h2>
+              <div className="mb-8 flex flex-wrap items-center gap-4">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl primary-gradient text-2xl font-black text-on-primary-fixed shadow-lg shadow-primary/20">
                   {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <button className="btn btn-secondary btn-sm" id="upload-avatar">
+                  <Button variant="secondary" size="sm" id="upload-avatar">
                     <Upload size={14} />
                     Upload photo
-                  </button>
-                  <p className={styles.avatarHint}>JPG, PNG or GIF · Max 2MB</p>
+                  </Button>
+                  <p className="mt-2 text-xs text-on-surface-variant">JPG, PNG or GIF · Max 2MB</p>
                 </div>
               </div>
-              <div className={styles.formGrid}>
-                <div className={styles.field}>
-                  <label htmlFor="profile-name">Full name</label>
-                  <input
-                    id="profile-name"
-                    className="input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="profile-email">Email address</label>
-                  <input
-                    id="profile-email"
-                    className="input"
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="profile-plan">Current plan</label>
-                  <div className={styles.planRow}>
-                    <span className="badge badge-primary">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Input
+                  id="profile-name"
+                  label="Full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <Input
+                  id="profile-email"
+                  label="Email address"
+                  type="email"
+                  value={user?.email || ''}
+                  disabled
+                />
+                <div className="sm:col-span-2">
+                  <span className="gm-label">Current plan</span>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <Badge tone="primary">
                       {user?.plan?.charAt(0).toUpperCase()}{user?.plan?.slice(1)} Plan
-                    </span>
-                    <a href="/pricing" className={styles.upgradeLink}>Upgrade →</a>
+                    </Badge>
+                    <a href="/pricing" className="text-sm font-semibold text-primary hover:underline">
+                      Upgrade →
+                    </a>
                   </div>
                 </div>
               </div>
-              <div className={styles.formActions}>
-                <button
-                  className="btn btn-primary"
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button
                   onClick={handleSave}
                   disabled={loadingProfile}
+                  loading={loadingProfile}
                   id="save-profile"
                 >
-                  {loadingProfile ? 'Saving…' : saved ? <><Check size={16} /> Saved!</> : <><Edit3 size={16} /> Save changes</>}
-                </button>
+                  {saved ? (
+                    <>
+                      <Check size={16} /> Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 size={16} /> Save changes
+                    </>
+                  )}
+                </Button>
               </div>
-              {saveError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{saveError}</p>}
-            </div>
+              {saveError && <p className="mt-3 text-sm text-error">{saveError}</p>}
+            </Card>
           )}
 
-          {/* Resume Vault Tab */}
           {tab === 'resume' && (
-            <div className={`card ${styles.section}`}>
-              <h2 className={styles.sectionTitle}><FileText size={18} /> Resume Vault</h2>
-              <p className={styles.sectionDesc}>
+            <Card padding="lg">
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold text-on-surface">
+                <FileText size={18} className="text-primary" />
+                Resume Vault
+              </h2>
+              <p className="mb-6 text-sm text-on-surface-variant">
                 Your resumes are encrypted and stored securely. Auto-deleted after 30 days unless you pin them.
               </p>
 
-              <div className={styles.resumeList}>
+              <div className="mb-6 space-y-3">
                 {[
                   { name: 'software_engineer_resume_v3.pdf', size: '142 KB', uploaded: '2 days ago', used: 2, pinned: true },
                   { name: 'software_engineer_resume_v2.pdf', size: '138 KB', uploaded: '2 weeks ago', used: 1, pinned: false },
                 ].map((r, i) => (
-                  <div key={i} className={styles.resumeItem}>
-                    <div className={styles.resumeIcon}><FileText size={20} /></div>
-                    <div className={styles.resumeInfo}>
-                      <div className={styles.resumeName}>{r.name}</div>
-                      <div className={styles.resumeMeta}>
-                        {r.size} · Uploaded {r.uploaded} · Used in {r.used} analyses
-                        {r.pinned && <span className="badge badge-primary" style={{ marginLeft: '8px' }}>Pinned</span>}
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 rounded-xl border border-outline-variant/15 bg-surface-container-low p-4"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <FileText size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold text-on-surface">{r.name}</div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
+                        <span>
+                          {r.size} · Uploaded {r.uploaded} · Used in {r.used} analyses
+                        </span>
+                        {r.pinned && <Badge tone="primary">Pinned</Badge>}
                       </div>
                     </div>
-                    <div className={styles.resumeActions}>
-                      <button className="btn btn-icon btn-ghost" title="Download" aria-label="Download resume">
+                    <div className="flex shrink-0 gap-1">
+                      <Button variant="ghost" size="sm" title="Download" aria-label="Download resume">
                         <Download size={16} />
-                      </button>
-                      <button className="btn btn-icon btn-ghost" title="Delete" aria-label="Delete resume" style={{ color: 'var(--color-danger)' }}>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Delete"
+                        aria-label="Delete resume"
+                        className="text-error hover:text-error"
+                      >
                         <Trash2 size={16} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
 
-              <button className="btn btn-secondary" id="upload-resume">
+              <Button variant="secondary" id="upload-resume">
                 <Upload size={14} />
                 Upload new resume
-              </button>
-            </div>
+              </Button>
+            </Card>
           )}
 
-          {/* Security Tab */}
           {tab === 'security' && (
-            <div className={`card ${styles.section}`}>
-              <h2 className={styles.sectionTitle}><Shield size={18} /> Security & Privacy</h2>
+            <Card padding="lg">
+              <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-on-surface">
+                <Shield size={18} className="text-primary" />
+                Security & Privacy
+              </h2>
 
-              <div className={styles.securityItem}>
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/15 py-4">
                 <div>
-                  <div className={styles.securityLabel}>Password</div>
-                  <div className={styles.securityDesc}>Update the password used to sign in to Gapminer.</div>
+                  <div className="text-sm font-bold text-on-surface">Password</div>
+                  <div className="text-sm text-on-surface-variant">Update the password used to sign in to Gapminer.</div>
                 </div>
-                <button
-                  className="btn btn-secondary btn-sm"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   id="change-password"
                   onClick={() => setShowPasswordForm((value) => !value)}
                 >
                   {showPasswordForm ? 'Close' : 'Change password'}
-                </button>
+                </Button>
               </div>
 
               {showPasswordForm && (
-                <form onSubmit={handleChangePassword} className={styles.dangerZone} style={{ borderColor: 'var(--color-border)' }}>
-                  <div className={styles.formGrid} style={{ gridTemplateColumns: '1fr' }}>
-                    <div className={styles.field}>
-                      <label htmlFor="current-password">Current password</label>
-                      <input
-                        id="current-password"
-                        className="input"
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="new-password">New password</label>
-                      <input
-                        id="new-password"
-                        className="input"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        required
-                        minLength={8}
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="confirm-password">Confirm new password</label>
-                      <input
-                        id="confirm-password"
-                        className="input"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        minLength={8}
-                      />
-                    </div>
+                <form
+                  onSubmit={handleChangePassword}
+                  className="my-4 rounded-xl border border-outline-variant/20 bg-surface-container-low p-5"
+                >
+                  <div className="space-y-4">
+                    <Input
+                      id="current-password"
+                      label="Current password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      required
+                    />
+                    <Input
+                      id="new-password"
+                      label="New password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={8}
+                    />
+                    <Input
+                      id="confirm-password"
+                      label="Confirm new password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={8}
+                    />
                   </div>
-                  {securityError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{securityError}</p>}
-                  {securityMessage && <p className={styles.sectionDesc} style={{ color: 'var(--color-primary-light)' }}>{securityMessage}</p>}
-                  <div className={styles.formActions}>
-                    <button className="btn btn-primary btn-sm" type="submit" disabled={busyAction === 'password'}>
+                  {securityError && <p className="mt-3 text-sm text-error">{securityError}</p>}
+                  {securityMessage && <p className="mt-3 text-sm text-primary">{securityMessage}</p>}
+                  <div className="mt-4">
+                    <Button type="submit" size="sm" loading={busyAction === 'password'} disabled={busyAction === 'password'}>
                       {busyAction === 'password' ? 'Updating…' : 'Update password'}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               )}
 
-              <div className={styles.securityItem}>
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant/15 py-4">
                 <div>
-                  <div className={styles.securityLabel}>Two-factor authentication</div>
-                  <div className={styles.securityDesc}>{twoFactorEnabled ? '2FA is currently enabled on your account.' : 'Add an extra layer of security.'}</div>
+                  <div className="text-sm font-bold text-on-surface">Two-factor authentication</div>
+                  <div className="text-sm text-on-surface-variant">
+                    {twoFactorEnabled ? '2FA is currently enabled on your account.' : 'Add an extra layer of security.'}
+                  </div>
                 </div>
-                <button
-                  className="btn btn-secondary btn-sm"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   id="enable-2fa"
                   onClick={() => {
                     setSecurityError('')
@@ -439,45 +473,39 @@ export default function ProfilePage() {
                   }}
                 >
                   {twoFactorEnabled ? (showTwoFactorForm ? 'Close' : 'Disable 2FA') : 'Enable 2FA'}
-                </button>
+                </Button>
               </div>
 
               {showTwoFactorForm && (
-                <div className={styles.dangerZone} style={{ borderColor: 'var(--color-border)' }}>
+                <div className="my-4 rounded-xl border border-outline-variant/20 bg-surface-container-low p-5">
                   {!twoFactorEnabled ? (
                     <>
-                      <div className={styles.sectionDesc} style={{ marginBottom: 'var(--space-3)' }}>
+                      <p className="mb-4 text-sm text-on-surface-variant">
                         {twoFactorSetupSecret
                           ? 'Add the secret to your authenticator app, then verify the code below to finish setup.'
                           : 'Start 2FA setup to generate a secret and QR/authenticator URL.'}
-                      </div>
+                      </p>
 
                       {!twoFactorSetupSecret && (
-                        <button
-                          className="btn btn-primary btn-sm"
+                        <Button
                           type="button"
+                          size="sm"
                           onClick={handleStartTwoFactor}
+                          loading={busyAction === '2fa-setup'}
                           disabled={busyAction === '2fa-setup'}
                         >
                           {busyAction === '2fa-setup' ? 'Preparing…' : 'Generate 2FA secret'}
-                        </button>
+                        </Button>
                       )}
 
                       {twoFactorSetupSecret && (
-                        <div className={styles.formGrid} style={{ gridTemplateColumns: '1fr' }}>
-                          <div className={styles.field}>
-                            <label>Secret key</label>
-                            <input className="input" type="text" value={twoFactorSetupSecret} readOnly />
-                          </div>
-                          <div className={styles.field}>
-                            <label>Authenticator URL</label>
-                            <textarea className="input" value={twoFactorSetupUrl} readOnly rows={4} />
-                          </div>
-                          <form onSubmit={handleVerifyTwoFactor} className={styles.field}>
-                            <label htmlFor="two-factor-code">Verification code</label>
-                            <input
+                        <div className="space-y-4">
+                          <Input label="Secret key" type="text" value={twoFactorSetupSecret} readOnly />
+                          <Textarea label="Authenticator URL" value={twoFactorSetupUrl} readOnly rows={4} />
+                          <form onSubmit={handleVerifyTwoFactor} className="space-y-4">
+                            <Input
                               id="two-factor-code"
-                              className="input"
+                              label="Verification code"
                               type="text"
                               inputMode="numeric"
                               maxLength={6}
@@ -486,83 +514,93 @@ export default function ProfilePage() {
                               placeholder="123456"
                               required
                             />
-                            <button className="btn btn-primary btn-sm" type="submit" disabled={busyAction === '2fa-verify'}>
+                            <Button type="submit" size="sm" loading={busyAction === '2fa-verify'} disabled={busyAction === '2fa-verify'}>
                               {busyAction === '2fa-verify' ? 'Verifying…' : 'Verify and enable'}
-                            </button>
+                            </Button>
                           </form>
                         </div>
                       )}
                     </>
                   ) : (
-                    <form onSubmit={handleDisableTwoFactor} className={styles.field}>
-                      <label htmlFor="disable-2fa-password">Confirm your password to disable 2FA</label>
-                      <input
+                    <form onSubmit={handleDisableTwoFactor} className="space-y-4">
+                      <Input
                         id="disable-2fa-password"
-                        className="input"
+                        label="Confirm your password to disable 2FA"
                         type="password"
                         value={currentPasswordFor2FA}
                         onChange={(e) => setCurrentPasswordFor2FA(e.target.value)}
                         placeholder="Enter password"
                         required
                       />
-                      <button className="btn btn-danger btn-sm" type="submit" disabled={busyAction === '2fa-disable'}>
+                      <Button variant="danger" type="submit" size="sm" loading={busyAction === '2fa-disable'} disabled={busyAction === '2fa-disable'}>
                         {busyAction === '2fa-disable' ? 'Disabling…' : 'Disable 2FA'}
-                      </button>
+                      </Button>
                     </form>
                   )}
 
-                  {securityError && <p className={styles.sectionDesc} style={{ color: 'var(--color-danger)' }}>{securityError}</p>}
-                  {securityMessage && <p className={styles.sectionDesc} style={{ color: 'var(--color-primary-light)' }}>{securityMessage}</p>}
+                  {securityError && <p className="mt-3 text-sm text-error">{securityError}</p>}
+                  {securityMessage && <p className="mt-3 text-sm text-primary">{securityMessage}</p>}
                 </div>
               )}
 
-              <div className={styles.dangerZone}>
-                <h3>Danger Zone</h3>
-                <div className={styles.securityItem} style={{ borderColor: 'hsla(0,90%,60%,0.2)' }}>
+              <div className="mt-8 rounded-xl border border-error/25 bg-error/5 p-5">
+                <h3 className="mb-4 text-sm font-bold text-error">Danger Zone</h3>
+                <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <div className={styles.securityLabel}>Delete account</div>
-                    <div className={styles.securityDesc}>Permanently delete your account and all data</div>
+                    <div className="text-sm font-bold text-on-surface">Delete account</div>
+                    <div className="text-sm text-on-surface-variant">Permanently delete your account and all data</div>
                   </div>
-                  <button className="btn btn-danger btn-sm" id="delete-account">
+                  <Button variant="danger" size="sm" id="delete-account">
                     <Trash2 size={14} />
                     Delete account
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Card>
           )}
 
-          {/* Notifications Tab */}
           {tab === 'notifications' && (
-            <div className={`card ${styles.section}`}>
-              <h2 className={styles.sectionTitle}><Bell size={18} /> Notification Preferences</h2>
-              <div className={styles.notifList}>
+            <Card padding="lg">
+              <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-on-surface">
+                <Bell size={18} className="text-primary" />
+                Notification Preferences
+              </h2>
+              <div className="divide-y divide-outline-variant/15">
                 {[
                   { label: 'Analysis complete', desc: 'When your gap analysis finishes', checked: true },
                   { label: 'Weekly digest', desc: 'Summary of your progress every Monday', checked: false },
                   { label: 'Roadmap reminders', desc: 'Reminders to continue your learning plan', checked: true },
                   { label: 'Product updates', desc: 'New features and announcements', checked: false },
                 ].map((n, i) => (
-                  <div key={i} className={styles.notifItem}>
+                  <div key={i} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
                     <div>
-                      <div className={styles.notifLabel}>{n.label}</div>
-                      <div className={styles.notifDesc}>{n.desc}</div>
+                      <div className="text-sm font-bold text-on-surface">{n.label}</div>
+                      <div className="text-sm text-on-surface-variant">{n.desc}</div>
                     </div>
                     <button
-                      className={`${styles.toggle} ${n.checked ? styles.toggleOn : ''}`}
+                      type="button"
+                      className={cn(
+                        'relative h-7 w-12 shrink-0 rounded-full transition-colors',
+                        n.checked ? 'bg-primary' : 'bg-surface-container-highest border border-outline-variant/30',
+                      )}
                       role="switch"
                       aria-checked={n.checked}
                       id={`notif-${i}`}
                     >
-                      <div className={styles.toggleThumb} />
+                      <span
+                        className={cn(
+                          'absolute top-1 h-5 w-5 rounded-full bg-on-primary-fixed shadow transition-all',
+                          n.checked ? 'left-6' : 'left-1',
+                        )}
+                      />
                     </button>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

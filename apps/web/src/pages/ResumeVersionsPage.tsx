@@ -9,8 +9,21 @@ import {
   Save,
   AlertCircle,
   Minus,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export default function ResumeVersionsPage() {
   const [versions, setVersions] = useState<any[]>([]);
@@ -118,230 +131,215 @@ export default function ResumeVersionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Clock className="w-8 h-8 text-blue-600" />
-              Resume Version Control
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Track changes, compare versions, and restore previous iterations
-            </p>
-          </div>
-          <button
-            onClick={() => setShowNewVersion(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
+    <PageShell maxWidth="lg">
+      <PageHeader
+        title="Resume Version Control"
+        description="Track changes, compare versions, and restore previous iterations"
+        icon={<Clock size={22} />}
+        actions={
+          <Button onClick={() => setShowNewVersion(true)}>
             <Plus size={18} />
             New Version
-          </button>
-        </div>
+          </Button>
+        }
+      />
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p className="text-red-700">{error}</p>
+      {error && (
+        <Card className="mb-6 border-error/30 bg-error/10" padding="md">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-error" />
+            <p className="flex-1 text-sm text-error">{error}</p>
             <button
+              type="button"
               onClick={() => setError(null)}
-              className="ml-auto text-red-400"
+              className="text-error/60 hover:text-error"
             >
               <X size={16} />
             </button>
           </div>
-        )}
+        </Card>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-3">
-            <h2 className="font-semibold text-gray-900 mb-3">
-              Version History
-            </h2>
-            {loading ? (
-              <p className="text-gray-500">Loading...</p>
-            ) : versions.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                No versions yet. Create your first version!
-              </p>
-            ) : (
-              versions.map((version, i) => (
-                <button
-                  key={version.id}
-                  onClick={() =>
-                    setSelectedVersion(
-                      version.id === selectedVersion ? null : version.id,
-                    )
-                  }
-                  className={`w-full text-left p-4 rounded-lg border transition-all ${
-                    selectedVersion === version.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">
-                        {versions.length - i}
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {version.change_summary ||
-                            `Version ${versions.length - i}`}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(version.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-3 lg:col-span-1">
+          <h2 className="mb-3 font-bold text-on-surface">Version history</h2>
+          {loading ? (
+            <div className="flex items-center gap-2 text-on-surface-variant">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Loading...
+            </div>
+          ) : versions.length === 0 ? (
+            <EmptyState
+              icon={<Clock size={28} />}
+              title="No versions yet"
+              description="Create your first version to start tracking changes"
+              action="New version"
+              onAction={() => setShowNewVersion(true)}
+            />
+          ) : (
+            versions.map((version, i) => (
+              <button
+                key={version.id}
+                type="button"
+                onClick={() =>
+                  setSelectedVersion(
+                    version.id === selectedVersion ? null : version.id,
+                  )
+                }
+                className={cn(
+                  "w-full rounded-xl border p-4 text-left transition-all",
+                  selectedVersion === version.id
+                    ? "border-primary/40 bg-primary/10"
+                    : "glass-card hover:border-primary/25",
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+                      {versions.length - i}
                     </div>
-                    {selectedVersion === version.id && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRestore(version.id);
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
-                        title="Restore this version"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                    )}
+                    <div>
+                      <p className="text-sm font-medium text-on-surface">
+                        {version.change_summary || `Version ${versions.length - i}`}
+                      </p>
+                      <p className="text-xs text-on-surface-variant">
+                        {new Date(version.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="lg:col-span-2">
-            {selectedVersion && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold">Version Content</h2>
-                  {versions.length >= 2 && (
+                  {selectedVersion === version.id && (
                     <button
-                      onClick={() => {
-                        const idx = versions.findIndex(
-                          (v) => v.id === selectedVersion,
-                        );
-                        if (idx < versions.length - 1) {
-                          handleCompare(selectedVersion, versions[idx + 1].id);
-                        }
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRestore(version.id);
                       }}
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                      className="rounded-lg p-1.5 text-primary hover:bg-primary/15"
+                      title="Restore this version"
                     >
-                      <GitCompare size={16} />
-                      Compare with previous
+                      <RotateCcw size={14} />
                     </button>
                   )}
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                  {versions.find((v) => v.id === selectedVersion)?.content}
-                </pre>
-              </div>
-            )}
-
-            {diffResult && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
-                <h2 className="font-semibold mb-4 flex items-center gap-2">
-                  <GitCompare size={18} className="text-blue-600" />
-                  Version Comparison
-                </h2>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="bg-green-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-green-600">
-                      {diffResult.addedLines}
-                    </p>
-                    <p className="text-xs text-green-700">Lines Added</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-red-600">
-                      {diffResult.removedLines}
-                    </p>
-                    <p className="text-xs text-red-700">Lines Removed</p>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-blue-600">
-                      {diffResult.similarity}%
-                    </p>
-                    <p className="text-xs text-blue-700">Similarity</p>
-                  </div>
-                </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {diffResult.changes
-                    .slice(0, 20)
-                    .map((change: any, i: number) => (
-                      <div
-                        key={i}
-                        className={`flex items-start gap-2 p-2 rounded text-sm font-mono ${
-                          change.type === "added"
-                            ? "bg-green-50 text-green-800"
-                            : "bg-red-50 text-red-800"
-                        }`}
-                      >
-                        {change.type === "added" ? (
-                          <Plus size={14} className="flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <Minus size={14} className="flex-shrink-0 mt-0.5" />
-                        )}
-                        {change.content}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
+              </button>
+            ))
+          )}
         </div>
 
-        <AnimatePresence>
-          {showNewVersion && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setShowNewVersion(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.95 }}
-                animate={{ scale: 1 }}
-                className="bg-white rounded-xl p-6 w-full max-w-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Create New Version</h2>
-                  <button
-                    onClick={() => setShowNewVersion(false)}
-                    className="p-1 hover:bg-gray-100 rounded"
+        <div className="lg:col-span-2">
+          {selectedVersion && (
+            <Card>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-bold text-on-surface">Version content</h2>
+                {versions.length >= 2 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const idx = versions.findIndex((v) => v.id === selectedVersion);
+                      if (idx < versions.length - 1) {
+                        handleCompare(selectedVersion, versions[idx + 1].id);
+                      }
+                    }}
                   >
-                    <X size={20} />
-                  </button>
-                </div>
-                <textarea
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Paste your resume content..."
-                  rows={10}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 resize-y"
-                />
-                <input
-                  type="text"
-                  value={changeSummary}
-                  onChange={(e) => setChangeSummary(e.target.value)}
-                  placeholder="What changed in this version? (optional)"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-                />
-                <button
-                  onClick={handleCreateVersion}
-                  disabled={!newContent.trim()}
-                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Save size={16} />
-                  Save Version
-                </button>
-              </motion.div>
-            </motion.div>
+                    <GitCompare size={16} />
+                    Compare with previous
+                  </Button>
+                )}
+              </div>
+              <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-xl border border-outline-variant/15 bg-surface-container-high p-4 font-mono text-sm text-on-surface-variant">
+                {versions.find((v) => v.id === selectedVersion)?.content}
+              </pre>
+            </Card>
           )}
-        </AnimatePresence>
+
+          {diffResult && (
+            <Card className="mt-6">
+              <h2 className="mb-4 flex items-center gap-2 font-bold text-on-surface">
+                <GitCompare size={18} className="text-primary" />
+                Version comparison
+              </h2>
+              <div className="mb-4 grid grid-cols-3 gap-4">
+                <StatCard label="Lines added" value={diffResult.addedLines} />
+                <StatCard label="Lines removed" value={diffResult.removedLines} />
+                <StatCard label="Similarity" value={`${diffResult.similarity}%`} />
+              </div>
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {diffResult.changes.slice(0, 20).map((change: any, i: number) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-start gap-2 rounded-lg p-2 font-mono text-sm",
+                      change.type === "added"
+                        ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                        : "border border-error/20 bg-error/10 text-red-300",
+                    )}
+                  >
+                    {change.type === "added" ? (
+                      <Plus size={14} className="mt-0.5 shrink-0" />
+                    ) : (
+                      <Minus size={14} className="mt-0.5 shrink-0" />
+                    )}
+                    {change.content}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {showNewVersion && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={() => setShowNewVersion(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              className="glass-card w-full max-w-2xl p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-black text-on-surface">Create new version</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowNewVersion(false)}
+                  className="rounded-lg p-1 text-outline hover:bg-surface-container-high"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <Textarea
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                placeholder="Paste your resume content..."
+                rows={10}
+                className="mb-4"
+              />
+              <Input
+                type="text"
+                value={changeSummary}
+                onChange={(e) => setChangeSummary(e.target.value)}
+                placeholder="What changed in this version? (optional)"
+                className="mb-4"
+              />
+              <Button
+                onClick={handleCreateVersion}
+                disabled={!newContent.trim()}
+                className="w-full"
+              >
+                <Save size={16} />
+                Save version
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PageShell>
   );
 }

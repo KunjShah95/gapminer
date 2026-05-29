@@ -9,10 +9,10 @@ import {
   Globe,
   Share2,
   Star,
-  Target,
   TrendingUp,
   Users,
   Zap,
+  BarChart2,
 } from "lucide-react";
 import {
   PolarAngleAxis,
@@ -24,6 +24,14 @@ import {
 } from "recharts";
 import { getAuthToken } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 type AnalysisResults = {
   overall_score: number;
@@ -54,26 +62,30 @@ const fallbackResults: AnalysisResults = {
 
 function LoadingState() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="primary-gradient text-on-primary-fixed animate-pulse rounded-full px-8 py-4 font-bold">
-        Loading Analysis Results...
+    <PageShell>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
+        <div className="primary-gradient animate-pulse rounded-full px-8 py-4 font-bold text-on-primary-fixed">
+          Loading Analysis Results...
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
 function EmptyState() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center space-y-4">
-      <AlertCircle className="text-error" size={48} />
-      <h2 className="text-xl font-bold">Analysis Not Found</h2>
-      <Link
-        to="/dashboard"
-        className="primary-gradient text-on-primary-fixed rounded-full px-6 py-3"
-      >
-        Back to Dashboard
-      </Link>
-    </div>
+    <PageShell>
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
+        <AlertCircle className="text-error" size={48} />
+        <h2 className="text-xl font-bold text-on-surface">Analysis Not Found</h2>
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-bold primary-gradient text-on-primary-fixed"
+        >
+          Back to Dashboard
+        </Link>
+      </div>
+    </PageShell>
   );
 }
 
@@ -133,115 +145,92 @@ export default function AnalysisResultsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface">
-      <header className="sticky top-0 z-50 border-b border-outline-variant/15 bg-surface/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-2 text-on-surface-variant transition-colors hover:text-primary"
-            >
-              <ArrowLeft size={20} />
-              <span className="text-sm font-bold uppercase tracking-widest">
+    <ProtectedRoute>
+      <PageShell>
+        <PageHeader
+          icon={<BarChart2 size={22} />}
+          title="Analysis Results"
+          description="How well your profile aligns with target role requirements."
+          actions={
+            <>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
+              >
+                <ArrowLeft size={18} />
                 Back
-              </span>
-            </Link>
-            <div className="h-8 w-px bg-outline-variant/20" />
-            <div className="flex items-center gap-2">
-              <Target className="text-primary" size={20} />
-              <h1 className="text-xl font-bold tracking-tight">
-                Analysis Results
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="glass flex items-center gap-2 rounded-full border border-outline-variant/20 px-4 py-2 text-sm font-bold transition-all hover:bg-surface-container-highest">
-              <Share2 size={16} />
-              Share
-            </button>
-            <button className="glass flex items-center gap-2 rounded-full border border-outline-variant/20 px-4 py-2 text-sm font-bold transition-all hover:bg-surface-container-highest">
-              <Download size={16} />
-              Export PDF
-            </button>
-          </div>
-        </div>
-      </header>
+              </Link>
+              <Button variant="outline" size="sm">
+                <Share2 size={16} /> Share
+              </Button>
+              <Button variant="secondary" size="sm">
+                <Download size={16} /> Export PDF
+              </Button>
+            </>
+          }
+        />
 
-      <main className="mx-auto max-w-7xl px-8 py-12">
         <OnboardingTooltip
           pageKey="results"
           icon="📊"
           title="Understanding your scores"
-          description="The radar chart shows 8 dimensions. Green = strong match. Red = gap. Click any section to see course recommendations."
+          description="The radar chart shows key dimensions. Green = strong match. Red = gap. Open the roadmap for course recommendations."
         />
-        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="glass bg-surface-container-high rounded-[2.5rem] border border-outline-variant/15 p-8 lg:col-span-2">
-            <div className="mb-8 flex items-start justify-between">
+
+        <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card padding="lg" className="lg:col-span-2">
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="mb-2 text-2xl font-black tracking-tight">
-                  Overall Match Score
-                </h2>
-                <p className="font-light text-on-surface-variant">
+                <h2 className="mb-1 text-xl font-black text-on-surface">Overall Match Score</h2>
+                <p className="text-sm text-on-surface-variant">
                   How well your profile aligns with target role requirements
                 </p>
               </div>
-              <span className="text-gradient skew-x-[-2deg] text-5xl font-black tracking-tighter">
+              <span className="text-5xl font-black tracking-tight text-primary">
                 {results.overall_score}%
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-outline-variant/10 bg-surface-container p-4">
-                <div className="mb-1 text-sm font-bold text-on-surface-variant">
-                  Resume Strength
-                </div>
-                <div className="text-2xl font-black">
-                  {results.resume_strength_score}%
-                </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4">
+                <p className="mb-1 text-sm font-bold text-on-surface-variant">Resume Strength</p>
+                <p className="text-2xl font-black text-on-surface">{results.resume_strength_score}%</p>
               </div>
-              <div className="rounded-2xl border border-outline-variant/10 bg-surface-container p-4">
-                <div className="mb-1 text-sm font-bold text-on-surface-variant">
-                  ATS Optimization
-                </div>
-                <div className="text-2xl font-black">
-                  {results.ats_score}/100
-                </div>
+              <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4">
+                <p className="mb-1 text-sm font-bold text-on-surface-variant">ATS Optimization</p>
+                <p className="text-2xl font-black text-on-surface">{results.ats_score}/100</p>
               </div>
-              <div className="rounded-2xl border border-outline-variant/10 bg-surface-container p-4">
-                <div className="mb-1 text-sm font-bold text-on-surface-variant">
-                  Market Fit
-                </div>
-                <div className="text-2xl font-black">
-                  {results.matchPercentage}%
-                </div>
+              <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4">
+                <p className="mb-1 text-sm font-bold text-on-surface-variant">Market Fit</p>
+                <p className="text-2xl font-black text-on-surface">{results.matchPercentage}%</p>
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className="glass bg-surface-container-high rounded-[2.5rem] border border-outline-variant/15 p-8">
-            <h3 className="mb-6 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-outline">
+          <Card padding="lg">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-outline">
               <TrendingUp size={16} className="text-primary" />
               Skill Radar
             </h3>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
-                  <PolarGrid stroke="rgba(72,71,77,0.1)" />
+                  <PolarGrid stroke="rgba(148,163,184,0.15)" />
                   <PolarAngleAxis
                     dataKey="subject"
-                    tick={{ fill: "#acaab1", fontSize: 10, fontWeight: 700 }}
+                    tick={{ fill: "rgb(148 163 184)", fontSize: 10, fontWeight: 700 }}
                   />
                   <Radar
                     name="Expertise"
                     dataKey="A"
-                    stroke="#b0a2ff"
-                    fill="#b0a2ff"
+                    stroke="rgb(176 162 255)"
+                    fill="rgb(176 162 255)"
                     fillOpacity={0.2}
                     strokeWidth={2}
                   />
                   <RechartsTooltip
                     contentStyle={{
-                      background: "#1f1f26",
-                      border: "1px solid #48474d",
+                      background: "rgb(30 32 40)",
+                      border: "1px solid rgba(148,163,184,0.2)",
                       borderRadius: "12px",
                       fontSize: "10px",
                     }}
@@ -249,101 +238,86 @@ export default function AnalysisResultsPage() {
                 </RadarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="glass bg-surface-container-high rounded-[2.5rem] border border-outline-variant/15 p-8">
-            <h3 className="mb-6 flex items-center gap-2 text-lg font-bold">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Card padding="lg">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
               <AlertCircle className="text-error" size={20} />
               Skill Gap Analysis
             </h3>
-            <div className="mb-8 space-y-4">
+            <div className="mb-6 space-y-4">
               <div>
-                <div className="mb-3 px-1 text-[10px] font-black uppercase tracking-widest text-error">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-error">
                   Missing Skills ({results.missingSkills.length})
-                </div>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {results.missingSkills.map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="rounded-lg border border-error/30 bg-error/10 px-3 py-1.5 text-xs font-bold text-error"
-                    >
+                    <Badge key={idx} tone="error" className="normal-case tracking-normal">
                       {skill}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="mb-3 px-1 text-[10px] font-black uppercase tracking-widest text-primary">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-primary">
                   Matched Strengths ({results.matchedSkills.length})
-                </div>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {results.matchedSkills.map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary"
-                    >
+                    <Badge key={idx} tone="primary" className="normal-case tracking-normal">
                       {skill}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
             </div>
             <Link
               to={id ? `/roadmap/${id}` : "/roadmap"}
-              className="primary-gradient text-on-primary-fixed flex w-full items-center justify-center gap-2 rounded-2xl py-3 font-bold transition-all hover:shadow-xl"
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold primary-gradient text-on-primary-fixed transition-all hover:shadow-lg hover:shadow-primary/20"
             >
               Generate Learning Roadmap <ArrowRight size={18} />
             </Link>
-          </div>
+          </Card>
 
-          <div className="glass bg-surface-container-high rounded-[2.5rem] border border-outline-variant/15 p-8">
-            <div className="mb-6 flex items-center gap-2">
+          <Card padding="lg">
+            <div className="mb-4 flex items-center gap-2">
               <Globe className="text-tertiary" size={20} />
-              <h3 className="text-lg font-bold">Market Significance</h3>
+              <h3 className="text-lg font-bold text-on-surface">Market Significance</h3>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {results.marketSignificance.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-3"
+                  className="flex items-center justify-between rounded-xl border border-outline-variant/15 bg-surface-container-low p-3"
                 >
                   <div>
-                    <p className="text-sm font-bold">{item.skill}</p>
+                    <p className="text-sm font-bold text-on-surface">{item.skill}</p>
                     <p className="text-[10px] text-on-surface-variant">
                       {item.demand}% of Job Descriptions
                     </p>
                   </div>
-                  <span className="rounded-lg px-2 py-1 text-xs font-bold">
-                    {item.trend}
-                  </span>
+                  <Badge tone="info">{item.trend}</Badge>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
-          <div className="glass bg-surface-container-high rounded-[2.5rem] border border-outline-variant/15 p-8">
-            <div className="mb-6 flex items-center gap-2">
+          <Card padding="lg">
+            <div className="mb-4 flex items-center gap-2">
               <Users className="text-primary" size={20} />
-              <h3 className="text-lg font-bold">Peer Benchmark</h3>
+              <h3 className="text-lg font-bold text-on-surface">Peer Benchmark</h3>
             </div>
-            <div className="mb-6 flex items-center gap-1">
+            <div className="mb-4 flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((s) => (
                 <Star
                   key={s}
                   size={16}
-                  className={
-                    s <= 3 ? "text-amber-500 fill-current" : "text-outline"
-                  }
-                  style={{
-                    fontVariationSettings: s <= 3 ? "'FILL' 1" : "'FILL' 0",
-                  }}
+                  className={cn(s <= 3 ? "fill-amber-500 text-amber-500" : "text-outline")}
                 />
               ))}
-              <span className="ml-2 text-xs font-medium text-on-surface-variant">
-                3 / 5 Relevance
-              </span>
+              <span className="ml-2 text-xs text-on-surface-variant">3 / 5 Relevance</span>
             </div>
             <p className="mb-6 text-sm font-semibold text-on-surface">
               You&apos;re in the{" "}
@@ -358,78 +332,68 @@ export default function AnalysisResultsPage() {
                 <div className="h-full w-[30%] border-r border-background/20 bg-primary/40" />
                 <div className="h-full w-[10%] bg-primary" />
               </div>
-              <div className="absolute left-[32%] top-0 -translate-x-1/2 flex flex-col items-center">
-                <div className="mb-1 h-3 w-[1px] bg-primary" />
-                <span className="text-[8px] font-bold uppercase text-primary">
-                  You
-                </span>
+              <div className="absolute left-[32%] top-0 flex -translate-x-1/2 flex-col items-center">
+                <div className="mb-1 h-3 w-px bg-primary" />
+                <span className="text-[8px] font-bold uppercase text-primary">You</span>
               </div>
-              <div className="absolute left-[68%] top-0 -translate-x-1/2 flex flex-col items-center">
-                <div className="mb-1 h-3 w-[1px] bg-on-surface-variant/40" />
-                <span className="text-[8px] font-bold uppercase text-on-surface-variant">
-                  Avg
-                </span>
+              <div className="absolute left-[68%] top-0 flex -translate-x-1/2 flex-col items-center">
+                <div className="mb-1 h-3 w-px bg-on-surface-variant/40" />
+                <span className="text-[8px] font-bold uppercase text-on-surface-variant">Avg</span>
               </div>
-              <div className="absolute left-[90%] top-0 -translate-x-1/2 flex flex-col items-center">
-                <div className="mb-1 h-3 w-[1px] bg-secondary" />
-                <span className="text-[8px] font-bold uppercase text-secondary">
-                  Top 10%
-                </span>
+              <div className="absolute left-[90%] top-0 flex -translate-x-1/2 flex-col items-center">
+                <div className="mb-1 h-3 w-px bg-secondary" />
+                <span className="text-[8px] font-bold uppercase text-secondary">Top 10%</span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
-        <div className="glass bg-surface-container-high mt-8 rounded-[2.5rem] border-2 border-primary/20 p-8">
-          <div className="mb-6 flex items-start justify-between">
+        <Card padding="lg" className="mt-6 border-primary/25">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <FileText className="text-primary" size={24} />
               <div>
-                <h3 className="text-xl font-bold tracking-tight">
-                  ATS Keyword Match
-                </h3>
+                <h3 className="text-xl font-bold text-on-surface">ATS Keyword Match</h3>
                 <p className="text-xs text-on-surface-variant">
                   Resume optimization for Applicant Tracking Systems
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-4xl font-black text-on-surface">
-                {results.ats_score}
-              </span>
+              <span className="text-4xl font-black text-on-surface">{results.ats_score}</span>
               <span className="text-sm text-on-surface-variant">/100</span>
             </div>
           </div>
-          <div className="mb-6 space-y-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+          <div className="mb-6">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
               Missing Keywords
             </p>
             <div className="flex flex-wrap gap-2">
               {results.missingKeywords.map((keyword, idx) => (
                 <span
                   key={idx}
-                  className="rounded-full border border-error/20 bg-surface-container-lowest px-4 py-1.5 font-mono text-xs text-error-dim"
+                  className="rounded-full border border-error/20 bg-surface-container-low px-4 py-1.5 font-mono text-xs text-error"
                 >
                   &quot;{keyword}&quot;
                 </span>
               ))}
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               to={id ? `/latex/${id}` : "/latex"}
-              className="primary-gradient text-on-primary-fixed flex flex-1 items-center justify-center gap-2 rounded-full py-3 font-bold shadow-[0_0_20px_rgba(176,162,255,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
             >
               <Zap size={18} />
               Optimize Resume
             </Link>
-            <button className="glass flex items-center gap-2 rounded-full border border-outline-variant/20 px-6 py-3 font-bold transition-all hover:bg-surface-container-highest">
+            <Button variant="outline" className="sm:flex-initial">
               <Download size={18} />
               Download Report
-            </button>
+            </Button>
           </div>
-        </div>
-      </main>
-    </div>
+        </Card>
+      </PageShell>
+    </ProtectedRoute>
   );
 }

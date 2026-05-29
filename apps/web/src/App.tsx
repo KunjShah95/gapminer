@@ -1,7 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
+import PublicLayout from "@/components/public/PublicLayout";
 import LandingPage from "@/pages/LandingPage";
+import AboutPage from "@/pages/AboutPage";
+import FeaturesPage from "@/pages/FeaturesPage";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import AnalysisResultsPage from "@/pages/AnalysisResultsPage";
@@ -67,11 +70,17 @@ export default function App() {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public */}
-      <Route path="/" element={<LandingPage />} />
+      {/* Public pages with shared layout */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+      </Route>
+
+      {/* Auth */}
       <Route path="/login" element={<AuthPage />} />
       <Route path="/auth" element={<AuthPage />} />
-      <Route path="/pricing" element={<PricingPage />} />
 
       {/* Protected App Routes */}
       <Route element={<AppLayout />}>

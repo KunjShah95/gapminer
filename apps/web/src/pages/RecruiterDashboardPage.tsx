@@ -25,6 +25,15 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { getAuthToken } from "@/lib/authFetch";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  Input,
+  StatCard,
+} from "@/components/ui";
 
 // ── Shared Types ──────────────────────────────────────────
 interface Stat {
@@ -277,85 +286,71 @@ export default function RecruiterDashboardPage() {
     }
   }
 
+  const statIconColors: Record<string, string> = {
+    primary: "text-primary",
+    tertiary: "text-violet-300",
+    success: "text-emerald-400",
+    info: "text-sky-400",
+  };
+
   return (
-    <div className="flex flex-col h-full bg-surface-container-low p-8 font-body overflow-hidden">
-      {/* ── Header Area ───────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-12">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <h1 className="text-3xl font-black tracking-tight skew-x-[-2deg] flex items-center gap-3">
-            Recruiter <span className="text-primary italic">Intelligence</span>{" "}
-            Hub
-            <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-md text-[9px] uppercase tracking-tighter italic">
-              AI Powered Hiring
+    <PageShell maxWidth="full" className="flex h-full flex-col overflow-hidden">
+      <PageHeader
+        badge="Enterprise"
+        title="Recruiter Intelligence Hub"
+        description="Optimize pipelines with precision and predictive insights."
+        icon={<Cpu className="h-6 w-6" />}
+        actions={
+          <>
+            <div className="flex items-center gap-2 rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-outline">
+                Min Score
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={threshold}
+                onChange={(e) => setThreshold(Number(e.target.value))}
+                className="w-12 bg-transparent text-center text-sm font-black text-primary outline-none"
+              />
+              <span className="text-[10px] text-outline">%</span>
             </div>
-          </h1>
-          <p className="text-on-surface-variant font-black text-[10px] uppercase tracking-[0.3em] mt-3 opacity-60">
-            Optimize pipelines with precision and predictive insights
-          </p>
-        </motion.div>
+            <Button size="lg" onClick={() => setShowNewJobModal(true)}>
+              <Briefcase className="h-4 w-4" />
+              Post New Position
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-4">
-          {/* Match threshold control */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-surface-container/40 rounded-2xl border border-outline-variant/10">
-            <span className="text-[10px] font-black uppercase tracking-wider text-outline">Min Score</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-              className="w-14 bg-transparent text-[13px] font-black text-primary outline-none text-center"
-            />
-            <span className="text-[10px] text-outline">%</span>
-          </div>
-          <button
-            onClick={() => setShowNewJobModal(true)}
-            className="btn btn-primary px-8 py-3.5 rounded-2xl shadow-2xl shadow-primary/30 active:scale-95"
-          >
-            <Briefcase size={14} />
-            Post New Position
-          </button>
-        </div>
-      </div>
-
-      {/* ── Executive HUD ──────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-6 mb-12">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((stat, idx) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1, duration: 0.5 }}
-            className="card group hover:border-primary/40 relative overflow-hidden"
+            transition={{ delay: idx * 0.08, duration: 0.4 }}
           >
-            <div className="absolute -inset-10 bg-primary/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="flex items-center justify-between mb-5 relative z-10">
-              <div
-                className={`p-2.5 rounded-xl bg-${stat.color}/10 flex items-center justify-center text-${stat.color} border border-${stat.color}/10`}
-              >
-                <stat.icon size={20} />
-              </div>
-            </div>
-            <div className="text-3xl font-black tracking-tight relative z-10">
-              {" "}
-              {stat.value}{" "}
-            </div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-outline mt-1.5 relative z-10 opacity-70">
-              {stat.label}
-            </div>
+            <StatCard
+              label={stat.label}
+              value={stat.value}
+              icon={
+                <stat.icon
+                  className={cn("h-5 w-5", statIconColors[stat.color] || "text-primary")}
+                />
+              }
+              className="border-primary/10 hover:border-primary/30"
+            />
           </motion.div>
         ))}
       </div>
 
       {/* ── Main Operations View ────────────────────────────── */}
       <div className="flex-grow flex gap-8 overflow-hidden items-stretch">
-        <div className="flex-grow flex flex-col glass bg-white/70 p-8 rounded-[2.5rem] border border-outline-variant/10 shadow-2xl overflow-hidden backdrop-blur-3xl">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2 p-1 bg-surface-container/40 rounded-[1.25rem] border border-outline-variant/10">
+        <Card padding="lg" className="flex flex-grow flex-col overflow-hidden">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex gap-1 rounded-xl border border-outline-variant/15 bg-surface-container-low p-1">
               {[
                 { id: "ranking", label: "Talent Ranking" },
                 { id: "jobs", label: "Managed Jobs" },
@@ -363,29 +358,25 @@ export default function RecruiterDashboardPage() {
               ].map((t) => (
                 <button
                   key={t.id}
+                  type="button"
                   onClick={() => setActiveTab(t.id)}
                   className={cn(
-                    "px-6 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all",
+                    "rounded-lg px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all",
                     activeTab === t.id
-                      ? "bg-white text-primary shadow-lg shadow-black/5 ring-1 ring-outline-variant/10"
-                      : "text-outline hover:text-on-surface",
+                      ? "primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20"
+                      : "text-on-surface-variant hover:text-on-surface",
                   )}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <Search
-                  size={14}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary"
-                />
-                <input
-                  className="bg-surface-container/40 rounded-2xl pl-11 pr-6 py-2.5 text-[11px] font-medium outline-none border border-outline-variant/10 focus:border-primary focus:bg-white transition-all w-64"
-                  placeholder="Global talent search..."
-                />
-              </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+              <input
+                className="gm-input w-full pl-10 text-sm"
+                placeholder="Global talent search..."
+              />
             </div>
           </div>
 
@@ -459,12 +450,9 @@ export default function RecruiterDashboardPage() {
                         <td className="py-5 bg-surface-container/20 group-hover:bg-surface-container/60 transition-all border-y border-outline-variant/5">
                           <div className="flex flex-wrap gap-1.5 max-w-[180px]">
                             {c.skills.map((skill) => (
-                              <span
-                                key={skill}
-                                className="px-2 py-0.5 rounded-md bg-white border border-outline-variant/10 text-[8px] font-black uppercase tracking-tighter text-outline"
-                              >
+                              <Badge key={skill} tone="default" className="text-[8px]">
                                 {skill}
-                              </span>
+                              </Badge>
                             ))}
                           </div>
                         </td>
@@ -483,14 +471,12 @@ export default function RecruiterDashboardPage() {
                         </td>
                         <td className="py-5 pr-4 bg-surface-container/20 group-hover:bg-surface-container/60 transition-all rounded-r-[1.5rem] border-y border-r border-outline-variant/5 text-right">
                           <div className="flex items-center justify-end gap-2 pr-2">
-                            <button className="p-2.5 rounded-xl bg-white border border-outline-variant/10 hover:border-primary transition-all">
-                              {" "}
-                              <Mail size={14} className="text-outline" />{" "}
-                            </button>
-                            <button className="p-2.5 rounded-xl bg-primary text-white hover:scale-110 transition-all">
-                              {" "}
-                              <ArrowUpRight size={14} />{" "}
-                            </button>
+                            <Button variant="outline" size="sm">
+                              <Mail size={14} />
+                            </Button>
+                            <Button size="sm">
+                              <ArrowUpRight size={14} />
+                            </Button>
                           </div>
                         </td>
                         <motion.div className="absolute bottom-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -509,7 +495,7 @@ export default function RecruiterDashboardPage() {
                     className="group bg-surface-container/20 hover:bg-surface-container/40 border border-outline-variant/10 rounded-[2rem] p-6 transition-all flex items-center justify-between"
                   >
                     <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 rounded-2xl bg-white border border-outline-variant/10 flex items-center justify-center text-primary">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
                         <Briefcase size={24} />
                       </div>
                       <div>
@@ -524,27 +510,31 @@ export default function RecruiterDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <button 
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setShowUploadModal({ jobId: job.id, jobTitle: job.title })}
-                        className="btn bg-white border border-outline-variant/10 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-outline hover:border-primary hover:text-primary transition-all flex items-center gap-2"
                       >
                         <Upload size={14} />
                         Upload
-                      </button>
-                      <button 
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => runShortlist(job.id)}
-                        className="btn bg-primary/10 border border-primary/20 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                        loading={shortlistLoading}
                       >
-                        {shortlistLoading ? <Loader2 size={14} className="animate-spin" /> : <Cpu size={14} />}
+                        {!shortlistLoading && <Cpu size={14} />}
                         Run AI
-                      </button>
-                      <button 
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setSelectedJob(job)}
-                        className="btn bg-surface-container px-4 py-2.5 rounded-xl text-outline hover:text-on-surface transition-all"
                       >
                         <MoreHorizontal size={16} />
-                      </button>
+                      </Button>
                     </div>
                   </motion.div>
                 ))}
@@ -574,7 +564,7 @@ export default function RecruiterDashboardPage() {
                         <div key={cat} className="flex items-center justify-between">
                           <span className="text-[11px] font-bold text-outline uppercase tracking-wider">{cat}</span>
                           <div className="flex items-center gap-3">
-                            <div className="w-32 h-1.5 bg-white/50 rounded-full overflow-hidden">
+                            <div className="h-1.5 w-32 overflow-hidden rounded-full bg-surface-container-highest">
                               <div className="h-full bg-primary" style={{ width: `${Math.random() * 40 + 60}%` }} />
                             </div>
                             <span className="text-[10px] font-black">High</span>
@@ -591,9 +581,9 @@ export default function RecruiterDashboardPage() {
                         { role: 'Fullstack Rust', range: '$160k - $210k' },
                         { role: 'Product Manager', range: '$130k - $175k' },
                       ].map(b => (
-                        <div key={b.role} className="flex justify-between items-center p-4 rounded-2xl bg-white/40 border border-white/60">
+                        <div key={b.role} className="flex items-center justify-between rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4">
                           <span className="text-[11px] font-black text-on-surface">{b.role}</span>
-                          <span className="text-[11px] font-black text-tertiary">{b.range}</span>
+                          <span className="text-[11px] font-black text-violet-300">{b.range}</span>
                         </div>
                       ))}
                     </div>
@@ -620,56 +610,59 @@ export default function RecruiterDashboardPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
-        <aside className="w-96 flex flex-col gap-8 shrink-0">
-          {/* Market Insight HUD */}
+        <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-96">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass bg-[#121214] p-10 rounded-[2.5rem] border border-white/5 text-white shadow-2xl relative overflow-hidden"
           >
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/20 flex-shrink-0">
+          <Card
+            padding="lg"
+            className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/15 via-surface-container to-surface-container-low"
+          >
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/20">
                 <Cpu size={14} className="text-primary" />
               </div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.25em]">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface">
                 Hiring AI Advisor
               </h3>
             </div>
-            <p className="text-[11px] text-white/60 leading-relaxed mb-8 italic">
-              "Market demand for <b>Fullstack Engineers</b> with <b>Rust</b>{" "}
-              expertise is currently at an all-time high. Your pipeline is 20%
-              ahead of competitors in this segment."
+            <p className="mb-6 text-xs italic leading-relaxed text-on-surface-variant">
+              Market demand for <strong className="text-on-surface">Fullstack Engineers</strong> with{" "}
+              <strong className="text-primary">Rust</strong> expertise is at an all-time high. Your
+              pipeline is 20% ahead of competitors in this segment.
             </p>
-            <div className="space-y-6">
+            <div className="space-y-5">
               {[
                 { label: "Talent Liquidity", val: 84 },
                 { label: "Competitive Pull", val: 62 },
                 { label: "Predictive Fill Time", val: 45 },
               ].map((r) => (
                 <div key={r.label}>
-                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-40 mb-2">
+                  <div className="mb-2 flex justify-between text-[9px] font-bold uppercase tracking-wider text-outline">
                     <span>{r.label}</span>
                     <span>{r.val}%</span>
                   </div>
-                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-1 overflow-hidden rounded-full bg-surface-container-highest">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${r.val}%` }}
-                      className="h-full bg-primary"
+                      className="h-full primary-gradient"
                     />
                   </div>
                 </div>
               ))}
             </div>
+          </Card>
           </motion.div>
 
-          <div className="card bg-white/80 p-8 rounded-[2.5rem] shadow-xl flex-grow flex flex-col gap-6">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-outline opacity-60">
+          <Card padding="md" className="flex flex-grow flex-col gap-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-outline">
               Candidate Sourcing Log
             </h3>
-            <div className="flex-grow space-y-5 overflow-y-auto custom-scrollbar pr-2">
+            <div className="custom-scrollbar flex-grow space-y-4 overflow-y-auto pr-2">
               {[
                 "New candidate applied for Tech Lead",
                 "Interview scheduled with Alex Rivera",
@@ -678,19 +671,17 @@ export default function RecruiterDashboardPage() {
               ].map((log, i) => (
                 <div
                   key={i}
-                  className="flex gap-4 items-start pb-4 border-b border-outline-variant/10 last:border-0"
+                  className="flex items-start gap-3 border-b border-outline-variant/10 pb-3 last:border-0"
                 >
-                  <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-primary shrink-0" />
-                  <span className="text-[11px] font-medium text-on-surface opacity-80">
-                    {log}
-                  </span>
+                  <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  <span className="text-xs text-on-surface-variant">{log}</span>
                 </div>
               ))}
             </div>
-            <button className="w-full py-4 bg-surface-container rounded-2xl text-[9px] font-black uppercase tracking-widest text-outline hover:bg-primary/10 hover:text-primary transition-all">
+            <Button variant="secondary" className="w-full text-[10px] uppercase tracking-wider">
               Deep Audit History
-            </button>
-          </div>
+            </Button>
+          </Card>
         </aside>
       </div>
 
@@ -701,7 +692,7 @@ export default function RecruiterDashboardPage() {
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[900px] max-h-[65vh] glass bg-white/90 backdrop-blur-3xl rounded-[2rem] border border-outline-variant/20 shadow-2xl overflow-hidden"
+            className="fixed bottom-8 left-1/2 z-50 max-h-[65vh] w-[900px] -translate-x-1/2 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-high/95 shadow-2xl shadow-black/40 backdrop-blur-xl"
           >
             <div className="flex items-center justify-between px-8 py-5 border-b border-outline-variant/10">
               <div className="flex items-center gap-3">
@@ -774,44 +765,40 @@ export default function RecruiterDashboardPage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[3rem] p-12 w-[640px] shadow-2xl relative overflow-hidden"
+              className="glass-card relative w-full max-w-[640px] overflow-hidden rounded-3xl p-10"
             >
-              <div className="absolute top-0 right-0 p-8">
-                <button onClick={() => setShowNewJobModal(false)} className="p-3 rounded-2xl hover:bg-surface-container transition-all">
-                  <XCircle size={24} className="text-outline" />
-                </button>
+              <div className="absolute right-4 top-4">
+                <Button variant="ghost" size="sm" onClick={() => setShowNewJobModal(false)}>
+                  <XCircle size={20} />
+                </Button>
               </div>
 
-              <div className="mb-10">
-                <h3 className="text-3xl font-black tracking-tight">Post New Position</h3>
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-outline mt-2">Initialize AI screening parameters</p>
+              <div className="mb-8">
+                <h3 className="text-2xl font-black tracking-tight text-on-surface">Post New Position</h3>
+                <p className="mt-2 text-xs font-bold uppercase tracking-wider text-outline">
+                  Initialize AI screening parameters
+                </p>
               </div>
 
-              <form onSubmit={createJob} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-outline">Position Title</label>
-                    <input name="title" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="e.g. Senior Rust Engineer" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-outline">Company</label>
-                    <input name="company" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="e.g. Acme Intelligence" />
-                  </div>
+              <form onSubmit={createJob} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <Input name="title" label="Position Title" required placeholder="e.g. Senior Rust Engineer" />
+                  <Input name="company" label="Company" required placeholder="e.g. Acme Intelligence" />
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-outline">Location</label>
-                  <input name="location" required className="w-full bg-surface-container/40 rounded-2xl px-6 py-4 text-[13px] font-black border border-outline-variant/10 focus:border-primary outline-none transition-all" placeholder="Remote, New York, etc." />
+                <Input name="location" label="Location" required placeholder="Remote, New York, etc." />
+                <div>
+                  <label className="gm-label">Job Description</label>
+                  <textarea
+                    name="description"
+                    required
+                    rows={4}
+                    className="gm-textarea resize-none"
+                    placeholder="Paste full JD here for AI alignment..."
+                  />
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-outline">Job Description</label>
-                  <textarea name="description" required rows={4} className="w-full bg-surface-container/40 rounded-[1.5rem] px-6 py-4 text-[13px] font-medium border border-outline-variant/10 focus:border-primary outline-none transition-all resize-none" placeholder="Paste full JD here for AI alignment..." />
-                </div>
-
-                <button type="submit" className="w-full py-5 bg-primary text-white rounded-[1.5rem] font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all mt-4">
+                <Button type="submit" size="lg" className="mt-2 w-full">
                   Deploy Position & Start AI Analysis
-                </button>
+                </Button>
               </form>
             </motion.div>
           </motion.div>
@@ -831,38 +818,35 @@ export default function RecruiterDashboardPage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[3rem] p-12 w-[1000px] max-h-[85vh] shadow-2xl relative overflow-hidden flex flex-col"
+              className="glass-card relative flex max-h-[85vh] w-full max-w-[1000px] flex-col overflow-hidden rounded-3xl p-10"
             >
-              <div className="flex items-center justify-between mb-10 shrink-0">
+              <div className="mb-8 flex shrink-0 flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-3xl font-black tracking-tight">{selectedJob.title}</h3>
-                  <div className="flex items-center gap-4 mt-2">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">{selectedJob.company}</span>
-                    <div className="w-1 h-1 rounded-full bg-outline/20" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-outline">{selectedJob.location}</span>
+                  <h3 className="text-2xl font-black tracking-tight text-on-surface">{selectedJob.title}</h3>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Badge tone="primary">{selectedJob.company}</Badge>
+                    <span className="text-xs text-outline">{selectedJob.location}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button 
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       setShowUploadModal({ jobId: selectedJob.id, jobTitle: selectedJob.title });
                       setSelectedJob(null);
                     }}
-                    className="btn bg-surface-container/40 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-outline hover:text-primary transition-all flex items-center gap-2"
                   >
                     <Upload size={14} />
                     Add Resumes
-                  </button>
-                  <button 
-                    onClick={() => runShortlist(selectedJob.id)}
-                    className="btn btn-primary px-8 py-3 rounded-2xl flex items-center gap-2"
-                  >
+                  </Button>
+                  <Button size="sm" onClick={() => runShortlist(selectedJob.id)}>
                     <Cpu size={14} />
                     Run AI Shortlist
-                  </button>
-                  <button onClick={() => setSelectedJob(null)} className="p-3 rounded-2xl hover:bg-surface-container transition-all">
-                    <XCircle size={24} className="text-outline" />
-                  </button>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedJob(null)}>
+                    <XCircle size={20} />
+                  </Button>
                 </div>
               </div>
 
@@ -888,7 +872,7 @@ export default function RecruiterDashboardPage() {
                         <tr key={app.applicationId} className="group cursor-pointer">
                           <td className="py-4 pl-4 bg-surface-container/20 group-hover:bg-surface-container/40 rounded-l-2xl">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-white border border-outline-variant/10 flex items-center justify-center text-primary font-black">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 font-black text-primary">
                                 {app.name.charAt(0)}
                               </div>
                               <span className="text-[13px] font-black">{app.name}</span>
@@ -901,7 +885,7 @@ export default function RecruiterDashboardPage() {
                             )}>{app.matchScore}%</span>
                           </td>
                           <td className="py-4 bg-surface-container/20 group-hover:bg-surface-container/40">
-                            <span className="px-3 py-1 rounded-lg bg-white border border-outline-variant/10 text-[9px] font-black uppercase">{app.status}</span>
+                            <Badge tone="default">{app.status}</Badge>
                           </td>
                           <td className="py-4 bg-surface-container/20 group-hover:bg-surface-container/40">
                             <div className="flex gap-1 flex-wrap max-w-[200px]">
@@ -911,9 +895,9 @@ export default function RecruiterDashboardPage() {
                             </div>
                           </td>
                           <td className="py-4 pr-4 bg-surface-container/20 group-hover:bg-surface-container/40 rounded-r-2xl text-right">
-                            <button className="p-2 rounded-xl bg-primary text-white hover:scale-110 transition-all">
+                            <Button size="sm">
                               <ArrowUpRight size={14} />
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -933,9 +917,15 @@ export default function RecruiterDashboardPage() {
       </AnimatePresence>
 
       {/* ── Background Grid ───────────────────────────────── */}
-      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03]">
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '100px 100px' }} />
-        <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+      <div className="pointer-events-none fixed inset-0 z-[-1] opacity-[0.04]">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+            backgroundSize: "100px 100px",
+          }}
+        />
       </div>
       <AnimatePresence>
         {showUploadModal && (
@@ -951,16 +941,18 @@ export default function RecruiterDashboardPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[2rem] p-10 w-[520px] shadow-2xl border border-outline-variant/10"
+              className="glass-card w-full max-w-[520px] rounded-3xl p-8"
             >
-              <div className="flex items-center justify-between mb-8">
+              <div className="mb-6 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-black text-on-surface">Bulk Upload Resumes</h3>
-                  <p className="text-[11px] text-outline mt-1">for <span className="text-primary font-black">{showUploadModal.jobTitle}</span></p>
+                  <p className="mt-1 text-xs text-outline">
+                    for <span className="font-bold text-primary">{showUploadModal.jobTitle}</span>
+                  </p>
                 </div>
-                <button onClick={() => setShowUploadModal(null)} className="p-2 rounded-xl hover:bg-surface-container">
-                  <XCircle size={18} className="text-outline" />
-                </button>
+                <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(null)}>
+                  <XCircle size={18} />
+                </Button>
               </div>
 
               <div className="border-2 border-dashed border-primary/20 rounded-[1.5rem] p-10 text-center hover:border-primary/40 transition-all cursor-pointer"
@@ -985,14 +977,13 @@ export default function RecruiterDashboardPage() {
                 </div>
               )}
 
-              <div className="mt-6 flex gap-4">
-                <button
-                  onClick={() => setShowUploadModal(null)}
-                  className="flex-1 py-3 rounded-2xl bg-surface-container text-[11px] font-black uppercase tracking-widest text-outline hover:bg-surface-container/60 transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
+              <Button
+                variant="secondary"
+                className="mt-6 w-full"
+                onClick={() => setShowUploadModal(null)}
+              >
+                Cancel
+              </Button>
             </motion.div>
           </motion.div>
         )}
@@ -1017,9 +1008,8 @@ export default function RecruiterDashboardPage() {
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 10px; }
-        .backdrop-blur-3xl { backdrop-filter: blur(60px); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
       `}</style>
-    </div>
+    </PageShell>
   );
 }

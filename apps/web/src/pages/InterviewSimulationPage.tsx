@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getAuthToken, safeReadJson } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
+import { PageShell } from "@/components/ui";
 
 export default function InterviewSimulationPage() {
   const [isStarted, setIsStarted] = useState(false);
@@ -205,8 +206,9 @@ export default function InterviewSimulationPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] text-white font-body overflow-hidden relative">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#1a1a2e_0%,_transparent_50%)] op-20 pointer-events-none" />
+    <PageShell noPadding maxWidth="full" className="!p-0 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col h-full bg-surface text-on-surface font-body overflow-hidden relative">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_rgba(108,71,255,0.15)_0%,_transparent_50%)] pointer-events-none" />
 
       {/* ── Header ─────────────────────────────────────────── */}
       <header className="h-20 flex items-center justify-between px-12 border-b border-white/5 z-10">
@@ -457,12 +459,14 @@ export default function InterviewSimulationPage() {
         .primary-gradient { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); }
       `}</style>
     </div>
+    </PageShell>
   );
 }
 
 function InterviewResults({ scorecard }: { scorecard: any }) {
   return (
-    <div className="flex flex-col h-full bg-[#050505] text-white p-12 overflow-hidden items-center justify-center">
+    <PageShell noPadding maxWidth="full" className="!p-0 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col h-full bg-surface text-on-surface p-12 overflow-hidden items-center justify-center relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#1a1a2e_0%,_transparent_70%)] opacity-30" />
 
       <motion.div
@@ -544,6 +548,7 @@ function InterviewResults({ scorecard }: { scorecard: any }) {
         </div>
       </motion.div>
     </div>
+    </PageShell>
   );
 }
 

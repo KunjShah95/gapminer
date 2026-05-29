@@ -17,9 +17,22 @@ import {
   RefreshCw,
   BarChart3,
   Info,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import DataSourceBadge from "@/components/market/DataSourceBadge";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 type TrendRow = {
   skill: string;
@@ -30,6 +43,9 @@ type TrendRow = {
   growthRate?: number;
   source?: string;
 };
+
+const CHART_GRID = "rgba(148, 163, 184, 0.12)";
+const CHART_TICK = { fill: "rgb(148 163 184)", fontSize: 11 };
 
 function normalizeTrendFilter(t: TrendRow): "emerging" | "stable" | "declining" {
   const dir = t.trendDirection || t.trend;
@@ -165,190 +181,194 @@ export default function MarketDemandPage() {
     }));
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Globe className="w-8 h-8 text-blue-600" />
-              Market Demand Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Skill demand from catalog, taxonomy, and embedding signals
-            </p>
-          </div>
-          <button
+    <PageShell maxWidth="2xl">
+      <PageHeader
+        title="Market Demand Dashboard"
+        description="Skill demand from catalog, taxonomy, and embedding signals"
+        icon={<Globe size={22} />}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
             onClick={fetchTrends}
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600"
+            disabled={loading}
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
             Refresh
-          </button>
-        </div>
+          </Button>
+        }
+      />
 
-        {disclaimer && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+      {disclaimer && (
+        <Card className="mb-6 border-primary/25 bg-primary/5" padding="md">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
             <div>
-              <p className="text-sm text-blue-900">{disclaimer}</p>
+              <p className="text-sm text-on-surface">{disclaimer}</p>
               {dataSource && (
-                <p className="text-xs text-blue-700 mt-1">
+                <p className="mt-1 text-xs text-on-surface-variant">
                   Engine: {dataSource}
                 </p>
               )}
             </div>
           </div>
-        )}
+        </Card>
+      )}
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p className="text-red-700">{error}</p>
+      {error && (
+        <Card className="mb-6 border-error/30 bg-error/10" padding="md">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-error" />
+            <p className="text-sm text-error">{error}</p>
           </div>
-        )}
+        </Card>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <p className="text-sm text-gray-600 mb-2">Avg demand</p>
-            <p className="text-3xl font-bold text-blue-600">{avgDemand}%</p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <p className="text-sm text-green-600 mb-2">Hot (70%+)</p>
-            <p className="text-3xl font-bold text-green-600">
-              {hotSkills.length}
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <p className="text-sm text-purple-600 mb-2">Emerging</p>
-            <p className="text-3xl font-bold text-purple-600">
-              {emergingSkills.length}
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <p className="text-sm text-red-600 mb-2">Declining</p>
-            <p className="text-3xl font-bold text-red-600">
-              {decliningSkills.length}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-              Top skills by demand
-            </h2>
-            {loading ? (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                Loading...
-              </div>
-            ) : chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="skill"
-                    tick={{ fontSize: 11 }}
-                    width={100}
-                  />
-                  <Tooltip formatter={(value: number) => [`${value}%`, "Demand"]} />
-                  <Bar dataKey="demand" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No data — run an analysis first for personalized skills
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-600" />
-              Hottest skills
-            </h2>
-            {hotSkills.length > 0 ? (
-              <div className="space-y-3">
-                {hotSkills.slice(0, 8).map((skill) => (
-                  <div key={skill.skill} className="flex items-center gap-3">
-                    <span className="w-24 text-sm font-medium truncate">
-                      {skill.skill}
-                    </span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-3">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                        style={{ width: `${skill.demandScore}%` }}
-                      />
-                    </div>
-                    <span className="w-10 text-sm font-bold text-right">
-                      {skill.demandScore}%
-                    </span>
-                    <DataSourceBadge source={skill.source} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">No hot skills in this set</p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Zap className="w-5 h-5 text-purple-600" />
-              Emerging
-            </h2>
-            <div className="space-y-2">
-              {emergingSkills.map((skill) => (
-                <div
-                  key={skill.skill}
-                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
-                >
-                  <span className="font-medium text-sm">{skill.skill}</span>
-                  <div className="flex items-center gap-2">
-                    <DataSourceBadge source={skill.source} />
-                    <span className="text-sm font-bold text-purple-600">
-                      {skill.demandScore}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {emergingSkills.length === 0 && (
-                <p className="text-gray-500 text-sm">None in current set</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <ArrowDownRight className="w-5 h-5 text-red-600" />
-              Declining
-            </h2>
-            <div className="space-y-2">
-              {decliningSkills.map((skill) => (
-                <div
-                  key={skill.skill}
-                  className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
-                >
-                  <span className="font-medium text-sm">{skill.skill}</span>
-                  <div className="flex items-center gap-2">
-                    <DataSourceBadge source={skill.source} />
-                    <span className="text-sm font-bold text-red-600">
-                      {skill.demandScore}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {decliningSkills.length === 0 && (
-                <p className="text-gray-500 text-sm">None in current set</p>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Avg demand" value={`${avgDemand}%`} icon={<BarChart3 size={18} />} />
+        <StatCard
+          label="Hot (70%+)"
+          value={hotSkills.length}
+          sub="High-demand skills"
+          icon={<Flame size={18} />}
+        />
+        <StatCard
+          label="Emerging"
+          value={emergingSkills.length}
+          sub="Growing signals"
+          icon={<Zap size={18} />}
+        />
+        <StatCard
+          label="Declining"
+          value={decliningSkills.length}
+          sub="Cooling demand"
+          icon={<ArrowDownRight size={18} />}
+        />
       </div>
-    </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            Top skills by demand
+          </h2>
+          {loading ? (
+            <div className="flex h-[300px] items-center justify-center gap-2 text-on-surface-variant">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              Loading...
+            </div>
+          ) : chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis type="number" domain={[0, 100]} tick={CHART_TICK} />
+                <YAxis
+                  type="category"
+                  dataKey="skill"
+                  tick={CHART_TICK}
+                  width={100}
+                />
+                <Tooltip
+                  formatter={(value: number) => [`${value}%`, "Demand"]}
+                  contentStyle={{
+                    background: "rgb(30 32 40)",
+                    border: "1px solid rgba(148,163,184,0.2)",
+                    borderRadius: "12px",
+                    color: "rgb(226 232 240)",
+                  }}
+                />
+                <Bar dataKey="demand" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState
+              icon={<BarChart3 size={28} />}
+              title="No chart data"
+              description="Run an analysis first for personalized skills"
+            />
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Flame className="h-5 w-5 text-error" />
+            Hottest skills
+          </h2>
+          {hotSkills.length > 0 ? (
+            <div className="space-y-3">
+              {hotSkills.slice(0, 8).map((skill) => (
+                <div key={skill.skill} className="flex items-center gap-3">
+                  <span className="w-24 truncate text-sm font-medium text-on-surface">
+                    {skill.skill}
+                  </span>
+                  <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-container-high">
+                    <div
+                      className="h-full rounded-full primary-gradient"
+                      style={{ width: `${skill.demandScore}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-sm font-bold text-on-surface">
+                    {skill.demandScore}%
+                  </span>
+                  <DataSourceBadge source={skill.source} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">No hot skills in this set</p>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Zap className="h-5 w-5 text-primary" />
+            Emerging
+          </h2>
+          <div className="space-y-2">
+            {emergingSkills.map((skill) => (
+              <div
+                key={skill.skill}
+                className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3"
+              >
+                <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
+                <div className="flex items-center gap-2">
+                  <DataSourceBadge source={skill.source} />
+                  <span className="text-sm font-bold text-primary">{skill.demandScore}%</span>
+                </div>
+              </div>
+            ))}
+            {emergingSkills.length === 0 && (
+              <p className="text-sm text-on-surface-variant">None in current set</p>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <ArrowDownRight className="h-5 w-5 text-error" />
+            Declining
+          </h2>
+          <div className="space-y-2">
+            {decliningSkills.map((skill) => (
+              <div
+                key={skill.skill}
+                className="flex items-center justify-between rounded-xl border border-error/20 bg-error/5 p-3"
+              >
+                <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
+                <div className="flex items-center gap-2">
+                  <DataSourceBadge source={skill.source} />
+                  <span className="text-sm font-bold text-error">{skill.demandScore}%</span>
+                </div>
+              </div>
+            ))}
+            {decliningSkills.length === 0 && (
+              <p className="text-sm text-on-surface-variant">None in current set</p>
+            )}
+          </div>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

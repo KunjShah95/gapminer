@@ -5,18 +5,27 @@ import {
   Bot,
   User,
   Trophy,
-  BarChart3,
   Play,
   X,
   AlertCircle,
   DollarSign,
   Briefcase,
-  Building2,
-  Target,
   CheckCircle2,
-  Clock,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export default function NegotiationRoleplayPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -144,224 +153,207 @@ export default function NegotiationRoleplayPage() {
     }
   };
 
+  const resetSession = () => {
+    setShowSetup(true);
+    setSessionId(null);
+    setMessages([]);
+    setScorecard(null);
+    setIsFinalized(false);
+  };
+
   if (showSetup) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-        <div className="max-w-lg w-full">
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="w-8 h-8 text-blue-600" />
+      <PageShell maxWidth="md">
+        <div className="flex min-h-[70vh] items-center justify-center">
+          <Card padding="lg" className="w-full max-w-lg">
+            <div className="mb-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl primary-gradient text-on-primary-fixed">
+                <DollarSign className="h-8 w-8" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-black text-on-surface">
                 Salary Negotiation Role-Play
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="mt-2 text-sm text-on-surface-variant">
                 Practice negotiating with an AI recruiter
               </p>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-500" />
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
+              <Card className="mb-4 border-error/30 bg-error/10" padding="sm">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-error" />
+                  <p className="text-sm text-error">{error}</p>
+                </div>
+              </Card>
             )}
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) =>
-                      setFormData({ ...formData, company: e.target.value })
-                    }
-                    placeholder="TechCorp"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.role}
-                    onChange={(e) =>
-                      setFormData({ ...formData, role: e.target.value })
-                    }
-                    placeholder="Software Engineer"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Base Salary
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.baseSalary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, baseSalary: e.target.value })
-                    }
-                    placeholder="120000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bonus
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.bonus}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bonus: e.target.value })
-                    }
-                    placeholder="10000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Equity
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.equity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, equity: e.target.value })
-                    }
-                    placeholder="50000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Goals
-                </label>
-                <textarea
-                  value={formData.goals}
+                <Input
+                  label="Company"
+                  type="text"
+                  value={formData.company}
                   onChange={(e) =>
-                    setFormData({ ...formData, goals: e.target.value })
+                    setFormData({ ...formData, company: e.target.value })
                   }
-                  placeholder="e.g., I want a higher base salary and more equity..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none"
+                  placeholder="TechCorp"
+                />
+                <Input
+                  label="Role"
+                  type="text"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  placeholder="Software Engineer"
                 />
               </div>
 
-              <button
+              <div className="grid grid-cols-3 gap-4">
+                <Input
+                  label="Base salary"
+                  type="number"
+                  value={formData.baseSalary}
+                  onChange={(e) =>
+                    setFormData({ ...formData, baseSalary: e.target.value })
+                  }
+                  placeholder="120000"
+                />
+                <Input
+                  label="Bonus"
+                  type="number"
+                  value={formData.bonus}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bonus: e.target.value })
+                  }
+                  placeholder="10000"
+                />
+                <Input
+                  label="Equity"
+                  type="number"
+                  value={formData.equity}
+                  onChange={(e) =>
+                    setFormData({ ...formData, equity: e.target.value })
+                  }
+                  placeholder="50000"
+                />
+              </div>
+
+              <Textarea
+                label="Your goals"
+                value={formData.goals}
+                onChange={(e) =>
+                  setFormData({ ...formData, goals: e.target.value })
+                }
+                placeholder="e.g., I want a higher base salary and more equity..."
+                rows={3}
+              />
+
+              <Button
                 onClick={handleStart}
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                loading={loading}
+                className="w-full"
+                size="lg"
               >
                 <Play size={18} />
-                {loading ? "Starting..." : "Start Negotiation"}
-              </button>
+                {loading ? "Starting..." : "Start negotiation"}
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+    <PageShell noPadding maxWidth="full" className="flex min-h-screen flex-col !p-0">
+      <div className="border-b border-outline-variant/15 bg-surface-container p-4">
+        <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <Briefcase size={20} className="text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Briefcase size={20} />
             </div>
             <div>
-              <h1 className="font-semibold text-gray-900">
-                Negotiation Practice
-              </h1>
-              <p className="text-xs text-gray-500">
-                {formData.company} • {formData.role}
+              <h1 className="font-bold text-on-surface">Negotiation practice</h1>
+              <p className="text-xs text-on-surface-variant">
+                {formData.company} · {formData.role}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isFinalized && (
-              <span className="flex items-center gap-1 text-sm text-green-600">
-                <CheckCircle2 size={14} />
+              <Badge tone="success" className="gap-1 normal-case tracking-normal">
+                <CheckCircle2 size={12} />
                 Finalized
-              </span>
+              </Badge>
             )}
-            <button
-              onClick={() => {
-                setShowSetup(true);
-                setSessionId(null);
-                setMessages([]);
-                setScorecard(null);
-                setIsFinalized(false);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
+            <Button variant="ghost" size="sm" onClick={resetSession}>
               <X size={18} />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="mx-auto max-w-3xl space-y-4">
+          {messages.length === 0 && (
+            <EmptyState
+              icon={<Bot size={28} />}
+              title="Session started"
+              description="The recruiter will message you shortly"
+            />
+          )}
           {messages.map((msg, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+              className={cn(
+                "flex gap-3",
+                msg.role === "user" && "flex-row-reverse",
+              )}
             >
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                   msg.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
+                    ? "primary-gradient text-on-primary-fixed"
+                    : "bg-surface-container-high text-on-surface-variant",
+                )}
               >
                 {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
               </div>
               <div
-                className={`max-w-[80%] p-4 rounded-2xl ${
+                className={cn(
+                  "max-w-[80%] rounded-2xl p-4 text-sm",
                   msg.role === "user"
-                    ? "bg-blue-600 text-white rounded-tr-sm"
-                    : "bg-white border border-gray-200 rounded-tl-sm"
-                }`}
+                    ? "primary-gradient rounded-tr-sm text-on-primary-fixed"
+                    : "glass-card rounded-tl-sm text-on-surface",
+                )}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
             </motion.div>
           ))}
           {loading && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                <Bot size={16} className="text-gray-700" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high">
+                <Bot size={16} className="text-on-surface-variant" />
               </div>
-              <div className="bg-white border border-gray-200 p-4 rounded-2xl rounded-tl-sm">
+              <Card padding="sm" className="rounded-2xl rounded-tl-sm">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
+                  <div className="h-2 w-2 animate-bounce rounded-full bg-outline" />
                   <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    className="h-2 w-2 animate-bounce rounded-full bg-outline"
                     style={{ animationDelay: "0.1s" }}
                   />
                   <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                    className="h-2 w-2 animate-bounce rounded-full bg-outline"
                     style={{ animationDelay: "0.2s" }}
                   />
                 </div>
-              </div>
+              </Card>
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -369,24 +361,20 @@ export default function NegotiationRoleplayPage() {
       </div>
 
       {scorecard && (
-        <div className="bg-white border-t border-gray-200 p-4">
-          <div className="max-w-3xl mx-auto">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-600" />
-              Performance Scorecard
+        <div className="border-t border-outline-variant/15 bg-surface-container p-4">
+          <div className="mx-auto max-w-3xl">
+            <h3 className="mb-3 flex items-center gap-2 font-bold text-on-surface">
+              <Trophy className="h-5 w-5 text-amber-400" />
+              Performance scorecard
             </h3>
-            <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {["preparation", "communication", "strategy", "outcome"].map(
                 (key) => (
-                  <div
+                  <StatCard
                     key={key}
-                    className="bg-gray-50 p-3 rounded-lg text-center"
-                  >
-                    <p className="text-2xl font-bold text-blue-600">
-                      {scorecard.scorecard?.[key] || "N/A"}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">{key}</p>
-                  </div>
+                    label={key}
+                    value={scorecard.scorecard?.[key] || "N/A"}
+                  />
                 ),
               )}
             </div>
@@ -394,8 +382,8 @@ export default function NegotiationRoleplayPage() {
         </div>
       )}
 
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="max-w-3xl mx-auto flex gap-3">
+      <div className="border-t border-outline-variant/15 bg-surface-container p-4">
+        <div className="mx-auto flex max-w-3xl gap-3">
           <input
             type="text"
             value={input}
@@ -405,17 +393,16 @@ export default function NegotiationRoleplayPage() {
               isFinalized ? "Negotiation finalized" : "Type your response..."
             }
             disabled={loading || isFinalized}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="gm-input flex-1 disabled:opacity-50"
           />
-          <button
+          <Button
             onClick={handleSend}
             disabled={loading || isFinalized || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             <Send size={18} />
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

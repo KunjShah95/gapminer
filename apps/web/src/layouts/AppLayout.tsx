@@ -1,212 +1,296 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/stores/authStore'
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/authStore";
 import {
-  LayoutDashboard, Search, Map, User, CreditCard,
-  Sparkles, LogOut, Bell, ChevronDown, Menu, X,
-  TrendingUp, GraduationCap, Settings, Shield, Activity,
-  FileText, Target, Briefcase, Linkedin, History,
-  BarChart2, MessageSquare, Star, Globe, PenTool
-} from 'lucide-react'
-import { useState } from 'react'
+  LayoutDashboard,
+  Search,
+  Map,
+  CreditCard,
+  Sparkles,
+  LogOut,
+  Bell,
+  Menu,
+  X,
+  TrendingUp,
+  GraduationCap,
+  Settings,
+  FileText,
+  Target,
+  Briefcase,
+  Linkedin,
+  History,
+  BarChart2,
+  MessageSquare,
+  Star,
+  Globe,
+  PenTool,
+  Mic,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const NAV_SECTIONS = [
   {
     title: "Core",
     items: [
-      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { path: '/analyze', label: 'New Analysis', icon: Search },
-      { path: '/roadmap/rm_001', label: 'My Roadmaps', icon: GraduationCap },
-      { path: '/pricing', label: 'Upgrade Plan', icon: CreditCard },
-    ]
+      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/analyze", label: "New Analysis", icon: Search },
+      { path: "/pricing", label: "Upgrade", icon: CreditCard },
+    ],
   },
   {
-    title: "Career Tools",
+    title: "Career tools",
     items: [
-      { path: '/latex', label: 'LaTeX Editor', icon: FileText },
-      { path: '/cover-letter', label: 'Cover Letter AI', icon: PenTool },
-      { path: '/linkedin', label: 'LinkedIn Optimizer', icon: Linkedin },
-      { path: '/negotiate', label: 'Negotiate', icon: Target },
-      { path: '/negotiation-roleplay', label: 'Negotiation Practice', icon: MessageSquare },
-    ]
+      { path: "/latex", label: "LaTeX Editor", icon: FileText },
+      { path: "/cover-letter", label: "Cover Letter", icon: PenTool },
+      { path: "/linkedin", label: "LinkedIn", icon: Linkedin },
+      { path: "/interview", label: "Interview", icon: Mic },
+      { path: "/negotiate", label: "Negotiate", icon: Target },
+      { path: "/negotiation-roleplay", label: "Role-play", icon: MessageSquare },
+    ],
   },
   {
     title: "Intelligence",
     items: [
-      { path: '/career-path', label: 'Career Path Predictor', icon: Map },
-      { path: '/market-demand', label: 'Market Demand', icon: Globe },
-      { path: '/benchmark', label: 'Peer Benchmarking', icon: BarChart2 },
-      { path: '/recommendations', label: 'Job Recommendations', icon: Star },
-    ]
+      { path: "/career-path", label: "Career Path", icon: Map },
+      { path: "/market-demand", label: "Market Demand", icon: Globe },
+      { path: "/benchmark", label: "Benchmark", icon: BarChart2 },
+      { path: "/recommendations", label: "Jobs Match", icon: Star },
+    ],
   },
   {
     title: "Tracking",
     items: [
-      { path: '/jobs', label: 'Job Tracker', icon: Briefcase },
-      { path: '/progress', label: 'Skill Progress', icon: TrendingUp },
-      { path: '/resume-versions', label: 'Resume Versions', icon: History },
-    ]
-  }
-]
+      { path: "/jobs", label: "Applications", icon: Briefcase },
+      { path: "/progress", label: "Progress", icon: TrendingUp },
+      { path: "/resume-versions", label: "Versions", icon: History },
+    ],
+  },
+  {
+    title: "Enterprise",
+    items: [{ path: "/recruiter", label: "Recruiter", icon: Users }],
+  },
+];
 
-export default function AppLayout() {
-  const { user, logout } = useAuthStore()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+function NavLink({
+  item,
+  active,
+  onClick,
+}: {
+  item: (typeof NAV_SECTIONS)[0]["items"][0];
+  active: boolean;
+  onClick?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.path}
+      onClick={onClick}
+      className={cn(
+        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all",
+        active
+          ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(108,71,255,0.25)]"
+          : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
+      )}
+    >
+      {active && (
+        <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+      )}
+      <Icon
+        size={18}
+        className={cn(
+          active ? "text-primary" : "text-outline group-hover:text-primary",
+        )}
+      />
+      {item.label}
+    </Link>
+  );
+}
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen flex font-body selection:bg-primary/30 selection:text-primary-fixed">
-      {/* ── Sidebar (Desktop) ─────────────────────────────────── */}
-      <aside className="w-80 border-r border-outline-variant/15 flex flex-col bg-surface-container-low hidden lg:flex sticky top-0 h-screen overflow-y-auto shrink-0">
-        <div className="p-10">
-          <Link to="/" className="text-2xl font-black tracking-tighter text-[#f9f5fd] flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl primary-gradient flex items-center justify-center text-on-primary-fixed shadow-lg shadow-primary/20">
-              <Sparkles size={20} />
-            </div>
-            Gapminer
-          </Link>
-        </div>
-        
-        <nav className="flex-grow px-6 space-y-6">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title}>
-              <div className="text-[10px] font-black text-outline uppercase tracking-[0.2em] px-4 mb-2 opacity-60">{section.title}</div>
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const active = location.pathname === item.path
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center gap-4 px-5 py-3 rounded-[1.5rem] transition-all group relative ${
-                        active ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(108,71,255,0.2)]' : 'text-on-surface-variant hover:bg-surface-container-high'
-                      }`}
-                    >
-                      <item.icon size={20} className={active ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors'} />
-                      <span className={`font-bold text-sm tracking-tight ${active ? 'skew-x-[-2deg]' : ''}`}>{item.label}</span>
-                      {active && (
-                        <div className="absolute left-0 w-1 h-6 bg-primary rounded-r-full" />
-                      )}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-
-          <div className="h-4"></div>
-          <div className="text-[10px] font-black text-outline uppercase tracking-[0.2em] px-4 mb-4 opacity-60">System Core</div>
-          <Link to="/profile" className="flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-on-surface-variant hover:bg-surface-container-high transition-all">
-            <Settings size={20} />
-            <span className="text-sm font-bold tracking-tight">Account Settings</span>
-          </Link>
-        </nav>
-
-        {/* Quota Card */}
-        {user && (
-          <div className="m-6 p-6 rounded-[2rem] bg-surface-container-high border border-outline-variant/10">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-black text-outline uppercase tracking-widest">Analysis Engine</span>
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{user.plan}</span>
-            </div>
-            <div className="flex justify-between items-end mb-2">
-              <div className="text-2xl font-black tracking-tighter">{user.analysesUsed}<span className="text-outline text-sm font-light">/{user.analysesLimit}</span></div>
-              <div className="text-[9px] font-bold text-outline uppercase pb-1">Usage</div>
-            </div>
-            <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden mb-5">
-              <div
-                className="h-full primary-gradient transition-all duration-1000"
-                style={{ width: `${(user.analysesUsed / user.analysesLimit) * 100}%` }}
-              ></div>
-            </div>
-            <Link to="/pricing" className="glass w-full border border-outline-variant/20 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest block text-center hover:bg-surface-container-highest transition-all">
-              Manage Access
-            </Link>
+    <>
+      <div className="border-b border-outline-variant/10 p-6">
+        <Link
+          to="/"
+          className="flex items-center gap-3"
+          onClick={onNavigate}
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl primary-gradient shadow-lg shadow-primary/20">
+            <Sparkles size={20} className="text-on-primary-fixed" />
           </div>
-        )}
-
-        <div className="p-6 border-t border-outline-variant/10 bg-surface-container-low/50">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-error/70 hover:bg-error/5 transition-all group"
-          >
-            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-bold tracking-tight uppercase tracking-widest">Terminate Session</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Sidebar (Mobile) ─────────────────────────────────── */}
-      <div className={`fixed inset-0 z-50 lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-surface/80 backdrop-blur-md" onClick={() => setSidebarOpen(false)} />
-        <aside className={`absolute left-0 top-0 bottom-0 w-80 bg-surface-container-low border-r border-outline-variant/20 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-8 flex justify-between items-center">
-             <Link to="/" className="text-2xl font-black tracking-tighter text-[#f9f5fd] flex items-center gap-3">
-              <Sparkles className="text-primary" size={24} />
-              Gapminer
-            </Link>
-            <button className="p-2 text-outline" onClick={() => setSidebarOpen(false)}>
-              <X size={24} />
-            </button>
+          <div>
+            <span className="text-lg font-black tracking-tight">Gapminer</span>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-outline">
+              Career OS
+            </p>
           </div>
-          {/* Mobile Nav Items */}
-          <nav className="p-4 space-y-1">
-            {NAV_SECTIONS.flatMap(s => s.items).map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="flex items-center gap-4 px-6 py-4 rounded-2xl text-on-surface-variant font-bold text-sm uppercase tracking-widest"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon size={20} />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
+        </Link>
       </div>
 
-      {/* ── Main Content ───────────────────────────────────── */}
-      <div className="flex-grow flex flex-col min-w-0">
-        <header className="h-20 lg:h-24 px-8 flex items-center justify-between bg-surface/40 backdrop-blur-xl sticky top-0 z-40 lg:hidden">
-          <button className="p-2 text-on-surface lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
-          </button>
-          <Link to="/" className="text-xl font-black tracking-tighter lg:hidden">Gapminer</Link>
-          <div className="w-10 h-10 rounded-full primary-gradient flex items-center justify-center text-on-primary-fixed shadow-lg border-2 border-surface">
-            {user?.name?.charAt(0)}
-          </div>
-        </header>
-
-        {/* Global Toolbar (Desktop only, subtle) */}
-        <header className="h-24 px-12 flex items-center justify-between bg-transparent hidden lg:flex shrink-0">
-          <div className="flex-grow"></div>
-          <div className="flex items-center gap-6">
-             <button className="glass w-10 h-10 rounded-xl flex items-center justify-center text-outline hover:text-primary transition-all border border-outline-variant/10">
-              <Bell size={18} />
-            </button>
-            <div className="h-10 w-px bg-outline-variant/15"></div>
-            <div className="flex items-center gap-4 group cursor-pointer">
-              <div className="text-right">
-                <div className="text-sm font-black tracking-tight skew-x-[-2deg]">{user?.name}</div>
-                <div className="text-[10px] font-black text-primary uppercase tracking-widest leading-none">{user?.plan} plan</div>
-              </div>
-              <div className="w-10 h-10 rounded-xl primary-gradient flex items-center justify-center text-on-primary-fixed font-black shadow-xl border-2 border-surface group-hover:scale-110 transition-transform">
-                {user?.name?.charAt(0)}
-              </div>
+      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.title}>
+            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-outline/80">
+              {section.title}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  item={item}
+                  active={
+                    location.pathname === item.path ||
+                    location.pathname.startsWith(item.path + "/")
+                  }
+                  onClick={onNavigate}
+                />
+              ))}
             </div>
           </div>
+        ))}
+
+        <div className="border-t border-outline-variant/10 pt-4">
+          <NavLink
+            item={{
+              path: "/profile",
+              label: "Settings",
+              icon: Settings,
+            }}
+            active={location.pathname === "/profile"}
+            onClick={onNavigate}
+          />
+        </div>
+      </nav>
+
+      {user && (
+        <div className="m-4 rounded-2xl border border-outline-variant/10 bg-surface-container-high p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-outline">
+              Usage
+            </span>
+            <span className="text-[10px] font-bold uppercase text-primary">
+              {user.plan}
+            </span>
+          </div>
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="text-2xl font-black">
+              {user.analysesUsed}
+              <span className="text-sm font-normal text-outline">
+                /{user.analysesLimit}
+              </span>
+            </span>
+          </div>
+          <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-surface-container">
+            <div
+              className="h-full primary-gradient transition-all duration-700"
+              style={{
+                width: `${Math.min(100, (user.analysesUsed / user.analysesLimit) * 100)}%`,
+              }}
+            />
+          </div>
+          <Link
+            to="/pricing"
+            onClick={onNavigate}
+            className="block w-full rounded-xl border border-outline-variant/15 py-2 text-center text-[10px] font-bold uppercase tracking-widest hover:bg-surface-container-highest"
+          >
+            Upgrade plan
+          </Link>
+        </div>
+      )}
+
+      <div className="border-t border-outline-variant/10 p-4">
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            navigate("/");
+            onNavigate?.();
+          }}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-error/80 transition-colors hover:bg-error/10"
+        >
+          <LogOut size={18} />
+          Sign out
+        </button>
+      </div>
+    </>
+  );
+}
+
+export default function AppLayout() {
+  const { user } = useAuthStore();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  return (
+    <div className="flex min-h-screen bg-surface font-body text-on-surface">
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-outline-variant/10 bg-surface-container-low lg:flex">
+        <SidebarContent />
+      </aside>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <aside className="absolute bottom-0 left-0 top-0 flex w-72 flex-col bg-surface-container-low shadow-2xl">
+            <div className="flex justify-end p-4">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="rounded-lg p-2 text-outline hover:bg-surface-container-high"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-outline-variant/10 bg-surface/80 px-4 backdrop-blur-xl lg:px-8">
+          <button
+            type="button"
+            className="rounded-lg p-2 lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu size={22} />
+          </button>
+          <Link to="/dashboard" className="text-lg font-black lg:hidden">
+            Gapminer
+          </Link>
+          <div className="hidden flex-1 lg:block" />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/15 text-outline hover:text-primary"
+            >
+              <Bell size={18} />
+            </button>
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 rounded-xl border border-outline-variant/10 bg-surface-container-high px-2 py-1.5 pr-3"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg primary-gradient text-xs font-black text-on-primary-fixed">
+                {user?.name?.charAt(0) ?? "?"}
+              </div>
+              <div className="hidden text-left sm:block">
+                <p className="text-xs font-bold leading-none">{user?.name}</p>
+                <p className="text-[10px] text-primary">{user?.plan} plan</p>
+              </div>
+            </Link>
+          </div>
         </header>
 
-        <main className="flex-grow flex flex-col">
+        <main className="flex flex-1 flex-col">
           <Outlet />
         </main>
       </div>
     </div>
-  )
+  );
 }

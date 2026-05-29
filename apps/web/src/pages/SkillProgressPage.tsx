@@ -9,26 +9,42 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
 } from "recharts";
 import {
   TrendingUp,
   Award,
   Target,
   Zap,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
-  Calendar,
   Trophy,
   Flame,
   Brain,
   BarChart3,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import { useAuthStore } from "@/stores/authStore";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
+
+const CHART_GRID = "rgba(148, 163, 184, 0.12)";
+const CHART_TICK = { fill: "rgb(148 163 184)", fontSize: 11 };
+const TOOLTIP_STYLE = {
+  background: "rgb(30 32 40)",
+  border: "1px solid rgba(148,163,184,0.2)",
+  borderRadius: "12px",
+  color: "rgb(226 232 240)",
+};
 
 export default function SkillProgressPage() {
   const { user } = useAuthStore();
@@ -111,314 +127,271 @@ export default function SkillProgressPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-600">Loading your progress...</p>
+      <PageShell>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-on-surface-variant">Loading your progress...</p>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Skill Progress Dashboard
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Track your skill growth and gap closure over time
-            </p>
-          </div>
+    <PageShell maxWidth="2xl">
+      <PageHeader
+        title="Skill Progress Dashboard"
+        description="Track your skill growth and gap closure over time"
+        icon={<TrendingUp size={22} />}
+        actions={
           <div className="flex gap-2">
             {(["30d", "90d", "all"] as const).map((range) => (
-              <button
+              <Button
                 key={range}
+                size="sm"
+                variant={timeRange === range ? "primary" : "outline"}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  timeRange === range
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-                }`}
               >
                 {range === "all" ? "All Time" : `Last ${range}`}
-              </button>
+              </Button>
             ))}
           </div>
-        </div>
+        }
+      />
 
-        {careerMemory?.insights && (
-          <div className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200">
-            <h2 className="text-lg font-semibold text-indigo-900 mb-3 flex items-center gap-2">
-              <Brain size={20} />
-              Career memory
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-indigo-700 font-medium mb-1">Top strengths</p>
-                <p className="text-gray-700">
-                  {(careerMemory.insights.topStrengths || []).slice(0, 5).join(", ") ||
-                    "Run more analyses to build your profile"}
-                </p>
-              </div>
-              <div>
-                <p className="text-indigo-700 font-medium mb-1">Improved skills</p>
-                <p className="text-gray-700">
-                  {(careerMemory.insights.improvedSkills || []).join(", ") ||
-                    "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-indigo-700 font-medium mb-1">Persistent gaps</p>
-                <p className="text-gray-700">
-                  {(careerMemory.insights.persistentGaps || []).join(", ") || "—"}
-                </p>
-              </div>
+      {careerMemory?.insights && (
+        <Card className="mb-8 border-primary/25 bg-primary/5" padding="lg">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Brain size={20} className="text-primary" />
+            Career memory
+          </h2>
+          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+            <div>
+              <p className="mb-1 font-medium text-primary">Top strengths</p>
+              <p className="text-on-surface-variant">
+                {(careerMemory.insights.topStrengths || []).slice(0, 5).join(", ") ||
+                  "Run more analyses to build your profile"}
+              </p>
             </div>
-            {careerMemory.timeline?.length > 1 && (
-              <p className="text-xs text-indigo-600 mt-3">
-                Score change since last analysis:{" "}
+            <div>
+              <p className="mb-1 font-medium text-primary">Improved skills</p>
+              <p className="text-on-surface-variant">
+                {(careerMemory.insights.improvedSkills || []).join(", ") || "—"}
+              </p>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-primary">Persistent gaps</p>
+              <p className="text-on-surface-variant">
+                {(careerMemory.insights.persistentGaps || []).join(", ") || "—"}
+              </p>
+            </div>
+          </div>
+          {careerMemory.timeline?.length > 1 && (
+            <p className="mt-3 text-xs text-on-surface-variant">
+              Score change since last analysis:{" "}
+              <span
+                className={cn(
+                  "font-bold",
+                  careerMemory.insights.scoreDelta >= 0
+                    ? "text-emerald-400"
+                    : "text-error",
+                )}
+              >
                 {careerMemory.insights.scoreDelta >= 0 ? "+" : ""}
                 {careerMemory.insights.scoreDelta} pts
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Overall Score</span>
-              <TrendingUp size={16} className="text-blue-600" />
-            </div>
-            <p className="text-3xl font-bold">{latestScore}%</p>
-            <div
-              className={`flex items-center gap-1 mt-1 text-sm ${scoreChange >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {scoreChange >= 0 ? (
-                <ArrowUpRight size={14} />
-              ) : (
-                <ArrowDownRight size={14} />
-              )}
-              {scoreChange >= 0 ? "+" : ""}
-              {scoreChange} pts
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Skill Gaps</span>
-              <Target size={16} className="text-orange-600" />
-            </div>
-            <p className="text-3xl font-bold">{latestGaps}</p>
-            <div
-              className={`flex items-center gap-1 mt-1 text-sm ${gapsChange >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {gapsChange >= 0 ? (
-                <ArrowDownRight size={14} />
-              ) : (
-                <ArrowUpRight size={14} />
-              )}
-              {gapsChange >= 0 ? "-" : "+"}
-              {Math.abs(gapsChange)} gaps
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Skills Mastered</span>
-              <Trophy size={16} className="text-yellow-600" />
-            </div>
-            <p className="text-3xl font-bold">{masteredSkills.length}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Consistently present in analyses
+              </span>
             </p>
-          </div>
+          )}
+        </Card>
+      )}
 
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Analyses Run</span>
-              <BarChart3 size={16} className="text-purple-600" />
-            </div>
-            <p className="text-3xl font-bold">
-              {progressData?.totalAnalyses || 0}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Total completed analyses
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp size={18} className="text-blue-600" />
-              Score Progression
-            </h2>
-            {filteredProgress.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={filteredProgress}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(d: string) =>
-                      new Date(d).toLocaleDateString()
-                    }
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    labelFormatter={(d: string) =>
-                      new Date(d).toLocaleDateString()
-                    }
-                    formatter={(value: number) => [`${value}%`, "Score"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="overallScore"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
-                    fillOpacity={0.1}
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500">
-                No progress data yet. Run an analysis to start tracking!
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Target size={18} className="text-orange-600" />
-              Skill Gaps Over Time
-            </h2>
-            {filteredProgress.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={filteredProgress}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(d: string) =>
-                      new Date(d).toLocaleDateString()
-                    }
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    labelFormatter={(d: string) =>
-                      new Date(d).toLocaleDateString()
-                    }
-                    formatter={(value: number) => [value, "Gaps"]}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="gapsCount"
-                    stroke="#f97316"
-                    strokeWidth={2}
-                    dot={{ fill: "#f97316", r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[250px] flex items-center justify-center text-gray-500">
-                No gap data available
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Trophy size={18} className="text-yellow-600" />
-              Mastered Skills
-            </h2>
-            {masteredSkills.length > 0 ? (
-              <div className="space-y-2">
-                {masteredSkills.map((skill: string, i: number) => (
-                  <div
-                    key={skill}
-                    className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Award size={16} className="text-green-600" />
-                      <span className="font-medium text-sm">{skill}</span>
-                    </div>
-                    <ChevronRight size={14} className="text-green-400" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No mastered skills yet. Keep analyzing!
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Flame size={18} className="text-red-600" />
-              Hot Skills in Demand
-            </h2>
-            {hotSkills.length > 0 ? (
-              <div className="space-y-2">
-                {hotSkills.map((trend: any) => (
-                  <div
-                    key={trend.skill}
-                    className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Flame size={16} className="text-red-600" />
-                      <span className="font-medium text-sm">{trend.skill}</span>
-                    </div>
-                    <span className="text-sm font-bold text-red-600">
-                      {trend.demandScore}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No market trend data available
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-xl border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Zap size={18} className="text-purple-600" />
-              Emerging Skills
-            </h2>
-            {emergingSkills.length > 0 ? (
-              <div className="space-y-2">
-                {emergingSkills.map((trend: any) => (
-                  <div
-                    key={trend.skill}
-                    className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Zap size={16} className="text-purple-600" />
-                      <span className="font-medium text-sm">{trend.skill}</span>
-                    </div>
-                    <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded">
-                      {trend.trend}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No emerging skills data available
-              </p>
-            )}
-          </div>
-        </div>
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard
+          label="Overall score"
+          value={`${latestScore}%`}
+          sub={`${scoreChange >= 0 ? "+" : ""}${scoreChange} pts`}
+          trend={scoreChange >= 0 ? "up" : "down"}
+          icon={<TrendingUp size={18} />}
+        />
+        <StatCard
+          label="Skill gaps"
+          value={latestGaps}
+          sub={`${gapsChange >= 0 ? "-" : "+"}${Math.abs(gapsChange)} gaps`}
+          trend={gapsChange >= 0 ? "up" : "down"}
+          icon={<Target size={18} />}
+        />
+        <StatCard
+          label="Skills mastered"
+          value={masteredSkills.length}
+          sub="Consistently present in analyses"
+          icon={<Trophy size={18} />}
+        />
+        <StatCard
+          label="Analyses run"
+          value={progressData?.totalAnalyses || 0}
+          sub="Total completed analyses"
+          icon={<BarChart3 size={18} />}
+        />
       </div>
-    </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <TrendingUp size={18} className="text-primary" />
+            Score progression
+          </h2>
+          {filteredProgress.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={filteredProgress}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(d: string) => new Date(d).toLocaleDateString()}
+                  tick={CHART_TICK}
+                />
+                <YAxis domain={[0, 100]} tick={CHART_TICK} />
+                <Tooltip
+                  labelFormatter={(d: string) => new Date(d).toLocaleDateString()}
+                  formatter={(value: number) => [`${value}%`, "Score"]}
+                  contentStyle={TOOLTIP_STYLE}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="overallScore"
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState
+              icon={<TrendingUp size={28} />}
+              title="No progress yet"
+              description="Run an analysis to start tracking!"
+            />
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Target size={18} className="text-amber-400" />
+            Skill gaps over time
+          </h2>
+          {filteredProgress.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={filteredProgress}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(d: string) => new Date(d).toLocaleDateString()}
+                  tick={CHART_TICK}
+                />
+                <YAxis tick={CHART_TICK} />
+                <Tooltip
+                  labelFormatter={(d: string) => new Date(d).toLocaleDateString()}
+                  formatter={(value: number) => [value, "Gaps"]}
+                  contentStyle={TOOLTIP_STYLE}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="gapsCount"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dot={{ fill: "#f59e0b", r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState
+              icon={<Target size={28} />}
+              title="No gap data"
+              description="Gap trends appear after multiple analyses"
+            />
+          )}
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Trophy size={18} className="text-amber-400" />
+            Mastered skills
+          </h2>
+          {masteredSkills.length > 0 ? (
+            <div className="space-y-2">
+              {masteredSkills.map((skill: string) => (
+                <div
+                  key={skill}
+                  className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Award size={16} className="text-emerald-400" />
+                    <span className="text-sm font-medium text-on-surface">{skill}</span>
+                  </div>
+                  <ChevronRight size={14} className="text-emerald-400/60" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">
+              No mastered skills yet. Keep analyzing!
+            </p>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Flame size={18} className="text-error" />
+            Hot skills in demand
+          </h2>
+          {hotSkills.length > 0 ? (
+            <div className="space-y-2">
+              {hotSkills.map((trend: any) => (
+                <div
+                  key={trend.skill}
+                  className="flex items-center justify-between rounded-xl border border-error/20 bg-error/5 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Flame size={16} className="text-error" />
+                    <span className="text-sm font-medium text-on-surface">{trend.skill}</span>
+                  </div>
+                  <span className="text-sm font-bold text-error">{trend.demandScore}%</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">No market trend data available</p>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+            <Zap size={18} className="text-primary" />
+            Emerging skills
+          </h2>
+          {emergingSkills.length > 0 ? (
+            <div className="space-y-2">
+              {emergingSkills.map((trend: any) => (
+                <div
+                  key={trend.skill}
+                  className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Zap size={16} className="text-primary" />
+                    <span className="text-sm font-medium text-on-surface">{trend.skill}</span>
+                  </div>
+                  <Badge tone="primary" className="normal-case tracking-normal">
+                    {trend.trend}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface-variant">No emerging skills data available</p>
+          )}
+        </Card>
+      </div>
+    </PageShell>
   );
 }

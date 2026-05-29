@@ -1,31 +1,27 @@
 import { useState, useEffect } from "react";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
   TrendingUp,
-  Flame,
-  Zap,
-  ArrowUpRight,
-  ArrowDownRight,
   Search,
   ExternalLink,
   AlertCircle,
   RefreshCw,
   Target,
   Briefcase,
-  MapPin,
-  DollarSign,
+  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import {
+  PageShell,
+  PageHeader,
+  Card,
+  Button,
+  Badge,
+  StatCard,
+  EmptyState,
+  Input,
+  Textarea,
+} from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -82,183 +78,172 @@ export default function RecommendationsPage() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Briefcase className="w-8 h-8 text-blue-600" />
-              Job Recommendations
-            </h1>
-            <p className="text-gray-600 mt-1">
-              AI-matched jobs based on your skills and experience
-            </p>
-          </div>
-          <button
+    <PageShell maxWidth="lg">
+      <PageHeader
+        title="Job Recommendations"
+        description="AI-matched jobs based on your skills and experience"
+        icon={<Briefcase size={22} />}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
             onClick={fetchRecommendations}
-            className="flex items-center gap-2 text-gray-600 hover:text-blue-600"
+            disabled={loading}
           >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={16} className={cn(loading && "animate-spin")} />
             Refresh
-          </button>
+          </Button>
+        }
+      />
+
+      {error && (
+        <Card className="mb-6 border-error/30 bg-error/10" padding="md">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-error" />
+            <p className="text-sm text-error">{error}</p>
+          </div>
+        </Card>
+      )}
+
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <StatCard
+          label="High matches"
+          value={highMatch}
+          sub="70%+ match score"
+          icon={<Target size={18} />}
+        />
+        <StatCard
+          label="Average match"
+          value={`${avgScore}%`}
+          sub="Across all recommendations"
+          icon={<TrendingUp size={18} />}
+        />
+        <StatCard
+          label="Total jobs"
+          value={recommendations.length}
+          sub="Available positions"
+          icon={<Search size={18} />}
+        />
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        {[
+          { id: "all", label: "All" },
+          { id: "high", label: "High Match (70%+)" },
+          { id: "medium", label: "Medium (50-69%)" },
+          { id: "low", label: "Low (<50%)" },
+        ].map((f) => (
+          <Button
+            key={f.id}
+            size="sm"
+            variant={filter === f.id ? "primary" : "outline"}
+            onClick={() => setFilter(f.id)}
+          >
+            {f.label}
+          </Button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-on-surface-variant">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          Loading recommendations...
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-600 mb-2">
-              <Target size={18} />
-              <span className="text-sm">High Matches</span>
-            </div>
-            <p className="text-3xl font-bold text-green-600">{highMatch}</p>
-            <p className="text-xs text-gray-500 mt-1">70%+ match score</p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-600 mb-2">
-              <TrendingUp size={18} />
-              <span className="text-sm">Average Match</span>
-            </div>
-            <p className="text-3xl font-bold text-blue-600">{avgScore}%</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Across all recommendations
-            </p>
-          </div>
-          <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-600 mb-2">
-              <Search size={18} />
-              <span className="text-sm">Total Jobs</span>
-            </div>
-            <p className="text-3xl font-bold">{recommendations.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Available positions</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 mb-6">
-          {[
-            { id: "all", label: "All" },
-            { id: "high", label: "High Match (70%+)" },
-            { id: "medium", label: "Medium (50-69%)" },
-            { id: "low", label: "Low (&lt;50%)" },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === f.id
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">
-            Loading recommendations...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No matching jobs found
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filtered.map((job) => (
-              <div
-                key={job.jobId}
-                className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {job.title}
-                      </h3>
-                      {job.isSaved && (
-                        <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
-                          Saved
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Briefcase size={14} />
-                        {job.company}
-                      </span>
-                      {job.url && (
-                        <a
-                          href={job.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-blue-600 hover:underline"
-                        >
-                          <ExternalLink size={14} />
-                          View posting
-                        </a>
-                      )}
-                    </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<Briefcase size={28} />}
+          title="No matching jobs"
+          description="Try refreshing or run a resume analysis first"
+          action="Refresh"
+          onAction={fetchRecommendations}
+        />
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((job) => (
+            <Card key={job.jobId} hover padding="lg">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-bold text-on-surface">{job.title}</h3>
+                    {job.isSaved && <Badge tone="warning">Saved</Badge>}
                   </div>
-                  <div
-                    className={`px-4 py-2 rounded-lg text-center ${
-                      job.matchScore >= 70
-                        ? "bg-green-50 text-green-700"
-                        : job.matchScore >= 50
-                          ? "bg-yellow-50 text-yellow-700"
-                          : "bg-red-50 text-red-700"
-                    }`}
-                  >
-                    <p className="text-2xl font-bold">{job.matchScore}%</p>
-                    <p className="text-xs">Match</p>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-on-surface-variant">
+                    <span className="flex items-center gap-1">
+                      <Briefcase size={14} />
+                      {job.company}
+                    </span>
+                    {job.url && (
+                      <a
+                        href={job.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:underline"
+                      >
+                        <ExternalLink size={14} />
+                        View posting
+                      </a>
+                    )}
                   </div>
                 </div>
-
-                {job.sharedSkills && job.sharedSkills.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs font-medium text-gray-500 mb-1">
-                      Your matching skills:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.sharedSkills.map((skill: string) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-200"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {job.missingSkills && job.missingSkills.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">
-                      Skills to learn:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.missingSkills.map((skill: string) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded border border-red-200"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div
+                  className={cn(
+                    "rounded-xl border px-4 py-2 text-center",
+                    job.matchScore >= 70 && "border-emerald-500/30 bg-emerald-500/10",
+                    job.matchScore >= 50 &&
+                      job.matchScore < 70 &&
+                      "border-amber-500/30 bg-amber-500/10",
+                    job.matchScore < 50 && "border-error/30 bg-error/10",
+                  )}
+                >
+                  <p
+                    className={cn(
+                      "text-2xl font-black",
+                      job.matchScore >= 70 && "text-emerald-400",
+                      job.matchScore >= 50 && job.matchScore < 70 && "text-amber-400",
+                      job.matchScore < 50 && "text-error",
+                    )}
+                  >
+                    {job.matchScore}%
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                    Match
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+
+              {job.sharedSkills && job.sharedSkills.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-outline">
+                    Your matching skills
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.sharedSkills.map((skill: string) => (
+                      <Badge key={skill} tone="success" className="normal-case tracking-normal">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {job.missingSkills && job.missingSkills.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-outline">
+                    Skills to learn
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {job.missingSkills.map((skill: string) => (
+                      <Badge key={skill} tone="error" className="normal-case tracking-normal">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </PageShell>
   );
 }
