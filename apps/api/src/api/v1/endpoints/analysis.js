@@ -51,12 +51,9 @@ router.post('/', requireUser, async (req, res, next) => {
     }
 
     // Trigger AI pipeline in background (don't await)
-    runAnalysisPipeline(analysisId, {
-      resumeId: resume_id,
-      jdId: job_description_id,
-      jdText: job_description_text,
-      seniority
-    }).catch(err => console.error(`Analysis ${analysisId} failed:`, err));
+    runAnalysisPipeline(analysisId, { seniority }).catch((err) =>
+      console.error(`Analysis ${analysisId} failed:`, err),
+    );
 
     return res.status(202).json({
       id: analysisId,
@@ -158,8 +155,18 @@ router.get('/:analysisId', requireAuth, async (req, res, next) => {
     const { rows: [resume] } = await query('SELECT filename, parsed_data FROM resumes WHERE id = $1', [analysis.resume_id]);
     const { rows: [jd] } = await query('SELECT title, company, parsed_data FROM job_descriptions WHERE id = $1', [analysis.job_description_id]);
 
-    const missingSkills = skillGaps.filter(g => g.status === 'missing').map(g => g.skill);
-    const matchedSkills = skillGaps.filter(g => g.status === 'matched').map(g => g.skill);
+    let missingSkills = skillGaps.filter(g => g.status === 'missing').map(g => g.skill);
+    let matchedSkills = skillGaps.filter(g => g.status === 'matched').map(g => g.skill);
+
+    const storedGap =
+      typeof analysis.gap_analysis === 'string'
+        ? JSON.parse(analysis.gap_analysis)
+        : analysis.gap_analysis;
+
+    if (storedGap && (!missingSkills.length && !matchedSkills.length)) {
+      missingSkills = storedGap.missingSkills || missingSkills;
+      matchedSkills = storedGap.matchedSkills || matchedSkills;
+    }
 
     return res.json({
       id: analysis.id,

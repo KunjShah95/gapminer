@@ -41,78 +41,47 @@ export default function CareerPathPage() {
     if (!token) return;
 
     try {
-      const res = await fetch("/api/v1/transformers/market-trends", {
+      // Fetch user's latest analysis to get their real skills
+      const analysisRes = await fetch("/api/v1/analysis", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      let userSkills = ["JavaScript", "Python", "React", "Node.js"]; // fallback
+
+      if (analysisRes.ok) {
+        const analyses = await analysisRes.json();
+        if (analyses.length > 0) {
+          // Get skills from the most recent analysis gap data (e.g. matched skills + some missing)
+          const latest = analyses[0];
+          // We can fetch the detail of the latest analysis to get all skills, or just pass top_gaps for now as a demo if full detail isn't readily available.
+          // Let's fetch the detail:
+          const detailRes = await fetch(`/api/v1/analysis/${latest.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (detailRes.ok) {
+            const detail = await detailRes.json();
+            if (detail.gapAnalysis?.matchedSkills?.length > 0) {
+               userSkills = detail.gapAnalysis.matchedSkills;
+            }
+          }
+        }
+      }
+
+      // Fetch career path predictions dynamically using the real skills
+      const pathRes = await fetch("/api/v1/transformers/career-path", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          skills: [
-            "JavaScript",
-            "Python",
-            "React",
-            "Node.js",
-            "AWS",
-            "Docker",
-            "TypeScript",
-          ],
+          skills: userSkills,
         }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setPredictions({
-          currentRole: "Software Engineer",
-          nextRoles: [
-            {
-              role: "Senior Software Engineer",
-              probability: 85,
-              timeline: "1-2 years",
-              skills: ["System Design", "Leadership", "Architecture"],
-            },
-            {
-              role: "Tech Lead",
-              probability: 65,
-              timeline: "2-3 years",
-              skills: ["Team Management", "Architecture", "Communication"],
-            },
-            {
-              role: "Staff Engineer",
-              probability: 40,
-              timeline: "3-5 years",
-              skills: ["Cross-team Impact", "Technical Strategy", "Mentoring"],
-            },
-            {
-              role: "Engineering Manager",
-              probability: 35,
-              timeline: "3-4 years",
-              skills: [
-                "People Management",
-                "Project Planning",
-                "Stakeholder Management",
-              ],
-            },
-            {
-              role: "Solutions Architect",
-              probability: 30,
-              timeline: "2-4 years",
-              skills: [
-                "Cloud Architecture",
-                "Client Communication",
-                "System Design",
-              ],
-            },
-          ],
-          skillGaps: {
-            "System Design": { priority: "high", effort: "3-6 months" },
-            Leadership: { priority: "high", effort: "6-12 months" },
-            Architecture: { priority: "medium", effort: "6-12 months" },
-            "Cloud Architecture": { priority: "medium", effort: "3-6 months" },
-            Communication: { priority: "low", effort: "Ongoing" },
-          },
-          marketTrends: data.trends || [],
-        });
-      }
+
+      if (!pathRes.ok) throw new Error("Failed to fetch career path");
+      const pathData = await pathRes.json();
+
+      setPredictions(pathData);
     } catch (err) {
       setError("Failed to load career predictions");
     } finally {

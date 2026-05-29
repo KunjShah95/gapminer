@@ -1,24 +1,29 @@
 import express from 'express';
 import { runGapminerAnalysis, gapminerAgentApp } from '../../../ai/agent.js';
-import { z } from 'zod';
 import { prisma } from '../../../core/database.js';
+import { requireAuth } from '../../../core/security.js';
+import { persistAnalysisResult } from '../../../services/persistAnalysis.js';
 import multer from 'multer';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// -----------------------------------------------------
-// 1. Zod Schemas
-// -----------------------------------------------------
-const MatchRequestSchema = z.object({
-  candidateId: z.string().uuid().optional(),
-  resumeText: z.string().optional(),
-  jobDescriptionText: z.string().min(10),
-  userId: z.string().uuid(),
-});
+const PIPELINE_STEPS = [
+  'parse',
+  'normalize',
+  'match',
+  'market',
+  'bench',
+  'eval',
+  'insights',
+  'ats',
+  'coverLetter',
+  'marketTrend',
+  'skillProficiency',
+];
 
 // -----------------------------------------------------
-// 2. GET /skills/taxonomy
+// GET /skills/taxonomy
 // -----------------------------------------------------
 router.get('/skills/taxonomy', async (req, res) => {
   try {
@@ -27,9 +32,9 @@ router.get('/skills/taxonomy', async (req, res) => {
         skills: {
           include: {
             subSkills: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
     res.json({ categories });
   } catch (err: any) {
@@ -38,24 +43,24 @@ router.get('/skills/taxonomy', async (req, res) => {
 });
 
 // -----------------------------------------------------
-// 3. POST /parse (Single Resume Parsing)
+// POST /parse (Single Resume Parsing)
 // -----------------------------------------------------
 router.post('/parse', upload.single('resume'), async (req: any, res: any) => {
   try {
     let text = req.body.text;
-    
-    // In a real prod app, we'd use pdf-parse or similar here for req.file.buffer
-    // For this demonstration, we assume text is passed or extracted earlier
+
     if (!text && !req.file) {
-      return res.status(400).json({ error: "Missing resume content." });
+      return res.status(400).json({ error: 'Missing resume content.' });
     }
 
-    // Run just the 'parse' node of the graph
-    const result = await gapminerAgentApp.invoke({ resumeText: text || "Raw resume content", jobDescriptionText: "" }, { recursionLimit: 2 });
-    
-    res.json({ 
+    const result = await gapminerAgentApp.invoke(
+      { resumeText: text || 'Raw resume content', jobDescriptionText: '' },
+      { recursionLimit: 2 },
+    );
+
+    res.json({
       parsedData: result.resumeData,
-      status: "success"
+      status: 'success',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -63,92 +68,107 @@ router.post('/parse', upload.single('resume'), async (req: any, res: any) => {
 });
 
 // -----------------------------------------------------
-// 4. POST /analyze (SSE Stream for legacy UI)
+// POST /analyze (SSE) — LangGraph pipeline + unified SQL persistence
 // -----------------------------------------------------
-router.post('/analyze', async (req, res) => {
+router.post('/analyze', requireAuth, async (req: any, res) => {
   try {
-    const { resumeText, jobDescriptionText, userId } = req.body;
+    const { resumeText, jobDescriptionText } = req.body;
+    const userId = req.userId as string;
+
+    if (!resumeText || !jobDescriptionText) {
+      return res
+        .status(400)
+        .json({ error: 'resumeText and jobDescriptionText are required' });
+    }
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const stream = await runGapminerAnalysis(resumeText, jobDescriptionText);
+    const sendStep = (name: string) => {
+      res.write(
+        `data: ${JSON.stringify({ event: 'on_chain_end', name, data: {} })}\n\n`,
+      );
+    };
 
-    let finalAggregatedState: any = {};
+    sendStep('parse');
 
-    for await (const chunk of stream) {
-      if (chunk.event === 'on_chain_end' || chunk.event === 'on_chat_model_stream') {
-        res.write(`data: ${JSON.stringify({ event: chunk.event, name: chunk.name, data: chunk.data })}\n\n`);
-        if (chunk.event === 'on_chain_end' && chunk.data?.output) {
-           finalAggregatedState = { ...finalAggregatedState, ...chunk.data.output };
-        }
-      }
+    const finalState = await gapminerAgentApp.invoke({
+      resumeText,
+      jobDescriptionText,
+    });
+
+    for (const step of PIPELINE_STEPS.slice(1)) {
+      sendStep(step);
     }
 
-    if (userId) {
+    const analysisId = await persistAnalysisResult(
+      userId,
+      resumeText,
+      jobDescriptionText,
+      finalState,
+    );
+
+    // Mirror to Prisma for recruiter / future features
+    try {
       await prisma.analysis.create({
         data: {
           userId,
           resumeText,
           jobDescriptionText,
-          resumeData: finalAggregatedState.resumeData ?? {},
-          jdData: finalAggregatedState.jdData ?? {},
-          gapAnalysis: finalAggregatedState.gapAnalysis ?? {},
-          roadmap: finalAggregatedState.roadmap ?? {},
-          courseRecommendations: finalAggregatedState.courseRecommendations ?? {},
-          interviewPrep: finalAggregatedState.interviewPrep ?? {},
-        }
+          resumeData: (finalState.resumeData as object) ?? {},
+          jdData: (finalState.jdData as object) ?? {},
+          gapAnalysis: (finalState.gapAnalysis as object) ?? {},
+          roadmap: (finalState.roadmap as object) ?? {},
+          courseRecommendations:
+            (finalState.courseRecommendations as object) ?? {},
+          interviewPrep: (finalState.interviewPrep as object) ?? {},
+        },
       });
-
-      if (finalAggregatedState.normalizedSkillsDetail?.length > 0) {
-        const candidate = await prisma.candidate.findFirst({
-          where: { resumeText },
-          orderBy: { createdAt: 'desc' }
-        });
-        if (candidate) {
-          await prisma.candidate.update({
-            where: { id: candidate.id },
-            data: { skillsFound: finalAggregatedState.normalizedSkills }
-          });
-        }
-      }
+    } catch (prismaErr: any) {
+      console.warn('Prisma analysis mirror skipped:', prismaErr.message);
     }
 
-    res.write('event: done\ndata: {}\n\n');
+    res.write(`event: done\ndata: ${JSON.stringify({ analysisId })}\n\n`);
     res.end();
   } catch (err: any) {
     console.error('Agent Error:', err);
     if (!res.headersSent) {
       return res.status(500).json({ error: err.message || 'Analysis failed' });
     }
-    res.write(`event: error\ndata: ${JSON.stringify({ error: err.message || 'Analysis failed' })}\n\n`);
+    res.write(
+      `event: error\ndata: ${JSON.stringify({ error: err.message || 'Analysis failed' })}\n\n`,
+    );
     res.end();
   }
 });
 
 // -----------------------------------------------------
-// 5. POST /match (Semantic Job Matching)
+// POST /match (Semantic Job Matching)
 // -----------------------------------------------------
-router.post('/match', async (req: any, res: any) => {
+router.post('/match', requireAuth, async (req: any, res: any) => {
   try {
     const { candidateId, resumeText, jobDescriptionText } = req.body;
 
     let textToMatch = resumeText;
 
     if (candidateId) {
-      // @ts-ignore - Prisma types might be syncing
-      const candidate = await prisma.candidate.findUnique({ where: { id: candidateId } });
-      if (!candidate) return res.status(404).json({ error: "Candidate not found." });
+      const candidate = await prisma.candidate.findUnique({
+        where: { id: candidateId },
+      });
+      if (!candidate) {
+        return res.status(404).json({ error: 'Candidate not found.' });
+      }
       textToMatch = candidate.resumeText;
     }
 
-    if (!textToMatch) return res.status(400).json({ error: "No resume text provided." });
+    if (!textToMatch) {
+      return res.status(400).json({ error: 'No resume text provided.' });
+    }
 
-    // Run the full pipeline (parse -> normalize -> match)
-    const result = await gapminerAgentApp.invoke({ 
-      resumeText: textToMatch, 
-      jobDescriptionText 
+    const result = await gapminerAgentApp.invoke({
+      resumeText: textToMatch,
+      jobDescriptionText,
     });
 
     res.json({
@@ -157,7 +177,7 @@ router.post('/match', async (req: any, res: any) => {
       skillNormalizationDetail: result.normalizedSkillsDetail || [],
       skillsByCategory: result.skillsByCategory || {},
       parsedData: result.resumeData,
-      status: "success"
+      status: 'success',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -165,26 +185,27 @@ router.post('/match', async (req: any, res: any) => {
 });
 
 // -----------------------------------------------------
-// 6. POST /optimize (ATS Optimization)
+// POST /optimize (ATS Optimization)
 // -----------------------------------------------------
-router.post('/optimize', async (req: any, res: any) => {
+router.post('/optimize', requireAuth, async (req: any, res: any) => {
   try {
     const { resumeText, jobDescriptionText } = req.body;
 
     if (!resumeText || !jobDescriptionText) {
-      return res.status(400).json({ error: "Missing resume or job description text." });
+      return res
+        .status(400)
+        .json({ error: 'Missing resume or job description text.' });
     }
 
-    // Run the full pipeline including ATS optimization
-    const result = await gapminerAgentApp.invoke({ 
-      resumeText, 
-      jobDescriptionText 
+    const result = await gapminerAgentApp.invoke({
+      resumeText,
+      jobDescriptionText,
     });
 
     res.json({
       optimization: result.atsOptimization,
       gapAnalysis: result.gapAnalysis,
-      status: "success"
+      status: 'success',
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -192,6 +213,3 @@ router.post('/optimize', async (req: any, res: any) => {
 });
 
 export default router;
-
-
-

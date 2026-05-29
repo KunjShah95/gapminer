@@ -53,6 +53,42 @@ export async function initDb() {
           updated_at TIMESTAMPTZ
         );
 
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          used_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          used_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          used_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id),
+          token TEXT UNIQUE NOT NULL,
+          expires_at TIMESTAMPTZ NOT NULL,
+          used_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS resumes (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL REFERENCES users(id),
@@ -170,6 +206,58 @@ export async function initDb() {
           synonyms JSONB,
           related_skills JSONB
         );
+
+        CREATE TABLE IF NOT EXISTS job_applications (
+          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          company TEXT NOT NULL,
+          role TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'saved',
+          salary INTEGER,
+          location TEXT,
+          job_url TEXT,
+          notes TEXT,
+          applied_date DATE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS resume_versions (
+          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          resume_id TEXT NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          content TEXT NOT NULL,
+          change_summary TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS career_snapshots (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          analysis_id TEXT REFERENCES analyses(id) ON DELETE SET NULL,
+          target_role TEXT,
+          target_company TEXT,
+          overall_score FLOAT,
+          ats_score FLOAT,
+          resume_strength_score FLOAT,
+          skills JSONB NOT NULL DEFAULT '[]',
+          matched_skills JSONB NOT NULL DEFAULT '[]',
+          missing_skills JSONB NOT NULL DEFAULT '[]',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS skill_evolution (
+          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          skill_name TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'tracked',
+          first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          appearance_count INTEGER NOT NULL DEFAULT 1,
+          was_missing_count INTEGER NOT NULL DEFAULT 0,
+          was_matched_count INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(user_id, skill_name)
+        );
       `);
 
       await client.query(`
@@ -177,6 +265,21 @@ export async function initDb() {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_secret TEXT;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'USER';
+
+        ALTER TABLE analyses ADD COLUMN IF NOT EXISTS gap_analysis JSONB;
+        ALTER TABLE analyses ADD COLUMN IF NOT EXISTS normalized_skills JSONB;
+
+        ALTER TABLE resumes ADD COLUMN IF NOT EXISTS embedding_json JSONB;
+        ALTER TABLE job_descriptions ADD COLUMN IF NOT EXISTS embedding_json JSONB;
+      `);
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_job_applications_user_id ON job_applications(user_id);
+        CREATE INDEX IF NOT EXISTS idx_resume_versions_resume_id ON resume_versions(resume_id);
+        CREATE INDEX IF NOT EXISTS idx_analyses_user_id ON analyses(user_id);
+        CREATE INDEX IF NOT EXISTS idx_career_snapshots_user_id ON career_snapshots(user_id);
+        CREATE INDEX IF NOT EXISTS idx_skill_evolution_user_id ON skill_evolution(user_id);
       `);
 
       // ── PL/pgSQL Vector Similarity Fallback ──
@@ -224,9 +327,13 @@ export async function initDb() {
         await client.query('CREATE EXTENSION IF NOT EXISTS vector');
         _hasPgVector = true;
         console.log('✅ Native pgvector extension available');
+        await client.query(`
+          ALTER TABLE resumes ADD COLUMN IF NOT EXISTS embedding vector(384);
+          ALTER TABLE job_descriptions ADD COLUMN IF NOT EXISTS embedding vector(384);
+        `);
       } catch {
         _hasPgVector = false;
-        console.log('ℹ️  Native pgvector unavailable — using PL/pgSQL fallback');
+        console.log('ℹ️  Native pgvector unavailable — using JSONB embedding_json + PL/pgSQL fallback');
       }
 
       console.log('✅ Database tables verified/created');

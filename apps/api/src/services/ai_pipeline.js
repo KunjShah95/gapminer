@@ -1,31 +1,65 @@
-// AI Pipeline service — mirrors app/services/ai_pipeline.py
+// Legacy analysis pipeline (POST /api/v1/analysis) — uses transformers, not stub data.
 
 import { v4 as uuidv4 } from "uuid";
 import { query } from "../core/database.js";
 import {
   extractSkills,
-  semanticSimilarity,
   generateRoadmapContent,
   classifySkillCategory,
   matchSkillToJD,
 } from "./transformerModels.js";
+import { getSkillTrendWithTransformer } from "./marketDemand.js";
+import { recordCareerSnapshot } from "./careerMemory.js";
 
-class DocumentParser {
-  async parse(resumeId) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return {
-      name: "John Doe",
-      skills: ["Python", "FastAPI", "PostgreSQL", "Node.js", "Express"],
-      experience: [],
-    };
+async function loadResumeContext(resumeId) {
+  const { rows } = await query(
+    `SELECT parsed_data, filename, file_type FROM resumes WHERE id = $1`,
+    [resumeId],
+  );
+  const row = rows[0];
+  if (!row) {
+    return { text: "", parsed: { skills: [] } };
   }
+
+  let parsed = row.parsed_data;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      parsed = {};
+    }
+  }
+
+  const skills =
+    parsed.skills ||
+    (parsed.workExperience
+      ? []
+      : []) ||
+    [];
+
+  const textParts = [
+    parsed.summary,
+    parsed.name,
+    Array.isArray(skills) ? skills.join(" ") : "",
+    ...(parsed.workExperience || []).flatMap((w) => [
+      w.title,
+      w.role,
+      w.company,
+      ...(w.highlights || w.responsibilities || []),
+    ]),
+  ].filter(Boolean);
+
+  return {
+    text: textParts.join("\n"),
+    parsed,
+  };
 }
 
 class SemanticSkillExtractor {
   async extract(resumeText, jdText) {
     const [resumeSkillList, jdSkillList] = await Promise.all([
-      extractSkills(resumeText),
-      extractSkills(jdText),
+      extractSkills(resumeText || ""),
+      extractSkills(jdText || ""),
     ]);
 
     const uniqueResumeSkills = [...new Set(resumeSkillList)];
@@ -71,14 +105,15 @@ class GapAnalyzer {
         });
       } else {
         const category = await classifySkillCategory(skill);
+        const trend = await getSkillTrendWithTransformer(skill);
         gaps.push({
           skill,
           status: "missing",
           severity: "high",
           confidence: 0.88,
           radar_score: 30,
-          market_demand: 80,
-          trend_delta: 5,
+          market_demand: trend.demandScore,
+          trend_delta: trend.growthRate,
           category,
         });
       }
@@ -111,19 +146,11 @@ class RoadmapGenerator {
       resources: [
         {
           title: `${gap.skill} Documentation`,
-          url: `https://docs.${gap.skill.toLowerCase()}.com`,
+          url: `https://developer.mozilla.org/en-US/search?q=${encodeURIComponent(gap.skill)}`,
           type: "documentation",
-          provider: "Official",
+          provider: "MDN",
           estimated_hours: 8,
           is_free: true,
-        },
-        {
-          title: `${gap.skill} Course`,
-          url: `https://coursera.org/${gap.skill.toLowerCase()}`,
-          type: "course",
-          provider: "Coursera",
-          estimated_hours: 12,
-          is_free: false,
         },
       ],
     }));
@@ -154,7 +181,14 @@ async function updateStep(analysisId, label, status, message = null) {
   await query(q, args);
 }
 
-export async function runAnalysisPipeline(analysisId, seniority = "mid") {
+/**
+ * @param {string} analysisId
+ * @param {{ seniority?: string }} [options]
+ */
+export async function runAnalysisPipeline(analysisId, options = {}) {
+  const seniority =
+    typeof options === "string" ? options : options.seniority || "mid";
+
   try {
     const { rows: analyses } = await query(
       "SELECT * FROM analyses WHERE id = $1",
@@ -163,35 +197,32 @@ export async function runAnalysisPipeline(analysisId, seniority = "mid") {
     const analysis = analyses[0];
     if (!analysis) return;
 
-    // -- 1. Parsing Resume
-    await updateStep(analysisId, "Parsing resume", "running");
+    await updateStep(analysisId, "Resume Parsing", "running");
     await query("UPDATE analyses SET status = 'parsing' WHERE id = $1", [
       analysisId,
     ]);
 
-    const parser = new DocumentParser();
-    const parsedResume = await parser.parse(analysis.resume_id);
+    const { text: resumeText, parsed } = await loadResumeContext(
+      analysis.resume_id,
+    );
 
     await query("UPDATE resumes SET parsed_data = $1 WHERE id = $2", [
-      JSON.stringify(parsedResume),
+      JSON.stringify(parsed),
       analysis.resume_id,
     ]);
     await updateStep(
       analysisId,
-      "Parsing resume",
+      "Resume Parsing",
       "done",
-      "Resume parsed successfully",
+      "Resume loaded from storage",
     );
 
-    // -- 2. Extracting Skills
-    await updateStep(analysisId, "Extracting skills", "running");
+    await updateStep(analysisId, "Market Benchmarking", "running");
     await query("UPDATE analyses SET status = 'extracting' WHERE id = $1", [
       analysisId,
     ]);
 
     const extractor = new SemanticSkillExtractor();
-    const resumeText = parsedResume.summary || "";
-
     let jdText = "";
     if (analysis.job_description_id) {
       const { rows: jds } = await query(
@@ -204,13 +235,12 @@ export async function runAnalysisPipeline(analysisId, seniority = "mid") {
     const skillData = await extractor.extract(resumeText, jdText);
     await updateStep(
       analysisId,
-      "Extracting skills",
+      "Market Benchmarking",
       "done",
-      `Found ${skillData.resume_skills.length} resume skills, ${skillData.jd_skills.length} required skills`,
+      `Found ${skillData.resume_skills.length} resume skills`,
     );
 
-    // -- 3. Comparing Requirements
-    await updateStep(analysisId, "Comparing with job requirements", "running");
+    await updateStep(analysisId, "Skill Gap Analysis", "running");
     await query("UPDATE analyses SET status = 'comparing' WHERE id = $1", [
       analysisId,
     ]);
@@ -229,7 +259,7 @@ export async function runAnalysisPipeline(analysisId, seniority = "mid") {
           uuidv4(),
           analysisId,
           gap.skill,
-          "technical",
+          gap.category || "technical",
           gap.status,
           gap.severity,
           gap.confidence,
@@ -244,21 +274,36 @@ export async function runAnalysisPipeline(analysisId, seniority = "mid") {
     const total = gaps.length;
     const overallScore = total > 0 ? Math.floor((matched / total) * 100) : 0;
 
+    const gapPayload = {
+      missingSkills: gaps.filter((g) => g.status === "missing").map((g) => g.skill),
+      matchedSkills: gaps.filter((g) => g.status === "matched").map((g) => g.skill),
+      criticalGaps: gaps
+        .filter((g) => g.status === "missing" && g.severity === "critical")
+        .map((g) => g.skill),
+      matchPercentage: overallScore,
+    };
+
     await query(
-      `UPDATE analyses SET overall_score = $1, resume_strength_score = $2, ats_score = $3 WHERE id = $4`,
-      [overallScore, 70, 75, analysisId],
+      `UPDATE analyses SET overall_score = $1, resume_strength_score = $2, ats_score = $3,
+       gap_analysis = $4, normalized_skills = $5 WHERE id = $6`,
+      [
+        overallScore,
+        70,
+        75,
+        JSON.stringify(gapPayload),
+        JSON.stringify(skillData.resume_skills),
+        analysisId,
+      ],
     );
 
-    const missingCount = gaps.filter((g) => g.status === "missing").length;
     await updateStep(
       analysisId,
-      "Comparing with job requirements",
+      "Skill Gap Analysis",
       "done",
-      `Found ${missingCount} skill gaps`,
+      `Found ${gaps.filter((g) => g.status === "missing").length} skill gaps`,
     );
 
-    // -- 4. Generating Roadmap
-    await updateStep(analysisId, "Generating roadmap", "running");
+    await updateStep(analysisId, "Roadmap Generation", "running");
     await query("UPDATE analyses SET status = 'generating' WHERE id = $1", [
       analysisId,
     ]);
@@ -320,10 +365,30 @@ export async function runAnalysisPipeline(analysisId, seniority = "mid") {
     );
     await updateStep(
       analysisId,
-      "Generating roadmap",
+      "Roadmap Generation",
       "done",
       `Roadmap created with ${roadmapData.milestones.length} milestones`,
     );
+
+    const { rows: jdMeta } = analysis.job_description_id
+      ? await query(
+          "SELECT title, company FROM job_descriptions WHERE id = $1",
+          [analysis.job_description_id],
+        )
+      : { rows: [] };
+
+    await recordCareerSnapshot({
+      userId: analysis.user_id,
+      analysisId,
+      targetRole: jdMeta[0]?.title,
+      targetCompany: jdMeta[0]?.company,
+      overallScore,
+      atsScore: 75,
+      resumeStrengthScore: 70,
+      normalizedSkills: skillData.resume_skills,
+      matchedSkills: gaps.filter((g) => g.status === "matched").map((g) => g.skill),
+      missingSkills: gaps.filter((g) => g.status === "missing").map((g) => g.skill),
+    });
   } catch (err) {
     console.error("Analysis failed:", err);
     await query("UPDATE analyses SET status = 'failed' WHERE id = $1", [

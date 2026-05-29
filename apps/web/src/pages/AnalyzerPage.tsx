@@ -1,26 +1,46 @@
-import { useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAnalysisStore } from '@/stores/analysisStore'
-import { useAuthStore } from '@/stores/authStore'
-import { safeReadJson } from '@/lib/authFetch'
+import { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { useNavigate, Link } from "react-router-dom";
+import { useAnalysisStore } from "@/stores/analysisStore";
+import { useAuthStore } from "@/stores/authStore";
+import { safeReadJson } from "@/lib/authFetch";
 
 import {
-  Upload, FileText, Link2, Loader2, Check, AlertCircle,
-  X, Brain, Target, BarChart3, Map, Globe, ChevronRight,
-  Sparkles, Shield, Cpu, Activity, Zap
-} from 'lucide-react'
+  Upload,
+  FileText,
+  Link2,
+  Loader2,
+  Check,
+  AlertCircle,
+  X,
+  Brain,
+  Target,
+  BarChart3,
+  Map,
+  Globe,
+  ChevronRight,
+  Sparkles,
+  Shield,
+  Cpu,
+  Activity,
+  Zap,
+} from "lucide-react";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
-type InputTab = 'paste' | 'url'
+type InputTab = "paste" | "url";
 
-function AgentTracker({ steps }: { steps: { id: string; label: string; status: string; message?: string }[] }) {
+function AgentTracker({
+  steps,
+}: {
+  steps: { id: string; label: string; status: string; message?: string }[];
+}) {
   const icons: Record<string, any> = {
-    parse:   Brain,
+    parse: Brain,
     extract: Target,
     compare: BarChart3,
-    market:  Globe,
+    market: Globe,
     roadmap: Map,
-  }
+  };
 
   return (
     <div className="glass bg-surface-container-high p-8 rounded-[2.5rem] border border-outline-variant/20 shadow-2xl animate-in zoom-in-95 duration-500">
@@ -30,41 +50,67 @@ function AgentTracker({ steps }: { steps: { id: string; label: string; status: s
         </div>
         <div>
           <h3 className="font-bold text-lg">AI Pipeline Active</h3>
-          <p className="text-xs text-on-surface-variant font-light uppercase tracking-widest">5 Specialized Agents Online</p>
+          <p className="text-xs text-on-surface-variant font-light uppercase tracking-widest">
+            5 Specialized Agents Online
+          </p>
         </div>
       </div>
-      
+
       <div className="space-y-4">
         {steps.map((step) => {
-          const Icon = icons[step.id] || Brain
-          const isActive = step.status === 'running'
-          const isDone = step.status === 'done'
-          
+          const Icon = icons[step.id] || Brain;
+          const isActive = step.status === "running";
+          const isDone = step.status === "done";
+
           return (
             <div
               key={step.id}
               className={`flex items-center gap-4 p-4 rounded-2xl transition-all border ${
-                isActive ? 'bg-primary/5 border-primary/30' : isDone ? 'bg-surface-container border-outline-variant/10' : 'bg-surface-container-low border-transparent opacity-40'
+                isActive
+                  ? "bg-primary/5 border-primary/30"
+                  : isDone
+                    ? "bg-surface-container border-outline-variant/10"
+                    : "bg-surface-container-low border-transparent opacity-40"
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
-                isActive ? 'bg-primary text-on-primary-fixed' : isDone ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest text-outline'
-              }`}>
-                {isDone ? <Check size={18} /> : isActive ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  isActive
+                    ? "bg-primary text-on-primary-fixed"
+                    : isDone
+                      ? "bg-primary/20 text-primary"
+                      : "bg-surface-container-highest text-outline"
+                }`}
+              >
+                {isDone ? (
+                  <Check size={18} />
+                ) : isActive ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Icon size={18} />
+                )}
               </div>
               <div className="flex-grow">
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm font-bold skew-x-[-2deg] ${isActive ? 'text-primary' : isDone ? 'text-on-surface' : 'text-outline'}`}>
+                  <span
+                    className={`text-sm font-bold skew-x-[-2deg] ${isActive ? "text-primary" : isDone ? "text-on-surface" : "text-outline"}`}
+                  >
                     {step.label}
                   </span>
-                  {isActive && <span className="text-[10px] font-black text-primary uppercase tracking-tighter animate-pulse">Processing...</span>}
+                  {isActive && (
+                    <span className="text-[10px] font-black text-primary uppercase tracking-tighter animate-pulse">
+                      Processing...
+                    </span>
+                  )}
                 </div>
                 {step.message && (
-                  <p className="text-[11px] text-on-surface-variant font-light italic leading-none">{step.message}</p>
+                  <p className="text-[11px] text-on-surface-variant font-light italic leading-none">
+                    {step.message}
+                  </p>
                 )}
               </div>
             </div>
-          )
+          );
         })}
       </div>
 
@@ -79,148 +125,224 @@ function AgentTracker({ steps }: { steps: { id: string; label: string; status: s
         </span>
       </div>
     </div>
-  )
+  );
 }
 
 export default function AnalyzerPage() {
-  const navigate = useNavigate()
-  const { liveSteps, isAnalyzing, setIsAnalyzing, updateStep, reset } = useAnalysisStore()
+  const navigate = useNavigate();
+  const { liveSteps, isAnalyzing, setIsAnalyzing, updateStep, reset } =
+    useAnalysisStore();
 
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
-  const [resumeText, setResumeText] = useState('')
-  const [resumeMode, setResumeMode] = useState<'drop' | 'text'>('drop')
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeText, setResumeText] = useState("");
+  const [resumeMode, setResumeMode] = useState<"drop" | "text">("drop");
 
-  const [jdTab, setJdTab] = useState<InputTab>('paste')
-  const [jdText, setJdText] = useState('')
-  const [jdUrl, setJdUrl] = useState('')
-  const [seniority, setSeniority] = useState<'junior' | 'mid' | 'senior' | 'lead'>('senior')
+  const [jdTab, setJdTab] = useState<InputTab>("paste");
+  const [jdText, setJdText] = useState("");
+  const [jdUrl, setJdUrl] = useState("");
+  const [seniority, setSeniority] = useState<
+    "junior" | "mid" | "senior" | "lead"
+  >("senior");
 
   const onDrop = useCallback((accepted: File[]) => {
-    if (accepted[0]) setResumeFile(accepted[0])
-  }, [])
+    if (accepted[0]) setResumeFile(accepted[0]);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'text/plain': ['.txt'],
+      "application/pdf": [".pdf"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
+      "text/plain": [".txt"],
     },
     maxFiles: 1,
     maxSize: 10 * 1024 * 1024,
-  })
+  });
 
   const runAnalysis = async () => {
-    if ((!resumeFile && !resumeText) || (!jdText && !jdUrl)) return
-    reset()
-    setIsAnalyzing(true)
+    if ((!resumeFile && !resumeText) || (!jdText && !jdUrl)) return;
+    reset();
+    setIsAnalyzing(true);
 
-    let resumeContent = resumeText
+    let resumeContent = resumeText;
     if (resumeFile) {
-      const formData = new FormData()
-      formData.append('text', await resumeFile.text())
+      const formData = new FormData();
+      formData.append("text", await resumeFile.text());
       try {
-        const parseRes = await fetch('/api/v1/agent/parse', {
-          method: 'POST',
-          body: formData
-        })
+        const parseRes = await fetch("/api/v1/agent/parse", {
+          method: "POST",
+          body: formData,
+        });
         if (parseRes.ok) {
-          const parseData = await safeReadJson<any>(parseRes, {})
-          resumeContent = parseData.parsedData ? JSON.stringify(parseData.parsedData) : resumeText
+          const parseData = await safeReadJson<any>(parseRes, {});
+          resumeContent = parseData.parsedData
+            ? JSON.stringify(parseData.parsedData)
+            : resumeText;
         }
       } catch (err) {
-        console.error('Parse error:', err)
+        console.error("Parse error:", err);
       }
     }
 
     const token = useAuthStore.getState().token;
     if (!token) {
-      alert('Please log in first')
-      setIsAnalyzing(false)
-      return
+      alert("Please log in first");
+      setIsAnalyzing(false);
+      return;
     }
 
     try {
-      const response = await fetch('/api/v1/agent/analyze', {
-        method: 'POST',
+      const response = await fetch("/api/v1/agent/analyze", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           resumeText: resumeContent,
-          jobDescriptionText: jdText || jdUrl
-        })
-      })
+          jobDescriptionText: jdText || jdUrl,
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error('Analysis failed')
+        throw new Error("Analysis failed");
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      let savedAnalysisId: string | null = null;
 
       if (reader) {
+        let buffer = "";
         while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          const chunk = decoder.decode(value)
-          const lines = chunk.split('\n')
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
+          for (const part of parts) {
+            const lines = part.split("\n");
+            let eventType = "";
+            let dataLine = "";
+
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                dataLine = line.slice(6);
+              }
+            }
+
+            if (eventType === "done" && dataLine) {
               try {
-                const data = JSON.parse(line.slice(6))
-                if (data.name === 'parse') {
-                  updateStep('parse', { status: 'done', message: 'Resume parsed successfully' })
-                } else if (data.name === 'normalize') {
-                  updateStep('extract', { status: 'done', message: 'Skills extracted' })
-                } else if (data.name === 'match') {
-                  updateStep('compare', { status: 'done', message: 'Gap analysis complete' })
-                } else if (data.name === 'insights') {
-                  updateStep('roadmap', { status: 'done', message: 'Roadmap generated' })
+                const payload = JSON.parse(dataLine);
+                if (payload.analysisId) {
+                  savedAnalysisId = payload.analysisId;
                 }
-              } catch (e) {}
+              } catch {
+                /* ignore */
+              }
+              continue;
+            }
+
+            if (eventType === "error" && dataLine) {
+              try {
+                const errPayload = JSON.parse(dataLine);
+                throw new Error(errPayload.error || "Analysis failed");
+              } catch (e) {
+                if (e instanceof Error && e.message !== "Analysis failed") {
+                  throw e;
+                }
+                throw new Error("Analysis failed");
+              }
+            }
+
+            if (dataLine) {
+              try {
+                const data = JSON.parse(dataLine);
+                if (data.name === "parse") {
+                  updateStep("parse", {
+                    status: "done",
+                    message: "Resume parsed successfully",
+                  });
+                } else if (data.name === "normalize") {
+                  updateStep("extract", {
+                    status: "done",
+                    message: "Skills extracted",
+                  });
+                } else if (data.name === "match") {
+                  updateStep("compare", {
+                    status: "done",
+                    message: "Gap analysis complete",
+                  });
+                } else if (data.name === "insights") {
+                  updateStep("roadmap", {
+                    status: "done",
+                    message: "Roadmap generated",
+                  });
+                }
+              } catch {
+                /* ignore partial chunks */
+              }
             }
           }
         }
       }
 
-      const analysisRes = await fetch('/api/v1/analysis', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      if (savedAnalysisId) {
+        navigate(`/roadmap/${savedAnalysisId}`);
+        return;
+      }
+
+      const analysisRes = await fetch("/api/v1/analysis", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (analysisRes.ok) {
-        const analyses = await safeReadJson<any[]>(analysisRes, [])
+        const analyses = await safeReadJson<any[]>(analysisRes, []);
         if (analyses.length > 0) {
-          const latest = analyses[0]
-          navigate(`/roadmap/${latest.id}`)
-          return
+          navigate(`/roadmap/${analyses[0].id}`);
+          return;
         }
       }
 
-      navigate('/dashboard')
+      navigate("/dashboard");
     } catch (err) {
-      console.error('Analysis error:', err)
-      alert('Analysis failed. Please try again.')
+      console.error("Analysis error:", err);
+      alert("Analysis failed. Please try again.");
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }
+  };
 
-  const canAnalyze = (resumeFile || resumeText.trim()) && (jdText.trim() || jdUrl.trim())
+  const canAnalyze =
+    (resumeFile || resumeText.trim()) && (jdText.trim() || jdUrl.trim());
 
   return (
     <div className="bg-surface text-on-surface flex-grow font-body overflow-y-auto">
       <main className="py-12 px-8 max-w-7xl mx-auto">
+        <OnboardingTooltip
+          pageKey="analyze"
+          icon="📄"
+          title="Upload your resume"
+          description="PDF or DOCX — we'll parse your skills, experience, and education automatically. Then paste a job URL to compare against."
+        />
         <div className="grid lg:grid-cols-5 gap-12 items-start">
-          
           <div className="lg:col-span-3 space-y-8 animate-in fade-in slide-in-from-left-4 duration-700">
             <div>
-              <span className="text-primary font-bold tracking-widest uppercase text-xs">Analysis Engine</span>
-              <h1 className="text-4xl lg:text-5xl font-black tracking-tighter mt-2 mb-4 font-headline">New Gap Analysis</h1>
+              <span className="text-primary font-bold tracking-widest uppercase text-xs">
+                Analysis Engine
+              </span>
+              <h1 className="text-4xl lg:text-5xl font-black tracking-tighter mt-2 mb-4 font-headline">
+                New Gap Analysis
+              </h1>
               <p className="text-on-surface-variant font-light max-w-xl">
-                Upload your latest resume and the target role profile. Our agents will benchmark your expertise against thousands of real-world job taxonomies.
+                Upload your latest resume and the target role profile. Our
+                agents will benchmark your expertise against thousands of
+                real-world job taxonomies.
               </p>
             </div>
 
@@ -231,31 +353,39 @@ export default function AnalyzerPage() {
                   <FileText size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl uppercase tracking-tighter skew-x-[-2deg]">1. Source Resume</h3>
-                  <p className="text-xs text-on-surface-variant font-light">PDF, DOCX or Plain Text</p>
+                  <h3 className="font-bold text-xl uppercase tracking-tighter skew-x-[-2deg]">
+                    1. Source Resume
+                  </h3>
+                  <p className="text-xs text-on-surface-variant font-light">
+                    PDF, DOCX or Plain Text
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-1 mb-6 p-1 bg-surface-container rounded-2xl border border-outline-variant/10 max-w-[200px]">
                 <button
-                  onClick={() => setResumeMode('drop')}
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${resumeMode === 'drop' ? 'bg-primary text-on-primary-fixed shadow-lg' : 'text-outline hover:text-on-surface'}`}
+                  onClick={() => setResumeMode("drop")}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${resumeMode === "drop" ? "bg-primary text-on-primary-fixed shadow-lg" : "text-outline hover:text-on-surface"}`}
                 >
                   Upload
                 </button>
                 <button
-                  onClick={() => setResumeMode('text')}
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${resumeMode === 'text' ? 'bg-primary text-on-primary-fixed shadow-lg' : 'text-outline hover:text-on-surface'}`}
+                  onClick={() => setResumeMode("text")}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${resumeMode === "text" ? "bg-primary text-on-primary-fixed shadow-lg" : "text-outline hover:text-on-surface"}`}
                 >
                   Text
                 </button>
               </div>
 
-              {resumeMode === 'drop' ? (
+              {resumeMode === "drop" ? (
                 <div
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-3xl p-10 transition-all flex flex-col items-center justify-center text-center group cursor-pointer ${
-                    isDragActive ? 'border-primary bg-primary/5' : resumeFile ? 'border-primary bg-primary/2' : 'border-outline-variant/20 hover:border-primary/50'
+                    isDragActive
+                      ? "border-primary bg-primary/5"
+                      : resumeFile
+                        ? "border-primary bg-primary/2"
+                        : "border-outline-variant/20 hover:border-primary/50"
                   }`}
                 >
                   <input {...getInputProps()} />
@@ -265,8 +395,16 @@ export default function AnalyzerPage() {
                         <FileText size={32} />
                       </div>
                       <div className="font-bold text-sm">{resumeFile.name}</div>
-                      <div className="text-[10px] text-outline font-bold uppercase">{(resumeFile.size / 1024).toFixed(0)} KB · Ready</div>
-                      <button onClick={(e) => { e.stopPropagation(); setResumeFile(null) }} className="mt-2 text-xs text-error hover:underline flex items-center gap-1 font-bold">
+                      <div className="text-[10px] text-outline font-bold uppercase">
+                        {(resumeFile.size / 1024).toFixed(0)} KB · Ready
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setResumeFile(null);
+                        }}
+                        className="mt-2 text-xs text-error hover:underline flex items-center gap-1 font-bold"
+                      >
                         <X size={14} /> Remove
                       </button>
                     </div>
@@ -275,8 +413,12 @@ export default function AnalyzerPage() {
                       <div className="w-16 h-16 rounded-2xl glass bg-surface-container flex items-center justify-center text-outline mb-4 group-hover:text-primary group-hover:scale-110 transition-all border border-outline-variant/15">
                         <Upload size={28} />
                       </div>
-                      <div className="text-sm font-bold mb-1">Drop resume here</div>
-                      <p className="text-[11px] text-outline uppercase tracking-widest">or browse your files</p>
+                      <div className="text-sm font-bold mb-1">
+                        Drop resume here
+                      </div>
+                      <p className="text-[11px] text-outline uppercase tracking-widest">
+                        or browse your files
+                      </p>
                     </>
                   )}
                 </div>
@@ -297,27 +439,31 @@ export default function AnalyzerPage() {
                   <Target size={24} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl uppercase tracking-tighter skew-x-[-2deg]">2. Target Role</h3>
-                  <p className="text-xs text-on-surface-variant font-light">Paste Text or Job URL</p>
+                  <h3 className="font-bold text-xl uppercase tracking-tighter skew-x-[-2deg]">
+                    2. Target Role
+                  </h3>
+                  <p className="text-xs text-on-surface-variant font-light">
+                    Paste Text or Job URL
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-1 mb-6 p-1 bg-surface-container rounded-2xl border border-outline-variant/10 max-w-[200px]">
                 <button
-                  onClick={() => setJdTab('url')}
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${jdTab === 'url' ? 'bg-tertiary text-on-tertiary shadow-lg' : 'text-outline hover:text-on-surface'}`}
+                  onClick={() => setJdTab("url")}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${jdTab === "url" ? "bg-tertiary text-on-tertiary shadow-lg" : "text-outline hover:text-on-surface"}`}
                 >
                   URL
                 </button>
                 <button
-                  onClick={() => setJdTab('paste')}
-                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${jdTab === 'paste' ? 'bg-tertiary text-on-tertiary shadow-lg' : 'text-outline hover:text-on-surface'}`}
+                  onClick={() => setJdTab("paste")}
+                  className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${jdTab === "paste" ? "bg-tertiary text-on-tertiary shadow-lg" : "text-outline hover:text-on-surface"}`}
                 >
                   Text
                 </button>
               </div>
 
-              {jdTab === 'url' ? (
+              {jdTab === "url" ? (
                 <div className="relative group">
                   <div className="absolute left-5 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-tertiary transition-colors">
                     <Link2 size={18} />
@@ -330,7 +476,8 @@ export default function AnalyzerPage() {
                     onChange={(e) => setJdUrl(e.target.value)}
                   />
                   <p className="mt-4 text-[10px] text-outline font-bold flex items-center gap-2 uppercase tracking-widest">
-                    <Globe size={10} /> Supports LinkedIn, Indeed, Greenhouse & more
+                    <Globe size={10} /> Supports LinkedIn, Indeed, Greenhouse &
+                    more
                   </p>
                 </div>
               ) : (
@@ -350,17 +497,23 @@ export default function AnalyzerPage() {
                   <BarChart3 size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm mb-0.5">Analysis Baseline</h4>
-                  <p className="text-[10px] text-on-surface-variant uppercase font-light tracking-widest">Target Seniority Calibration</p>
+                  <h4 className="font-bold text-sm mb-0.5">
+                    Analysis Baseline
+                  </h4>
+                  <p className="text-[10px] text-on-surface-variant uppercase font-light tracking-widest">
+                    Target Seniority Calibration
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
-                {(['junior', 'mid', 'senior', 'lead'] as const).map((level) => (
+                {(["junior", "mid", "senior", "lead"] as const).map((level) => (
                   <button
                     key={level}
                     onClick={() => setSeniority(level)}
                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tighter transition-all border ${
-                      seniority === level ? 'bg-primary border-primary text-on-primary-fixed shadow-lg' : 'bg-surface-container border-outline-variant/10 text-outline hover:text-on-surface'
+                      seniority === level
+                        ? "bg-primary border-primary text-on-primary-fixed shadow-lg"
+                        : "bg-surface-container border-outline-variant/10 text-outline hover:text-on-surface"
                     }`}
                   >
                     {level}
@@ -383,7 +536,10 @@ export default function AnalyzerPage() {
                   </>
                 ) : (
                   <>
-                    <Brain size={24} className="group-hover:scale-110 transition-transform" />
+                    <Brain
+                      size={24}
+                      className="group-hover:scale-110 transition-transform"
+                    />
                     Engage AI Analysis
                     <ChevronRight size={20} />
                   </>
@@ -405,20 +561,38 @@ export default function AnalyzerPage() {
               <div className="space-y-6">
                 <div className="glass bg-surface-container-high p-8 rounded-[2.5rem] border border-outline-variant/15 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-32 h-32 primary-gradient opacity-10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
-                  <h3 className="font-black text-xl mb-6 tracking-tighter">AI Analysis Logic</h3>
+                  <h3 className="font-black text-xl mb-6 tracking-tighter">
+                    AI Analysis Logic
+                  </h3>
                   <div className="space-y-6">
                     {[
-                      { icon: Brain, title: 'Multi-Agent Flow', desc: '5 specialized agents handle parsing, context-matching, and roadmap generation in parallel.' },
-                      { icon: Target, title: 'Semantic Depth', desc: 'We analyze the core architecture of your skills, not just keywords. Versions and paradigms are understood.' },
-                      { icon: Shield, title: 'Local Compute', desc: 'All processing happens on our dedicated infrastructure via Ollama. 100% data privacy guaranteed.' }
+                      {
+                        icon: Brain,
+                        title: "Multi-Agent Flow",
+                        desc: "5 specialized agents handle parsing, context-matching, and roadmap generation in parallel.",
+                      },
+                      {
+                        icon: Target,
+                        title: "Semantic Depth",
+                        desc: "We analyze the core architecture of your skills, not just keywords. Versions and paradigms are understood.",
+                      },
+                      {
+                        icon: Shield,
+                        title: "Local Compute",
+                        desc: "All processing happens on our dedicated infrastructure via Ollama. 100% data privacy guaranteed.",
+                      },
                     ].map((item, i) => (
                       <div key={i} className="flex gap-4">
                         <div className="w-10 h-10 rounded-xl bg-surface-container-highest border border-outline-variant/10 flex items-center justify-center text-primary shrink-0 transition-colors group-hover:border-primary/30">
                           <item.icon size={20} />
                         </div>
                         <div>
-                          <h4 className="font-bold text-sm mb-1">{item.title}</h4>
-                          <p className="text-[11px] text-on-surface-variant font-light leading-relaxed">{item.desc}</p>
+                          <h4 className="font-bold text-sm mb-1">
+                            {item.title}
+                          </h4>
+                          <p className="text-[11px] text-on-surface-variant font-light leading-relaxed">
+                            {item.desc}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -431,18 +605,27 @@ export default function AnalyzerPage() {
                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                     REAL-TIME AGENT LOGS
                   </div>
-                  <div className="text-on-surface/70 tracking-tighter">[AGENT 1] PARSING resume_v2.pdf... OK</div>
-                  <div className="text-on-surface/70 tracking-tighter">[AGENT 2] SEARCHING skill_graph_v4... 12k nodes</div>
-                  <div className="text-on-surface/70 tracking-tighter">[AGENT 2] SKILL: "gRPC" {'->'} Type: Backend, Level: High</div>
-                  <div className="text-on-surface/70 tracking-tighter">[AGENT 3] COMPARING candidates... Top 12% match</div>
-                  <div className="text-primary font-black pt-2 animate-pulse cursor-default">ANALYSIS INITIALIZED {'>'} READY_FOR_PROCESS</div>
+                  <div className="text-on-surface/70 tracking-tighter">
+                    [AGENT 1] PARSING resume_v2.pdf... OK
+                  </div>
+                  <div className="text-on-surface/70 tracking-tighter">
+                    [AGENT 2] SEARCHING skill_graph_v4... 12k nodes
+                  </div>
+                  <div className="text-on-surface/70 tracking-tighter">
+                    [AGENT 2] SKILL: "gRPC" {"->"} Type: Backend, Level: High
+                  </div>
+                  <div className="text-on-surface/70 tracking-tighter">
+                    [AGENT 3] COMPARING candidates... Top 12% match
+                  </div>
+                  <div className="text-primary font-black pt-2 animate-pulse cursor-default">
+                    ANALYSIS INITIALIZED {">"} READY_FOR_PROCESS
+                  </div>
                 </div>
               </div>
             )}
           </div>
-
         </div>
       </main>
     </div>
-  )
+  );
 }

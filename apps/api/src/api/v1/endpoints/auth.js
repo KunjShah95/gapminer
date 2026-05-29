@@ -33,6 +33,11 @@ function serializeUser(user) {
     analysesLimit: user.analyses_limit ?? user.analysesLimit ?? 10,
     twoFactorEnabled: user.two_factor_enabled ?? user.twoFactorEnabled ?? false,
     isVerified: user.is_verified ?? user.isVerified ?? false,
+    currentRole: user.current_role ?? user.currentRole ?? null,
+    experienceLevel: user.experience_level ?? user.experienceLevel ?? null,
+    targetRole: user.target_role ?? user.targetRole ?? null,
+    topSkills: user.top_skills ?? user.topSkills ?? null,
+    linkedInUrl: user.linked_in_url ?? user.linkedInUrl ?? null,
   };
 }
 
@@ -545,7 +550,15 @@ router.get("/me", requireUser, (req, res) => {
 // ─── PUT /me ──────────────────────────────────────────────────
 router.put("/me", requireUser, async (req, res, next) => {
   try {
-    const { name, avatar } = req.body;
+    const {
+      name,
+      avatar,
+      currentRole,
+      experienceLevel,
+      targetRole,
+      topSkills,
+      linkedInUrl,
+    } = req.body;
     const updates = [];
     const values = [];
     let idx = 1;
@@ -557,6 +570,26 @@ router.put("/me", requireUser, async (req, res, next) => {
     if (avatar !== undefined) {
       updates.push(`avatar = $${idx++}`);
       values.push(avatar);
+    }
+    if (currentRole !== undefined) {
+      updates.push(`current_role = $${idx++}`);
+      values.push(currentRole);
+    }
+    if (experienceLevel !== undefined) {
+      updates.push(`experience_level = $${idx++}`);
+      values.push(experienceLevel);
+    }
+    if (targetRole !== undefined) {
+      updates.push(`target_role = $${idx++}`);
+      values.push(targetRole);
+    }
+    if (topSkills !== undefined) {
+      updates.push(`top_skills = $${idx++}`);
+      values.push(topSkills);
+    }
+    if (linkedInUrl !== undefined) {
+      updates.push(`linked_in_url = $${idx++}`);
+      values.push(linkedInUrl);
     }
 
     if (updates.length === 0) {

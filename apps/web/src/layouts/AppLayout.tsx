@@ -4,17 +4,48 @@ import {
   LayoutDashboard, Search, Map, User, CreditCard,
   Sparkles, LogOut, Bell, ChevronDown, Menu, X,
   TrendingUp, GraduationCap, Settings, Shield, Activity,
-  FileText, Target
+  FileText, Target, Briefcase, Linkedin, History,
+  BarChart2, MessageSquare, Star, Globe, PenTool
 } from 'lucide-react'
 import { useState } from 'react'
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/analyze', label: 'New Analysis', icon: Search },
-  { path: '/negotiate', label: 'Negotiate', icon: Target },
-  { path: '/latex', label: 'LaTeX Editor', icon: FileText },
-  { path: '/roadmap/rm_001', label: 'My Roadmaps', icon: GraduationCap },
-  { path: '/pricing', label: 'Upgrade Plan', icon: CreditCard },
+const NAV_SECTIONS = [
+  {
+    title: "Core",
+    items: [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/analyze', label: 'New Analysis', icon: Search },
+      { path: '/roadmap/rm_001', label: 'My Roadmaps', icon: GraduationCap },
+      { path: '/pricing', label: 'Upgrade Plan', icon: CreditCard },
+    ]
+  },
+  {
+    title: "Career Tools",
+    items: [
+      { path: '/latex', label: 'LaTeX Editor', icon: FileText },
+      { path: '/cover-letter', label: 'Cover Letter AI', icon: PenTool },
+      { path: '/linkedin', label: 'LinkedIn Optimizer', icon: Linkedin },
+      { path: '/negotiate', label: 'Negotiate', icon: Target },
+      { path: '/negotiation-roleplay', label: 'Negotiation Practice', icon: MessageSquare },
+    ]
+  },
+  {
+    title: "Intelligence",
+    items: [
+      { path: '/career-path', label: 'Career Path Predictor', icon: Map },
+      { path: '/market-demand', label: 'Market Demand', icon: Globe },
+      { path: '/benchmark', label: 'Peer Benchmarking', icon: BarChart2 },
+      { path: '/recommendations', label: 'Job Recommendations', icon: Star },
+    ]
+  },
+  {
+    title: "Tracking",
+    items: [
+      { path: '/jobs', label: 'Job Tracker', icon: Briefcase },
+      { path: '/progress', label: 'Skill Progress', icon: TrendingUp },
+      { path: '/resume-versions', label: 'Resume Versions', icon: History },
+    ]
+  }
 ]
 
 export default function AppLayout() {
@@ -41,26 +72,32 @@ export default function AppLayout() {
           </Link>
         </div>
         
-        <nav className="flex-grow px-6 space-y-2">
-          <div className="text-[10px] font-black text-outline uppercase tracking-[0.2em] px-4 mb-4 opacity-60">Main Terminal</div>
-          {NAV_ITEMS.map((item) => {
-            const active = location.pathname === item.path
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-4 px-5 py-4 rounded-[1.5rem] transition-all group relative ${
-                  active ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(108,71,255,0.2)]' : 'text-on-surface-variant hover:bg-surface-container-high'
-                }`}
-              >
-                <item.icon size={20} className={active ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors'} />
-                <span className={`font-bold text-sm tracking-tight ${active ? 'skew-x-[-2deg]' : ''}`}>{item.label}</span>
-                {active && (
-                  <div className="absolute left-0 w-1 h-6 bg-primary rounded-r-full" />
-                )}
-              </Link>
-            )
-          })}
+        <nav className="flex-grow px-6 space-y-6">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <div className="text-[10px] font-black text-outline uppercase tracking-[0.2em] px-4 mb-2 opacity-60">{section.title}</div>
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const active = location.pathname === item.path
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-4 px-5 py-3 rounded-[1.5rem] transition-all group relative ${
+                        active ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(108,71,255,0.2)]' : 'text-on-surface-variant hover:bg-surface-container-high'
+                      }`}
+                    >
+                      <item.icon size={20} className={active ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors'} />
+                      <span className={`font-bold text-sm tracking-tight ${active ? 'skew-x-[-2deg]' : ''}`}>{item.label}</span>
+                      {active && (
+                        <div className="absolute left-0 w-1 h-6 bg-primary rounded-r-full" />
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
 
           <div className="h-4"></div>
           <div className="text-[10px] font-black text-outline uppercase tracking-[0.2em] px-4 mb-4 opacity-60">System Core</div>
@@ -119,7 +156,7 @@ export default function AppLayout() {
           </div>
           {/* Mobile Nav Items */}
           <nav className="p-4 space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {NAV_SECTIONS.flatMap(s => s.items).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}

@@ -2,38 +2,48 @@ import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  AreaChart,
-  Area,
 } from "recharts";
 import {
-  TrendingUp,
   Flame,
   Zap,
-  ArrowUpRight,
   ArrowDownRight,
   Globe,
   AlertCircle,
   RefreshCw,
-  Target,
-  Briefcase,
   BarChart3,
-  Award,
-  Activity,
+  Info,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import DataSourceBadge from "@/components/market/DataSourceBadge";
+
+type TrendRow = {
+  skill: string;
+  category?: string;
+  trend: string;
+  trendDirection?: string;
+  demandScore: number;
+  growthRate?: number;
+  source?: string;
+};
+
+function normalizeTrendFilter(t: TrendRow): "emerging" | "stable" | "declining" {
+  const dir = t.trendDirection || t.trend;
+  if (dir.includes("emerging") || dir === "emerging") return "emerging";
+  if (dir.includes("declining") || dir === "declining") return "declining";
+  return "stable";
+}
 
 export default function MarketDemandPage() {
-  const [trends, setTrends] = useState<any[]>([]);
+  const [trends, setTrends] = useState<TrendRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dataSource, setDataSource] = useState<string>("");
+  const [disclaimer, setDisclaimer] = useState<string>("");
 
   useEffect(() => {
     fetchTrends();
@@ -43,39 +53,86 @@ export default function MarketDemandPage() {
     const token = getAuthToken();
     if (!token) return;
 
+    setLoading(true);
+    setError(null);
+
     try {
+      let skillsToAnalyze = [
+        "React",
+        "TypeScript",
+        "Python",
+        "AWS",
+        "Docker",
+        "Kubernetes",
+        "Node.js",
+        "PostgreSQL",
+      ];
+
+      const analysisRes = await fetch("/api/v1/analysis", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (analysisRes.ok) {
+        const analyses = await analysisRes.json();
+        if (analyses.length > 0) {
+          const detailRes = await fetch(`/api/v1/analysis/${analyses[0].id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (detailRes.ok) {
+            const detail = await detailRes.json();
+            const matched = detail.gapAnalysis?.matchedSkills || [];
+            const missing = detail.gapAnalysis?.missingSkills || [];
+            const combined = [...matched, ...missing];
+            if (combined.length >= 4) {
+              skillsToAnalyze = combined.slice(0, 20);
+            }
+          }
+        }
+      }
+
+      const skillsParam = encodeURIComponent(skillsToAnalyze.join(","));
+      const trendRes = await fetch(
+        `/api/v1/skills-trend/trends?skills=${skillsParam}&timeframe=12`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      if (trendRes.ok) {
+        const data = await trendRes.json();
+        const rows: TrendRow[] = (data.skills || []).map((s: TrendRow) => ({
+          skill: s.skill,
+          category: s.category,
+          trend: s.trend,
+          trendDirection: s.trend,
+          demandScore: s.demandScore,
+          growthRate: s.growthRate,
+          source: s.source,
+        }));
+        setTrends(rows);
+        setDataSource(data.dataSource || "catalog+database");
+        setDisclaimer(
+          "Scores use the curated skill catalog and your taxonomy — not live job-board feeds.",
+        );
+        return;
+      }
+
       const res = await fetch("/api/v1/transformers/market-trends", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          skills: [
-            "React",
-            "TypeScript",
-            "Python",
-            "AWS",
-            "Docker",
-            "Kubernetes",
-            "Node.js",
-            "PostgreSQL",
-            "GraphQL",
-            "Machine Learning",
-            "Rust",
-            "Go",
-            "Terraform",
-            "CI/CD",
-            "Microservices",
-            "System Design",
-          ],
-        }),
+        body: JSON.stringify({ skills: skillsToAnalyze }),
       });
+
       if (res.ok) {
-        const data = await res.json().catch(() => ({ trends: [] }));
+        const data = await res.json();
         setTrends(data.trends || []);
+        setDataSource(data.dataSource || "");
+        setDisclaimer(data.disclaimer || "");
+      } else {
+        setError("Failed to load market trends");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load market trends");
     } finally {
       setLoading(false);
@@ -86,10 +143,10 @@ export default function MarketDemandPage() {
     .filter((t) => t.demandScore >= 70)
     .sort((a, b) => b.demandScore - a.demandScore);
   const emergingSkills = trends.filter(
-    (t) => t.trend === "emerging technology" || t.trend === "high demand skill",
+    (t) => normalizeTrendFilter(t) === "emerging",
   );
   const decliningSkills = trends.filter(
-    (t) => t.trend === "declining technology",
+    (t) => normalizeTrendFilter(t) === "declining",
   );
 
   const avgDemand =
@@ -105,20 +162,19 @@ export default function MarketDemandPage() {
     .map((t) => ({
       skill: t.skill,
       demand: t.demandScore,
-      trend: t.trend,
     }));
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
               <Globe className="w-8 h-8 text-blue-600" />
               Market Demand Dashboard
             </h1>
             <p className="text-gray-600 mt-1">
-              Real-time skill demand analysis across the tech industry
+              Skill demand from catalog, taxonomy, and embedding signals
             </p>
           </div>
           <button
@@ -130,6 +186,20 @@ export default function MarketDemandPage() {
           </button>
         </div>
 
+        {disclaimer && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-blue-900">{disclaimer}</p>
+              {dataSource && (
+                <p className="text-xs text-blue-700 mt-1">
+                  Engine: {dataSource}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-500" />
@@ -139,44 +209,26 @@ export default function MarketDemandPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-gray-600 mb-2">
-              <Activity size={18} />
-              <span className="text-sm">Avg Demand</span>
-            </div>
+            <p className="text-sm text-gray-600 mb-2">Avg demand</p>
             <p className="text-3xl font-bold text-blue-600">{avgDemand}%</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Across all tracked skills
-            </p>
           </div>
           <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-green-600 mb-2">
-              <Flame size={18} />
-              <span className="text-sm">Hot Skills</span>
-            </div>
+            <p className="text-sm text-green-600 mb-2">Hot (70%+)</p>
             <p className="text-3xl font-bold text-green-600">
               {hotSkills.length}
             </p>
-            <p className="text-xs text-gray-500 mt-1">70%+ demand score</p>
           </div>
           <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-purple-600 mb-2">
-              <Zap size={18} />
-              <span className="text-sm">Emerging</span>
-            </div>
+            <p className="text-sm text-purple-600 mb-2">Emerging</p>
             <p className="text-3xl font-bold text-purple-600">
               {emergingSkills.length}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Growing demand</p>
           </div>
           <div className="bg-white p-5 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2 text-red-600 mb-2">
-              <ArrowDownRight size={18} />
-              <span className="text-sm">Declining</span>
-            </div>
+            <p className="text-sm text-red-600 mb-2">Declining</p>
             <p className="text-3xl font-bold text-red-600">
               {decliningSkills.length}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Decreasing demand</p>
           </div>
         </div>
 
@@ -184,7 +236,7 @@ export default function MarketDemandPage() {
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-600" />
-              Top Skills by Demand
+              Top skills by demand
             </h2>
             {loading ? (
               <div className="h-[300px] flex items-center justify-center text-gray-500">
@@ -194,26 +246,20 @@ export default function MarketDemandPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                  />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <YAxis
                     type="category"
                     dataKey="skill"
                     tick={{ fontSize: 11 }}
                     width={100}
                   />
-                  <Tooltip
-                    formatter={(value: number) => [`${value}%`, "Demand"]}
-                  />
+                  <Tooltip formatter={(value: number) => [`${value}%`, "Demand"]} />
                   <Bar dataKey="demand" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No data available
+                No data — run an analysis first for personalized skills
               </div>
             )}
           </div>
@@ -221,41 +267,30 @@ export default function MarketDemandPage() {
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Flame className="w-5 h-5 text-red-600" />
-              Hottest Skills Right Now
+              Hottest skills
             </h2>
-            {loading ? (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                Loading...
-              </div>
-            ) : hotSkills.length > 0 ? (
+            {hotSkills.length > 0 ? (
               <div className="space-y-3">
                 {hotSkills.slice(0, 8).map((skill) => (
-                  <div key={skill.skill} className="flex items-center gap-4">
-                    <span className="w-24 text-sm font-medium text-gray-700 truncate">
+                  <div key={skill.skill} className="flex items-center gap-3">
+                    <span className="w-24 text-sm font-medium truncate">
                       {skill.skill}
                     </span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div className="flex-1 bg-gray-100 rounded-full h-3">
                       <div
-                        className={`h-full rounded-full transition-all ${
-                          skill.demandScore >= 85
-                            ? "bg-gradient-to-r from-red-500 to-orange-500"
-                            : skill.demandScore >= 70
-                              ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                              : "bg-gradient-to-r from-green-500 to-emerald-500"
-                        }`}
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
                         style={{ width: `${skill.demandScore}%` }}
                       />
                     </div>
-                    <span className="w-12 text-right text-sm font-bold text-gray-700">
+                    <span className="w-10 text-sm font-bold text-right">
                       {skill.demandScore}%
                     </span>
+                    <DataSourceBadge source={skill.source} />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-gray-500">
-                No hot skills data
-              </div>
+              <p className="text-gray-500 text-sm">No hot skills in this set</p>
             )}
           </div>
         </div>
@@ -264,64 +299,53 @@ export default function MarketDemandPage() {
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Zap className="w-5 h-5 text-purple-600" />
-              Emerging Technologies
+              Emerging
             </h2>
-            {emergingSkills.length > 0 ? (
-              <div className="space-y-2">
-                {emergingSkills.map((skill) => (
-                  <div
-                    key={skill.skill}
-                    className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Zap size={16} className="text-purple-600" />
-                      <span className="font-medium text-sm">{skill.skill}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded">
-                        {skill.trend}
-                      </span>
-                      <span className="text-sm font-bold text-purple-600">
-                        {skill.demandScore}%
-                      </span>
-                    </div>
+            <div className="space-y-2">
+              {emergingSkills.map((skill) => (
+                <div
+                  key={skill.skill}
+                  className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
+                >
+                  <span className="font-medium text-sm">{skill.skill}</span>
+                  <div className="flex items-center gap-2">
+                    <DataSourceBadge source={skill.source} />
+                    <span className="text-sm font-bold text-purple-600">
+                      {skill.demandScore}%
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No emerging skills data available
-              </p>
-            )}
+                </div>
+              ))}
+              {emergingSkills.length === 0 && (
+                <p className="text-gray-500 text-sm">None in current set</p>
+              )}
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <ArrowDownRight className="w-5 h-5 text-red-600" />
-              Declining Technologies
+              Declining
             </h2>
-            {decliningSkills.length > 0 ? (
-              <div className="space-y-2">
-                {decliningSkills.map((skill) => (
-                  <div
-                    key={skill.skill}
-                    className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ArrowDownRight size={16} className="text-red-600" />
-                      <span className="font-medium text-sm">{skill.skill}</span>
-                    </div>
+            <div className="space-y-2">
+              {decliningSkills.map((skill) => (
+                <div
+                  key={skill.skill}
+                  className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
+                >
+                  <span className="font-medium text-sm">{skill.skill}</span>
+                  <div className="flex items-center gap-2">
+                    <DataSourceBadge source={skill.source} />
                     <span className="text-sm font-bold text-red-600">
                       {skill.demandScore}%
                     </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">
-                No declining skills data available
-              </p>
-            )}
+                </div>
+              ))}
+              {decliningSkills.length === 0 && (
+                <p className="text-gray-500 text-sm">None in current set</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

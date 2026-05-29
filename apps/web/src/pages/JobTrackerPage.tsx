@@ -24,6 +24,7 @@ import {
   Handshake,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
 const STATUSES = [
   { id: "saved", label: "Saved", color: "bg-gray-500", icon: Target },
@@ -245,6 +246,12 @@ export default function JobTrackerPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        <OnboardingTooltip
+          pageKey="jobs"
+          icon="📋"
+          title="Track your applications"
+          description="Keep tabs on every job application. Update status, add notes, and never lose track of where you've applied."
+        />
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">

@@ -16,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
 interface OfferData {
   base: number;
@@ -125,6 +126,12 @@ export default function NegotiationCompanionPage() {
 
   return (
     <div className="p-8 lg:p-12 max-w-7xl mx-auto">
+      <OnboardingTooltip
+        pageKey="negotiate"
+        icon="💰"
+        title="Research market salary data"
+        description="View compensation benchmarks for your role and location. Practice your negotiation strategy."
+      />
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tighter mb-2">
           Negotiation Companion

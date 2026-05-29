@@ -3,7 +3,11 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../../../core/security.js';
-import { getTopTrendingSkills, generateSkillTrendData } from '../../../ai/agents/marketTrend.js';
+import {
+  getTopTrendingSkills,
+  resolveSkillTrend,
+  getSkillTrendWithTransformer,
+} from '../../../services/marketDemand.js';
 
 const router = Router();
 
@@ -37,24 +41,21 @@ router.get('/trends', requireAuth, async (req, res, next) => {
 
     // If specific skills are requested, generate trend data for them
     if (skills) {
-      const skillList = skills.split(',').map((s) => s.trim());
-      const skillTrends = skillList.map((skill) => ({
-        skill,
-        category: category || 'Custom',
-        demandScore: 70 + Math.floor(Math.random() * 30),
-        trend: Math.random() > 0.6 ? 'emerging' : Math.random() > 0.3 ? 'stable' : 'declining',
-        growthRate: Math.round((Math.random() * 40 - 10) * 10) / 10,
-        historicalData: generateSkillTrendData(
-          skill,
-          Math.random() > 0.6 ? 'emerging' : Math.random() > 0.3 ? 'stable' : 'declining',
-          70 + Math.floor(Math.random() * 30)
-        ).slice(-months)
-      }));
+      const skillList = skills.split(',').map((s) => s.trim()).filter(Boolean);
+      const skillTrends = await Promise.all(
+        skillList.map((skill) =>
+          getSkillTrendWithTransformer(skill).then((row) => ({
+            ...row,
+            historicalData: row.historicalData.slice(-months),
+          })),
+        ),
+      );
 
       return res.json({
         skills: skillTrends,
         timeframe: months,
-        generatedAt: new Date().toISOString()
+        dataSource: 'catalog+database+transformer',
+        generatedAt: new Date().toISOString(),
       });
     }
 
@@ -73,8 +74,9 @@ router.get('/trends', requireAuth, async (req, res, next) => {
     return res.json({
       skills: limitedTrends,
       timeframe: months,
-      categories: [...new Set(limitedTrends.map(s => s.category))],
-      generatedAt: new Date().toISOString()
+      categories: [...new Set(limitedTrends.map((s) => s.category))],
+      dataSource: 'catalog+database',
+      generatedAt: new Date().toISOString(),
     });
   } catch (err) {
     next(err);
@@ -165,30 +167,18 @@ router.get('/compare', requireAuth, async (req, res, next) => {
 
     const allTrends = await getTopTrendingSkills(undefined, 100);
 
-    const comparison = skillList.map((skillName) => {
-      const existingSkill = allTrends.find(
-        s => s.skill.toLowerCase() === skillName.toLowerCase()
-      );
-
-      if (existingSkill) {
+    const comparison = await Promise.all(
+      skillList.map(async (skillName) => {
+        const existingSkill = allTrends.find(
+          (s) => s.skill.toLowerCase() === skillName.toLowerCase(),
+        );
+        const row = existingSkill || (await resolveSkillTrend(skillName));
         return {
-          ...existingSkill,
-          historicalData: existingSkill.historicalData.slice(-months)
+          ...row,
+          historicalData: row.historicalData.slice(-months),
         };
-      }
-
-      // Generate data for unknown skills
-      const demandScore = 60 + Math.floor(Math.random() * 30);
-      const trend = Math.random() > 0.5 ? 'stable' : 'emerging';
-      return {
-        skill: skillName,
-        category: 'Unknown',
-        trend,
-        demandScore,
-        growthRate: Math.round((Math.random() * 20 - 5) * 10) / 10,
-        historicalData: generateSkillTrendData(skillName, trend, demandScore).slice(-months)
-      };
-    });
+      }),
+    );
 
     return res.json({
       comparison,

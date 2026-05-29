@@ -69,6 +69,7 @@ function AppRoutes() {
     <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<AuthPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/pricing" element={<PricingPage />} />
 

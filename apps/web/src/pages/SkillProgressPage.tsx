@@ -33,6 +33,7 @@ import { useAuthStore } from "@/stores/authStore";
 export default function SkillProgressPage() {
   const { user } = useAuthStore();
   const [progressData, setProgressData] = useState<any>(null);
+  const [careerMemory, setCareerMemory] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"30d" | "90d" | "all">("all");
 
@@ -46,12 +47,33 @@ export default function SkillProgressPage() {
     if (!token || !user?.id) return;
 
     try {
-      const res = await fetch(`/api/v1/progress/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
+      const [progressRes, careerRes] = await Promise.all([
+        fetch(`/api/v1/progress/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/v1/career/memory", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (progressRes.ok) {
+        const data = await progressRes.json().catch(() => null);
         setProgressData(data);
+      }
+
+      if (careerRes.ok) {
+        let memory = await careerRes.json().catch(() => null);
+        if (!memory?.snapshots?.length) {
+          const bf = await fetch("/api/v1/career/backfill", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (bf.ok) {
+            const body = await bf.json().catch(() => null);
+            memory = body?.memory ?? body;
+          }
+        }
+        setCareerMemory(memory);
       }
     } catch (err) {
       console.error("Failed to fetch progress:", err);
@@ -126,6 +148,44 @@ export default function SkillProgressPage() {
             ))}
           </div>
         </div>
+
+        {careerMemory?.insights && (
+          <div className="mb-8 p-6 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200">
+            <h2 className="text-lg font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+              <Brain size={20} />
+              Career memory
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-indigo-700 font-medium mb-1">Top strengths</p>
+                <p className="text-gray-700">
+                  {(careerMemory.insights.topStrengths || []).slice(0, 5).join(", ") ||
+                    "Run more analyses to build your profile"}
+                </p>
+              </div>
+              <div>
+                <p className="text-indigo-700 font-medium mb-1">Improved skills</p>
+                <p className="text-gray-700">
+                  {(careerMemory.insights.improvedSkills || []).join(", ") ||
+                    "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-indigo-700 font-medium mb-1">Persistent gaps</p>
+                <p className="text-gray-700">
+                  {(careerMemory.insights.persistentGaps || []).join(", ") || "—"}
+                </p>
+              </div>
+            </div>
+            {careerMemory.timeline?.length > 1 && (
+              <p className="text-xs text-indigo-600 mt-3">
+                Score change since last analysis:{" "}
+                {careerMemory.insights.scoreDelta >= 0 ? "+" : ""}
+                {careerMemory.insights.scoreDelta} pts
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white p-5 rounded-xl border border-gray-200">

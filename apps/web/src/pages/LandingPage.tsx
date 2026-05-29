@@ -1,629 +1,627 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
-import {
-  Brain, Zap, Shield, TrendingUp, Users, Award,
-  ArrowRight, Check, Star, Globe, Upload, FileText,
-  BarChart3, Map, Sparkles, Target, Clock, Terminal,
-  PlayCircle, CheckCircle, MoreVertical, GraduationCap, Cloud,
-  GitBranch, FileDown, Share2, LineChart, Type, History, Medal,
-  PenTool, FileCode, Wand2, Code, Layers, Send
-} from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Check, ChevronDown } from 'lucide-react'
 
-// ─── Stat Counter Component ───
-function Counter({ target, duration = 2000 }: { target: number; duration?: number }) {
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS (keep everything consistent)
+   Palette: #090909 ink | #E8C547 gold | #F5F0E8 cream | #1A1A1A charcoal
+───────────────────────────────────────────── */
+
+// Animated counter (triggers once on scroll into view)
+function Counter({ target, suffix = '', prefix = '' }: { target: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0)
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLSpanElement>(null)
   const started = useRef(false)
-
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true
-          const start = performance.now()
-          const animate = (now: number) => {
-            const progress = Math.min((now - start) / duration, 1)
-            const eased = 1 - Math.pow(1 - progress, 3)
-            setCount(Math.floor(eased * target))
-            if (progress < 1) requestAnimationFrame(animate)
-          }
-          requestAnimationFrame(animate)
+    const observer = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !started.current) {
+        started.current = true
+        const t0 = performance.now()
+        const dur = 1800
+        const tick = (now: number) => {
+          const p = Math.min((now - t0) / dur, 1)
+          const eased = 1 - Math.pow(1 - p, 4)
+          setCount(Math.floor(eased * target))
+          if (p < 1) requestAnimationFrame(tick)
         }
-      },
-      { threshold: 0.5 }
-    )
+        requestAnimationFrame(tick)
+      }
+    }, { threshold: 0.5 })
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
-  }, [target, duration])
-
-  return <div ref={ref}>{count}</div>
+  }, [target])
+  return <span ref={ref}>{prefix}{count}{suffix}</span>
 }
 
-const radarSkills = [
-  { label: 'Strategy', value: 92 },
-  { label: 'Frontend', value: 78 },
-  { label: 'Data', value: 64 },
-  { label: 'Backend', value: 84 },
-  { label: 'Delivery', value: 71 },
-  { label: 'Leadership', value: 88 },
-]
+// Typewriter effect
+function Typewriter({ words }: { words: string[] }) {
+  const [idx, setIdx] = useState(0)
+  const [displayed, setDisplayed] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
-function SkillRadarPreview({ showSummary = true }: { showSummary?: boolean }) {
-  const size = 320
-  const center = size / 2
-  const radius = 118
-  const polygonPoints = radarSkills
-    .map((skill, index) => {
-      const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
-      const pointRadius = 28 + (skill.value / 100) * radius
-      const x = center + Math.cos(angle) * pointRadius
-      const y = center + Math.sin(angle) * pointRadius
-      return `${x},${y}`
-    })
-    .join(' ')
+  useEffect(() => {
+    const word = words[idx % words.length]
+    if (!deleting && displayed.length < word.length) {
+      const t = setTimeout(() => setDisplayed(word.slice(0, displayed.length + 1)), 80)
+      return () => clearTimeout(t)
+    }
+    if (!deleting && displayed.length === word.length) {
+      const t = setTimeout(() => setDeleting(true), 2000)
+      return () => clearTimeout(t)
+    }
+    if (deleting && displayed.length > 0) {
+      const t = setTimeout(() => setDisplayed(displayed.slice(0, -1)), 45)
+      return () => clearTimeout(t)
+    }
+    if (deleting && displayed.length === 0) {
+      setDeleting(false)
+      setIdx(i => i + 1)
+    }
+  }, [displayed, deleting, idx, words])
 
   return (
-    <div className="relative rounded-[1.75rem] border border-outline-variant/15 bg-[#10111a] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.45)] overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(108,71,255,0.18),transparent_55%)]" />
-      <div className="relative flex items-center justify-between mb-3 text-[11px] uppercase tracking-[0.28em] text-on-surface-variant">
-        <span>Live skill radar</span>
-        <span>Updated moments ago</span>
+    <span className="text-[#E8C547]">
+      {displayed}
+      <span className="animate-pulse">|</span>
+    </span>
+  )
+}
+
+// Marquee tape
+function Tape({ items }: { items: string[] }) {
+  const repeated = [...items, ...items, ...items]
+  return (
+    <div className="overflow-hidden border-y border-[#E8C547]/20 py-3">
+      <div
+        className="flex gap-12 whitespace-nowrap"
+        style={{ animation: 'marquee 28s linear infinite' }}
+      >
+        {repeated.map((item, i) => (
+          <span key={i} className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 flex items-center gap-12">
+            {item}
+            <span className="text-[#E8C547]/30">◆</span>
+          </span>
+        ))}
       </div>
-      <div className="relative aspect-square rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] border border-white/5">
-        <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 h-full w-full" aria-hidden="true">
-          {[0.28, 0.48, 0.68, 0.88].map((ring, ringIndex) => {
-            const r = radius * ring
-            return <circle key={ringIndex} cx={center} cy={center} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeDasharray={ringIndex === 3 ? '0' : '4 8'} />
-          })}
-          {radarSkills.map((_, index) => {
-            const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
-            const x = center + Math.cos(angle) * radius
-            const y = center + Math.sin(angle) * radius
-            return <line key={index} x1={center} y1={center} x2={x} y2={y} stroke="rgba(255,255,255,0.08)" />
-          })}
-          <polygon points={polygonPoints} fill="rgba(108,71,255,0.22)" stroke="rgba(176,162,255,0.95)" strokeWidth="2.5" />
-          {radarSkills.map((skill, index) => {
-            const angle = (Math.PI * 2 * index) / radarSkills.length - Math.PI / 2
-            const pointRadius = 28 + (skill.value / 100) * radius
-            const x = center + Math.cos(angle) * pointRadius
-            const y = center + Math.sin(angle) * pointRadius
-            const labelRadius = radius + 20
-            const labelX = center + Math.cos(angle) * labelRadius
-            const labelY = center + Math.sin(angle) * labelRadius
-            return (
-              <g key={skill.label}>
-                <circle cx={x} cy={y} r="4.5" fill="#f9f5fd" stroke="#6C47FF" strokeWidth="3" />
-                <text x={labelX} y={labelY} fill="rgba(249,245,253,0.88)" fontSize="10" textAnchor="middle" dominantBaseline="middle">
-                  {skill.label}
-                </text>
-              </g>
-            )
-          })}
-          <circle cx={center} cy={center} r="18" fill="#0e0e13" stroke="rgba(255,255,255,0.2)" />
-          <text x={center} y={center - 2} fill="#f9f5fd" fontSize="18" fontWeight="700" textAnchor="middle" dominantBaseline="middle">
-            82%
-          </text>
-          <text x={center} y={center + 18} fill="rgba(172,170,177,0.9)" fontSize="8.5" fontWeight="600" textAnchor="middle" dominantBaseline="middle" letterSpacing="1.2">
-            FIT SCORE
-          </text>
-        </svg>
-      </div>
-      {showSummary ? (
-        <div className="relative mt-4 grid grid-cols-3 gap-2 text-xs">
-          {[
-            { label: 'Matched', value: '82%', tone: 'text-primary' },
-            { label: 'Missing', value: '12%', tone: 'text-error' },
-            { label: 'Partial', value: '6%', tone: 'text-tertiary' },
-          ].map((item) => (
-            <div key={item.label} className="rounded-2xl border border-white/5 bg-white/5 px-3 py-3 text-center backdrop-blur-sm">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.28em] text-on-surface-variant">{item.label}</div>
-              <div className={`text-lg font-bold ${item.tone}`}>{item.value}</div>
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }
 
-function SkillLandscapePreview() {
-  const skills = [
-    { label: 'Frontend Systems', value: 88 },
-    { label: 'Product Thinking', value: 76 },
-    { label: 'Data Literacy', value: 68 },
-    { label: 'Execution', value: 91 },
-    { label: 'Mentorship', value: 73 },
-  ]
+// Radar SVG (pure, hand-crafted — no library)
+function RadarGlyph() {
+  const skills = [78, 91, 64, 88, 73, 82]
+  const labels = ['Frontend', 'Execution', 'Data', 'Backend', 'Soft', 'Strategy']
+  const n = skills.length
+  const cx = 120, cy = 120, r = 90
+
+  const points = skills.map((v, i) => {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2
+    const d = (v / 100) * r + 12
+    return [cx + Math.cos(a) * d, cy + Math.sin(a) * d]
+  })
+
+  const labelPts = labels.map((_, i) => {
+    const a = (Math.PI * 2 * i) / n - Math.PI / 2
+    return [cx + Math.cos(a) * (r + 18), cy + Math.sin(a) * (r + 18)]
+  })
+
+  const poly = points.map(p => p.join(',')).join(' ')
 
   return (
-    <div className="relative rounded-[2rem] border border-outline-variant/15 bg-[#11131c] p-5 shadow-[0_30px_80px_rgba(0,0,0,0.35)] overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_36%),radial-gradient(circle_at_80%_10%,rgba(108,71,255,0.16),transparent_28%),radial-gradient(circle_at_bottom,rgba(252,132,184,0.12),transparent_46%)]" />
-      <div className="relative flex items-center justify-between gap-3 border-b border-white/5 pb-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.28em] text-on-surface-variant">Competency map</div>
-          <div className="mt-1 text-lg font-bold text-on-surface">Deep visual skill mapping</div>
-        </div>
-        <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-primary">
-          94% coverage
-        </div>
-      </div>
-
-      <div className="relative mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-[1.5rem] border border-white/5 bg-white/5 p-4">
-          <div className="mb-4 flex items-center justify-between text-xs text-on-surface-variant">
-            <span>Capability balance</span>
-            <span>Top 15% peer cohort</span>
-          </div>
-          <div className="space-y-3">
-            {skills.map((skill, index) => (
-              <div key={skill.label}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-on-surface">{skill.label}</span>
-                  <span className="text-on-surface-variant">{skill.value}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${index % 2 === 0 ? 'bg-gradient-to-r from-primary to-[#9b82ff]' : 'bg-gradient-to-r from-tertiary to-[#ffcae0]'}`}
-                    style={{ width: `${skill.value}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-[1.5rem] border border-white/5 bg-[linear-gradient(180deg,rgba(108,71,255,0.12),rgba(255,255,255,0.02))] p-4">
-          <div className="mb-4 text-xs uppercase tracking-[0.28em] text-on-surface-variant">Signal summary</div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'ATS match', value: '89%', tone: 'text-primary' },
-              { label: 'Gap risk', value: 'Low', tone: 'text-tertiary' },
-              { label: 'Best next step', value: 'SQL + AI', tone: 'text-on-surface' },
-              { label: 'Avg lift', value: '+23%', tone: 'text-success' },
-            ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-white/5 bg-black/20 p-3">
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em] text-on-surface-variant">{item.label}</div>
-                <div className={`text-sm font-bold ${item.tone}`}>{item.value}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-2xl border border-white/5 bg-black/20 p-3 text-sm text-on-surface-variant">
-            Gapminer turns a noisy resume into a focused, recruiter-friendly narrative in under a minute.
-          </div>
-        </div>
-      </div>
-    </div>
+    <svg viewBox="0 0 240 240" className="w-full h-full" aria-hidden>
+      {[0.3, 0.55, 0.78, 1].map((ring, ri) => {
+        const rr = r * ring
+        const pts = Array.from({ length: n }, (_, i) => {
+          const a = (Math.PI * 2 * i) / n - Math.PI / 2
+          return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]
+        })
+        return (
+          <polygon
+            key={ri}
+            points={pts.map(p => p.join(',')).join(' ')}
+            fill="none"
+            stroke="rgba(232,197,71,0.12)"
+            strokeWidth="1"
+          />
+        )
+      })}
+      {Array.from({ length: n }, (_, i) => {
+        const a = (Math.PI * 2 * i) / n - Math.PI / 2
+        return (
+          <line
+            key={i}
+            x1={cx} y1={cy}
+            x2={cx + Math.cos(a) * r}
+            y2={cy + Math.sin(a) * r}
+            stroke="rgba(232,197,71,0.1)"
+            strokeWidth="1"
+          />
+        )
+      })}
+      <polygon
+        points={poly}
+        fill="rgba(232,197,71,0.15)"
+        stroke="#E8C547"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {points.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="3.5" fill="#E8C547" />
+      ))}
+      {labelPts.map(([x, y], i) => (
+        <text
+          key={i}
+          x={x} y={y}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize="8"
+          fontWeight="700"
+          letterSpacing="1"
+          fill="rgba(245,240,232,0.6)"
+          style={{ textTransform: 'uppercase' }}
+        >
+          {labels[i]}
+        </text>
+      ))}
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="900" fill="#E8C547">82</text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="7" fontWeight="700" letterSpacing="2" fill="rgba(245,240,232,0.4)">FIT SCORE</text>
+    </svg>
   )
 }
 
 export default function LandingPage() {
+  const [scrollY, setScrollY] = useState(0)
+  useEffect(() => {
+    const h = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', h, { passive: true })
+    return () => window.removeEventListener('scroll', h)
+  }, [])
+
+  const heroOpacity = Math.max(0, 1 - scrollY / 400)
+
   return (
-    <div className="bg-surface text-on-surface selection:bg-primary selection:text-on-primary">
-      {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-[#19191f]/80 backdrop-blur-xl border-b border-[#48474d]/15 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-        <div className="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
-          <div className="text-2xl font-semibold tracking-tighter text-[#f9f5fd] flex items-center gap-2">
-            <Sparkles className="text-primary" size={24} />
-            Gapminer
+    <div
+      className="bg-[#090909] text-[#F5F0E8] min-h-screen selection:bg-[#E8C547] selection:text-[#090909]"
+      style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-33.33%) } }
+        @keyframes float-slow { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+        @keyframes fade-up { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation: fade-up 0.8s ease forwards; }
+        .radar-float { animation: float-slow 6s ease-in-out infinite; }
+        .grid-bg {
+          background-image: 
+            linear-gradient(rgba(232,197,71,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(232,197,71,0.04) 1px, transparent 1px);
+          background-size: 48px 48px;
+        }
+        .text-stroke {
+          -webkit-text-stroke: 1.5px rgba(245,240,232,0.2);
+          color: transparent;
+        }
+        .clip-gold { background: linear-gradient(135deg, #E8C547 0%, #F5D76E 50%, #C9A227 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .gold-border { border: 1px solid rgba(232,197,71,0.2); }
+        .gold-border:hover { border-color: rgba(232,197,71,0.6); }
+        .scrim { background: linear-gradient(to right, #090909 0%, transparent 40%, transparent 60%, #090909 100%); }
+      `}</style>
+
+      {/* ──── NAV ──────────────────────────────────────────── */}
+      <nav className="fixed top-0 z-50 w-full" style={{ background: 'rgba(9,9,9,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(232,197,71,0.08)' }}>
+        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 bg-[#E8C547] rounded-sm flex items-center justify-center">
+              <span className="text-[#090909] font-black text-sm">G</span>
+            </div>
+            <span className="font-black text-[15px] tracking-[-0.02em] text-[#F5F0E8]">GAPMINER</span>
           </div>
-          <div className="hidden md:flex items-center space-x-8">
-            <a className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-['Inter'] antialiased tracking-tight" href="#how-it-works">How it Works</a>
-            <a className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-['Inter'] antialiased tracking-tight" href="#features">Features</a>
-            <a className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-['Inter'] antialiased tracking-tight" href="#pricing">Pricing</a>
+
+          <div className="hidden md:flex items-center gap-10">
+            {[['#story', 'The Problem'], ['#engine', 'The Engine'], ['#proof', 'Proof'], ['#pricing', 'Pricing']].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                className="text-[13px] font-medium text-[#F5F0E8]/40 hover:text-[#F5F0E8] transition-colors tracking-wide"
+              >
+                {label}
+              </a>
+            ))}
           </div>
-          <div className="flex items-center space-x-4">
-            <Link to="/auth?mode=login" className="text-[#acaab1] hover:text-[#f9f5fd] transition-colors font-medium px-4">Sign In</Link>
-            <Link to="/auth?mode=signup" className="primary-gradient text-on-primary-fixed px-6 py-2.5 rounded-full font-semibold scale-95 active:scale-90 transition-transform">Get Started</Link>
+
+          <div className="flex items-center gap-4">
+            <Link to="/auth?mode=login" className="text-[13px] font-medium text-[#F5F0E8]/40 hover:text-[#F5F0E8] transition-colors">
+              Sign in
+            </Link>
+            <Link
+              to="/auth?mode=signup"
+              className="bg-[#E8C547] text-[#090909] px-5 py-2 rounded-sm font-bold text-[13px] hover:bg-[#F5D76E] transition-colors tracking-wide"
+            >
+              Start Free
+            </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen pt-32 pb-20 px-8 overflow-hidden hero-mesh">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-primary/10 blur-[120px] rounded-full pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10">
-          <div className="flex-1 text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass bg-surface-container-low mb-6 border border-outline-variant/15">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(108,71,255,0.8)]"></span>
-              <span className="text-xs font-medium tracking-widest uppercase text-on-surface-variant">Powered by local Ollama AI</span>
+      {/* ──── HERO ─────────────────────────────────────────── */}
+      <section className="relative min-h-screen grid-bg flex flex-col justify-end pb-24 pt-28 overflow-hidden">
+        {/* Big ghost number in background */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 select-none pointer-events-none"
+          style={{ opacity: heroOpacity * 0.04 }}
+        >
+          <span className="text-[clamp(200px,30vw,440px)] font-black text-[#E8C547] leading-none">73%</span>
+        </div>
+
+        {/* Vertical rule — editorial grid line */}
+        <div className="absolute left-[calc(50%-1px)] top-0 bottom-0 w-px bg-[#E8C547]/6 hidden lg:block" />
+
+        <div className="relative max-w-7xl mx-auto px-8 w-full">
+          {/* Kicker line */}
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-8 h-px bg-[#E8C547]" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.3em] text-[#E8C547]">Career Intelligence Platform</span>
+          </div>
+
+          {/* Main headline — editorial, asymmetric */}
+          <div className="grid lg:grid-cols-[1fr_auto] gap-0 items-end">
+            <div>
+              <h1 className="font-black leading-[0.88] tracking-[-0.04em] mb-0" style={{ fontSize: 'clamp(56px, 9vw, 140px)' }}>
+                <span className="block text-[#F5F0E8]">Your resume</span>
+                <span className="block text-stroke">is a lie.</span>
+                <span className="block text-[#F5F0E8]">We fix that.</span>
+              </h1>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tighter leading-[1.1] mb-6 font-headline">
-              Know Exactly What's <br />
-              <span className="text-gradient">Holding You Back</span>
-            </h1>
-            <p className="text-xl text-on-surface-variant mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light">
-              Our 5-agent AI orchestrator deep-scans your profile against thousands of real-world job taxonomies to pinpoint skill gaps in under 60 seconds.
+
+            <div className="hidden lg:flex flex-col items-end gap-8 pb-4 max-w-[280px]">
+              {/* Live stat */}
+              <div className="border-l-2 border-[#E8C547] pl-5">
+                <div className="text-[42px] font-black text-[#E8C547] leading-none">73%</div>
+                <div className="text-[11px] font-medium text-[#F5F0E8]/40 mt-1 uppercase tracking-widest">of resumes are rejected<br />before a human reads them</div>
+              </div>
+              <div className="border-l-2 border-[#F5F0E8]/15 pl-5">
+                <div className="text-[42px] font-black text-[#F5F0E8] leading-none">6s</div>
+                <div className="text-[11px] font-medium text-[#F5F0E8]/40 mt-1 uppercase tracking-widest">average recruiter<br />scan time</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Subheadline + CTA row */}
+          <div className="grid lg:grid-cols-[1fr_auto] gap-12 items-end mt-14 pt-10 border-t border-[#F5F0E8]/8">
+            <p className="text-[18px] text-[#F5F0E8]/50 font-light leading-relaxed max-w-xl">
+              We run five AI agents against your resume and every job you target — then hand you the exact roadmap to close the gap. Not vague feedback. Not motivational noise.{' '}
+              <em className="text-[#F5F0E8]/80 not-italic font-medium">Surgical precision.</em>
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to="/auth?signup=true" className="primary-gradient text-on-primary-fixed px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-2 group transition-all hover:shadow-[0_0_30px_rgba(117,86,255,0.4)]">
-                Analyze My Resume Free
-                <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <button className="glass px-8 py-4 rounded-full font-bold text-lg border border-outline-variant/20 hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2 text-on-surface">
-                <PlayCircle />
-                Watch Demo
-              </button>
-            </div>
-            <p className="mt-8 text-sm text-outline flex items-center justify-center lg:justify-start gap-2">
-              <Shield className="text-sm" size={16} />
-              Your data never leaves our servers. 100% encrypted and private.
-            </p>
-          </div>
-          <div className="flex-1 w-full max-w-2xl">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-3xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative glass bg-surface-container-highest p-8 rounded-3xl border border-outline-variant/15 shadow-2xl">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="font-bold text-xl">Skill Gap Analysis</h3>
-                    <p className="text-sm text-on-surface-variant">Candidate: Senior Product Designer</p>
-                  </div>
-                  <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Live View</span>
-                </div>
-                <div className="flex justify-center mb-8 h-[21rem]">
-                  <div className="relative w-full h-full flex items-center justify-center">
-                    <div className="w-full max-w-[19rem]">
-                      <SkillRadarPreview showSummary={false} />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-surface-container p-3 rounded-2xl text-center border border-outline-variant/10">
-                    <div className="text-xs text-on-surface-variant mb-1 uppercase font-bold tracking-tighter">Matched</div>
-                    <div className="text-2xl font-bold text-primary">82%</div>
-                  </div>
-                  <div className="bg-surface-container p-3 rounded-2xl text-center border border-outline-variant/10">
-                    <div className="text-xs text-on-surface-variant mb-1 uppercase font-bold tracking-tighter">Missing</div>
-                    <div className="text-2xl font-bold text-error">12%</div>
-                  </div>
-                  <div className="bg-surface-container p-3 rounded-2xl text-center border border-outline-variant/10">
-                    <div className="text-xs text-on-surface-variant mb-1 uppercase font-bold tracking-tighter">Partial</div>
-                    <div className="text-2xl font-bold text-tertiary">6%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof Bar */}
-      <section className="py-12 border-y border-outline-variant/10 bg-surface-container-lowest/50">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-            <div className="text-center md:text-left">
-              <p className="text-sm font-bold uppercase tracking-widest text-on-surface-variant mb-2">Trusted by 12,000+ professionals</p>
-              <div className="flex flex-wrap justify-center md:justify-start gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-                <span className="text-2xl font-black italic tracking-tighter">Google</span>
-                <span className="text-2xl font-black italic tracking-tighter">Meta</span>
-                <span className="text-2xl font-black italic tracking-tighter">Stripe</span>
-                <span className="text-2xl font-black italic tracking-tighter">Airbnb</span>
-              </div>
-            </div>
-            <div className="flex gap-12">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary flex items-center justify-center">
-                  <Counter target={60} />
-                  <span>sec</span>
-                </div>
-                <div className="text-xs text-outline uppercase font-bold tracking-widest">Avg Analysis</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary flex items-center justify-center">
-                  <Counter target={94} />
-                  <span>%</span>
-                </div>
-                <div className="text-xs text-outline uppercase font-bold tracking-widest">Accuracy</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary flex items-center justify-center">
-                  <Counter target={10} />
-                  <span>k+</span>
-                </div>
-                <div className="text-xs text-outline uppercase font-bold tracking-widest">Skill Taxon</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 01 / How It Works */}
-      <section id="how-it-works" className="py-32 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-16">
-            <span className="text-primary font-bold tracking-widest uppercase text-sm">01 / Process</span>
-            <h2 className="text-4xl font-bold mt-2 font-headline">How it Works</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-12 left-0 w-full h-px bg-gradient-to-r from-transparent via-outline-variant/20 to-transparent"></div>
-            <div className="relative group">
-              <div className="w-16 h-16 rounded-2xl bg-surface-container-high glass flex items-center justify-center mb-6 border border-primary/20 group-hover:border-primary transition-colors">
-                <Upload className="text-primary" size={32} />
-                <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary-fixed font-bold shadow-lg">1</div>
-              </div>
-              <h3 className="text-xl font-bold mb-3">Upload Resume</h3>
-              <p className="text-on-surface-variant leading-relaxed">Drop your PDF or DOCX. Our agent parses text, formatting, and implied expertise automatically.</p>
-            </div>
-            <div className="relative group">
-              <div className="w-16 h-16 rounded-2xl bg-surface-container-high glass flex items-center justify-center mb-6 border border-outline-variant/15 group-hover:border-primary transition-colors">
-                <FileText className="text-primary" size={32} />
-                <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface font-bold border border-outline-variant/15">2</div>
-              </div>
-              <h3 className="text-xl font-bold mb-3">Paste Job URL</h3>
-              <p className="text-on-surface-variant leading-relaxed">Provide any LinkedIn, Indeed, or company career page URL. We scrape the direct hiring requirements.</p>
-            </div>
-            <div className="relative group">
-              <div className="w-16 h-16 rounded-2xl bg-surface-container-high glass flex items-center justify-center mb-6 border border-outline-variant/15 group-hover:border-primary transition-colors">
-                <Map className="text-primary" size={32} />
-                <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface font-bold border border-outline-variant/15">3</div>
-              </div>
-              <h3 className="text-xl font-bold mb-3">Get Roadmap</h3>
-              <p className="text-on-surface-variant leading-relaxed">Receive a step-by-step upskilling plan with verified resources to bridge every single gap detected.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 02 / Multi-Agent Pipeline */}
-      <section className="py-32 bg-surface-container-low/50 relative">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex flex-col lg:flex-row gap-20 items-center">
-            <div className="flex-1">
-              <span className="text-primary font-bold tracking-widest uppercase text-sm">02 / Architecture</span>
-              <h2 className="text-4xl font-bold mt-2 mb-8 font-headline">Multi-Agent Intelligence</h2>
-              <div className="space-y-6">
-                {([] as { title: string; status: string; active: boolean; label?: string; opacity?: string }[]).concat([
-                  { title: 'Document Parser', status: 'Parses resume & job description', active: true },
-                  { title: 'Skill Extractor', status: 'Extracts skills from documents', active: true },
-                  { title: 'Gap Analyzer', status: 'Analyzes skill gaps', active: true },
-                  { title: 'Roadmap Generator', status: 'Generates learning path', active: false },
-                  { title: 'Market Intelligence', status: 'Provides salary insights', active: false },
-                ]).map((agent, i) => (
-                  <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl glass bg-surface-container-high border-l-4 ${agent.active ? 'border-primary' : 'border-outline-variant'} ${agent.opacity || ''}`}>
-                    <span className={`w-3 h-3 rounded-full ${agent.active ? 'bg-primary animate-pulse' : 'bg-primary/40'}`}></span>
-                    <div>
-                      <h4 className="font-bold text-sm">{agent.title}</h4>
-                      <p className="text-xs text-on-surface-variant">{agent.status}</p>
-                    </div>
-                    {agent.label ? (
-                      <span className="ml-auto text-xs font-mono text-primary">{agent.label}</span>
-                    ) : (
-                      agent.active && <CheckCircle className="ml-auto text-primary" size={18} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1 w-full">
-              <div className="glass bg-surface-container-highest rounded-3xl p-8 border border-outline-variant/20 shadow-xl overflow-hidden relative">
-                <div className="absolute top-0 right-0 p-4">
-                  <MoreVertical className="text-on-surface-variant hover:text-primary cursor-pointer" />
-                </div>
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                  <Terminal className="text-primary" />
-                  Analysis Output
-                </h3>
-                <div className="space-y-4 font-mono text-sm">
-                  <div className="flex justify-between items-center p-3 rounded-xl bg-surface-container-low border border-outline-variant/10">
-                    <span className="text-on-surface-variant">Skills will appear here</span>
-                    <span className="text-tertiary flex items-center gap-1 font-bold">PENDING</span>
-                  </div>
-                </div>
-                <div className="mt-8 pt-8 border-t border-outline-variant/10">
-                  <div className="text-xs text-outline mb-2 uppercase font-bold tracking-widest">Recommendation</div>
-                  <p className="text-sm text-on-surface-variant italic">Enter your resume and job description to get real-time gap analysis and personalized recommendations.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 03 / Gap Visualization (Radar) */}
-      <section className="py-32 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-surface-container-highest rounded-[3rem] p-12 lg:p-20 border border-outline-variant/15 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors pointer-events-none"></div>
-            <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-              <div>
-                <span className="text-primary font-bold tracking-widest uppercase text-sm">03 / Visualization</span>
-                <h2 className="text-4xl lg:text-5xl font-bold mt-2 mb-6 tracking-tight font-headline">Deep Visual <br />Skill Mapping</h2>
-                <p className="text-lg text-on-surface-variant mb-10 leading-relaxed font-light">
-                  We don't just list gaps; we map them across core domains. Understand your competency in Frontend, Backend, DevOps, Leadership, and CS Fundamentals relative to the local market average.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-2xl glass bg-surface-container border border-outline-variant/10">
-                    <div className="text-primary font-bold mb-1">Peer Benchmarking</div>
-                    <div className="text-xs text-on-surface-variant">Top 15% of candidates</div>
-                  </div>
-                  <div className="p-4 rounded-2xl glass bg-surface-container border border-outline-variant/10">
-                    <div className="text-primary font-bold mb-1">ATS Optimization</div>
-                    <div className="text-xs text-on-surface-variant">Keyword match rate 89%</div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <div className="w-full max-w-xl">
-                  <SkillLandscapePreview />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 04 / Roadmap Preview */}
-      <section className="py-32 bg-surface-container-lowest overflow-hidden">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="text-center mb-20">
-            <span className="text-primary font-bold tracking-widest uppercase text-sm">04 / The Outcome</span>
-            <h2 className="text-4xl font-bold mt-2 font-headline">Personalized Upskilling Roadmap</h2>
-          </div>
-          <div className="relative">
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20 -translate-y-1/2 hidden lg:block"></div>
-            <div className="grid lg:grid-cols-4 gap-8">
-              {[
-                { title: 'Kubernetes Basics', desc: 'Master pods, services, and deployments.', duration: '12 Hours', platform: 'Coursera', icon: GraduationCap, highlight: true },
-                { title: 'AWS EKS Pro', desc: 'Managing managed clusters on cloud infrastructure.', duration: '8 Hours', platform: 'YouTube', icon: Cloud, offset: 'lg:mt-12' },
-                { title: 'Helm Charts', desc: 'Templating complex Kubernetes applications.', duration: '4 Hours', platform: 'Udemy', icon: GitBranch, offset: 'lg:-mt-12' },
-                { title: 'Project Submission', desc: 'Build & deploy a microservices app to production.', duration: 'Portfolio', platform: 'GitHub', icon: Award, offset: 'lg:mt-6', special: true },
-              ].map((item, i) => (
-                <div key={i} className={`relative z-10 ${item.offset || ''}`}>
-                  <div className="glass bg-surface-container-high p-6 rounded-3xl border border-outline-variant/20 hover:-translate-y-2 transition-transform h-full flex flex-col">
-                    <div className={`w-12 h-12 rounded-2xl ${item.highlight ? 'primary-gradient shadow-[0_0_20px_rgba(117,86,255,0.4)]' : item.special ? 'bg-primary/20' : 'bg-surface-container-highest border border-outline-variant/15'} flex items-center justify-center mb-6`}>
-                      <item.icon className={item.highlight ? 'text-on-primary-fixed' : 'text-primary'} size={24} />
-                    </div>
-                    <h3 className="font-bold text-lg mb-2">{item.title}</h3>
-                    <p className="text-sm text-on-surface-variant mb-6 flex-grow">{item.desc}</p>
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      <span className="bg-surface-container-highest px-2 py-1 rounded-md text-[10px] text-outline font-bold uppercase tracking-wider">{item.duration}</span>
-                      <span className="bg-primary/10 text-primary px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">{item.platform}</span>
-                    </div>
-                    <button className="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
-                      {item.special ? 'Start Lab' : 'View Course'} <ArrowRight size={14} className="rotate-[-45deg]" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-20 flex justify-center gap-4">
-            <button className="glass px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-surface-container-high transition-all text-on-surface">
-              <FileDown size={20} />
-              Export as PDF
-            </button>
-            <button className="glass px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-surface-container-high transition-all text-on-surface">
-              <Share2 size={20} />
-              Share Link
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 05 / Differentiators */}
-      <section id="features" className="py-32 px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-primary font-bold tracking-widest uppercase text-sm">05 / Features</span>
-            <h2 className="text-4xl font-bold mt-2 font-headline">Smarter Intelligence</h2>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: Globe, title: 'JD URL Scraper', desc: 'Simply paste any job link. Our agents bypass cookie walls and scrapers to extract hidden requirements.' },
-              { icon: LineChart, title: 'Skills Trend Heatmap', desc: 'See which skills are trending in your niche based on real-time hiring data across the tech industry.' },
-              { icon: Users, title: 'Peer Benchmarking', desc: 'Anonymously compare your skill density against other candidates applying for the same roles.' },
-              { icon: Type, title: 'ATS Keyword Optimizer', desc: 'Automatically re-word your existing experience to match the specific linguistic patterns ATS systems look for.' },
-              { icon: History, title: 'Progress Tracker', desc: 'Connect your learning accounts (Coursera/Udemy) to update your gap analysis in real-time as you learn.' },
-              { icon: Medal, title: 'Resume Strength Score', desc: 'Get a single numeric score representing your marketability and likelihood of landing an interview.' },
-            ].map((f, i) => (
-              <div key={i} className="glass bg-surface-container-high p-8 rounded-3xl border border-outline-variant/10">
-                <f.icon className="text-primary mb-4" size={32} />
-                <h3 className="font-bold text-xl mb-3">{f.title}</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 06 / LaTeX Resume Editor */}
-      <section className="py-32 px-8 bg-gradient-to-b from-surface-container-low/30 to-surface">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-primary font-bold tracking-widest uppercase text-sm">06 / Resume Builder</span>
-            <h2 className="text-4xl font-bold mt-2 font-headline">AI-Powered LaTeX Editor</h2>
-            <p className="text-lg text-on-surface-variant mt-4 max-w-2xl mx-auto">
-              Generate professional LaTeX resumes with AI assistance. Optimize for ATS, 
-              get real-time suggestions, and export to PDF instantly.
-            </p>
-          </div>
-          
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              {[
-                { icon: Wand2, title: 'AI Writing Assistant', desc: 'Generate sections, fix errors, or get suggestions by chatting with AI.' },
-                { icon: Target, title: 'ATS Optimization', desc: 'Automatically optimize your resume for Applicant Tracking Systems.' },
-                { icon: Layers, title: 'Live Preview', desc: 'See your LaTeX compiled to PDF in real-time as you type.' },
-                { icon: Code, title: 'Professional Templates', desc: 'Start with expertly crafted LaTeX templates tailored for tech roles.' },
-              ].map((feature, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0 border border-primary/20">
-                    <feature.icon size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg mb-1">{feature.title}</h3>
-                    <p className="text-sm text-on-surface-variant">{feature.desc}</p>
-                  </div>
-                </div>
-              ))}
-              <Link 
-                to="/latex" 
-                className="inline-flex items-center gap-2 mt-6 px-6 py-3 primary-gradient text-on-primary-fixed rounded-full font-bold hover:shadow-[0_0_30px_rgba(117,86,255,0.4)] transition-all"
+            <div className="flex flex-col gap-4 min-w-[220px]">
+              <Link
+                to="/auth?mode=signup"
+                className="flex items-center justify-between gap-6 bg-[#E8C547] text-[#090909] px-6 py-4 font-black text-[15px] tracking-wide hover:bg-[#F5D76E] transition-all group"
               >
-                <PenTool size={18} />
-                Open Editor
-                <ArrowRight size={18} />
+                Analyse My Resume
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </Link>
+              <span className="text-[11px] text-[#F5F0E8]/25 font-medium tracking-wider text-center">Free · No card required · 60 seconds</span>
             </div>
-            
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-[80px] rounded-3xl"></div>
-              <div className="relative glass bg-[#263238] rounded-2xl overflow-hidden border border-outline-variant/20 shadow-2xl">
-                <div className="flex items-center gap-2 px-4 py-3 bg-[#1e282c] border-b border-outline-variant/10">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+          </div>
+        </div>
+
+        {/* Scroll cue */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
+          <span className="text-[10px] uppercase tracking-[0.3em] text-[#F5F0E8]">Scroll</span>
+          <ChevronDown size={16} className="text-[#E8C547] animate-bounce" />
+        </div>
+      </section>
+
+      {/* ──── TAPE ─────────────────────────────────────────── */}
+      <Tape items={['Skill Gap Analysis', 'AI Roadmap Builder', 'ATS Optimizer', 'Career Path Predictor', 'Peer Benchmarking', 'LaTeX Resume Editor', 'Market Intelligence', 'Negotiation Coach']} />
+
+      {/* ──── THE PROBLEM (STORY) ───────────────────────────── */}
+      <section id="story" className="py-40 px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Section number */}
+          <div className="flex items-center gap-6 mb-20">
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#E8C547]/60">001</span>
+            <div className="flex-1 h-px bg-[#F5F0E8]/8" />
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#F5F0E8]/20">The Problem</span>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-24 items-start">
+            {/* Left: editorial text */}
+            <div>
+              <h2
+                className="font-black leading-[0.92] tracking-[-0.03em] mb-12"
+                style={{ fontSize: 'clamp(40px, 5.5vw, 84px)' }}
+              >
+                Most resumes<br />
+                are written for<br />
+                <span className="clip-gold">the wrong reader.</span>
+              </h2>
+              <div className="space-y-6 text-[#F5F0E8]/50 text-[17px] font-light leading-relaxed">
+                <p>
+                  You craft sentences. You worry about fonts. You obsess over the one-page rule. Meanwhile, the actual reader — an ATS algorithm — has already filtered you out because you used "responsible for" instead of "drove."
+                </p>
+                <p>
+                  Gapminer doesn't coach you. It doesn't give you templates. It runs a clinical analysis of your document against real job taxonomies, surfaces the precise delta between where you are and where the role requires you to be, then hands you a step-by-step plan to close it.
+                </p>
+                <p className="text-[#F5F0E8]/80 font-medium">
+                  The gap was always there. You just couldn't see it.
+                </p>
+              </div>
+            </div>
+
+            {/* Right: raw stats as editorial data points */}
+            <div className="space-y-0">
+              {[
+                { n: '73', unit: '%', label: 'Resumes never reach a human eye', note: 'ATS rejection rate, LinkedIn 2024' },
+                { n: '6', unit: 's', label: 'Time a recruiter spends on your resume', note: 'The Ladders eye-tracking study' },
+                { n: '250', unit: '+', label: 'Applications per average corporate role', note: 'SHRM workforce report' },
+                { n: '11', unit: '%', label: 'Candidates who understand their skill gaps', note: 'Gapminer internal benchmark' },
+              ].map((stat, i) => (
+                <div key={i} className="py-8 border-b border-[#F5F0E8]/8 grid grid-cols-[120px_1fr] gap-6 items-center group cursor-default">
+                  <div className="text-[54px] font-black leading-none tracking-[-0.04em] text-[#E8C547] group-hover:scale-105 transition-transform origin-left">
+                    <Counter target={parseInt(stat.n)} suffix={stat.unit} />
                   </div>
-                  <div className="ml-4 px-3 py-1 bg-[#263238] rounded-md text-xs text-gray-400 font-mono">main.tex</div>
+                  <div>
+                    <div className="text-[15px] font-semibold text-[#F5F0E8] leading-snug mb-1">{stat.label}</div>
+                    <div className="text-[11px] text-[#F5F0E8]/25 uppercase tracking-wider">{stat.note}</div>
+                  </div>
                 </div>
-                <div className="p-4 font-mono text-sm text-gray-300 overflow-hidden">
-                  <div><span className="text-purple-400">\documentclass</span>{'{article}'}</div>
-                  <div><span className="text-purple-400">\usepackage</span>{'{amsmath}'}</div>
-                  <div className="mt-2"><span className="text-green-400">% AI Generated Section</span></div>
-                  <div><span className="text-purple-400">\section</span>{'{Experience}'}</div>
-                  <div><span className="text-yellow-400">\resumeItem</span>{'{'}</div>
-                  <div className="ml-4">Built scalable microservices handling 10K+ RPS</div>
-                  <div className="ml-4 text-gray-500">% AI suggested: add metrics</div>
-                  <div className="ml-4 text-green-400">Optimized: 10K+ {'→'} 50,000+ requests/second</div>
-                  <div>{'}'}</div>
-                  <div><span className="text-yellow-400">\resumeItem</span>{'{'}</div>
-                  <div className="ml-4">Led team of 5 engineers across 3 time zones</div>
-                  <div>{'}'}</div>
-                  <div className="mt-2"><span className="text-purple-400">\end</span>{'{document}'}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ──── HOW IT WORKS ─────────────────────────────────── */}
+      <section id="engine" className="py-40 px-8 bg-[#0E0E0E]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-6 mb-20">
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#E8C547]/60">002</span>
+            <div className="flex-1 h-px bg-[#F5F0E8]/8" />
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#F5F0E8]/20">The Engine</span>
+          </div>
+
+          <h2 className="font-black tracking-[-0.03em] leading-[0.92] mb-6" style={{ fontSize: 'clamp(38px, 5vw, 80px)' }}>
+            Five agents.<br />
+            <span className="clip-gold">One verdict.</span>
+          </h2>
+          <p className="text-[#F5F0E8]/40 text-[18px] font-light mb-20 max-w-xl">
+            Each agent is a specialist. Together they run a complete audit of your professional signal in under 60 seconds.
+          </p>
+
+          {/* Agent pipeline — horizontal on desktop, vertical on mobile */}
+          <div className="grid lg:grid-cols-5 gap-0 relative">
+            {/* Connector line */}
+            <div className="absolute top-[60px] left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#E8C547]/30 to-transparent hidden lg:block" />
+
+            {[
+              { num: '01', name: 'Parser', desc: 'Tears apart your PDF. Reads formatting signals as data — whitespace, hierarchy, density.', color: '#E8C547' },
+              { num: '02', name: 'Extractor', desc: 'Maps every skill, tool, and method to a canonical taxonomy of 10,000+ tech identifiers.', color: '#E8C547' },
+              { num: '03', name: 'Analyst', desc: 'Cross-references your stack against the job. Outputs a gap matrix with severity scores.', color: '#E8C547' },
+              { num: '04', name: 'Pathfinder', desc: 'Generates a sequenced learning roadmap. Ordered by ROI — highest-leverage gaps first.', color: '#E8C547' },
+              { num: '05', name: 'Market Intel', desc: 'Layers in live hiring data. Salary bands, trending skills, demand velocity by region.', color: '#E8C547' },
+            ].map((agent, i) => (
+              <div key={i} className="relative px-6 pt-0 group">
+                {/* Node dot */}
+                <div className="relative z-10 w-[52px] h-[52px] mb-8 border border-[#E8C547]/30 bg-[#090909] flex items-center justify-center font-black text-[13px] text-[#E8C547] group-hover:bg-[#E8C547] group-hover:text-[#090909] transition-all">
+                  {agent.num}
+                </div>
+                <div className="text-[11px] font-black uppercase tracking-[0.25em] text-[#E8C547]/60 mb-2">{agent.name}</div>
+                <p className="text-[14px] text-[#F5F0E8]/40 leading-relaxed">{agent.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Live radar preview */}
+          <div className="mt-24 grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-6">Live output preview</div>
+              <div className="radar-float w-full max-w-[340px] mx-auto lg:mx-0">
+                <div
+                  className="p-8 border border-[#E8C547]/15"
+                  style={{ background: 'rgba(232,197,71,0.03)' }}
+                >
+                  <div className="aspect-square">
+                    <RadarGlyph />
+                  </div>
+                  <div className="grid grid-cols-3 gap-px mt-6">
+                    {[['Matched', '82%', '#E8C547'], ['Missing', '12%', '#F87171'], ['Partial', '6%', '#94A3B8']].map(([l, v, c]) => (
+                      <div key={l} className="bg-[#111] px-3 py-3 text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-[#F5F0E8]/25 mb-1 font-bold">{l}</div>
+                        <div className="text-[22px] font-black" style={{ color: c }}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="absolute -bottom-4 -right-4 bg-tertiary text-on-tertiary px-4 py-2 rounded-full text-xs font-bold shadow-lg">
-                <span className="flex items-center gap-1"><Send size={12} /> Try it now</span>
+            </div>
+
+            <div className="space-y-0">
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-6">Terminal output</div>
+              <div
+                className="p-8 font-mono text-[13px]"
+                style={{ background: '#050505', border: '1px solid rgba(232,197,71,0.15)' }}
+              >
+                {[
+                  { t: 0, text: '> Parsing resume...', color: '#F5F0E8/40' },
+                  { t: 1, text: '  ✓ 847 tokens extracted', color: '#4ADE80' },
+                  { t: 2, text: '> Running skill extractor...', color: '#F5F0E8/40' },
+                  { t: 3, text: '  ✓ 34 unique skills identified', color: '#4ADE80' },
+                  { t: 4, text: '> Comparing against JD taxonomy...', color: '#F5F0E8/40' },
+                  { t: 5, text: '  ✗ Kubernetes: MISSING [HIGH]', color: '#F87171' },
+                  { t: 6, text: '  ✗ System Design: PARTIAL [MED]', color: '#FCD34D' },
+                  { t: 7, text: '  ✓ React: STRONG MATCH', color: '#4ADE80' },
+                  { t: 8, text: '> Generating roadmap...', color: '#F5F0E8/40' },
+                  { t: 9, text: '  ✓ 3 steps · 14h total · ETA 3wk', color: '#4ADE80' },
+                  { t: 10, text: '> Analysis complete. Score: 82/100', color: '#E8C547' },
+                ].map((line, i) => (
+                  <div key={i} className="mb-1.5" style={{ color: line.color.includes('/') ? `rgba(245,240,232,${parseFloat(line.color.split('/')[1]) / 100})` : line.color }}>
+                    {line.text}
+                  </div>
+                ))}
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-[#E8C547]">▋</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 07 / Testimonials */}
-      <section className="py-32 bg-surface-container-low/30 px-8">
+      {/* ──── FEATURES GRID ─────────────────────────────────── */}
+      <section className="py-40 px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: 'Alex Chen', role: 'Lead Engineer', quote: 'Gapminer correctly identified that my resume was too academic for a lead engineer role. After following the roadmap, I landed a job at Stripe in 3 weeks.' },
-              { name: 'Sarah Jenkins', role: 'Product Designer', quote: "The multi-agent pipeline is incredible. It's like having a career coach and a technical recruiter looking at your profile simultaneously." },
-              { name: 'Mark Thompson', role: 'DevOps Lead', quote: 'I used the free analysis and it was better than the paid consultant I hired last year. The roadmap links were exactly what I needed.' },
-            ].map((t, i) => (
-              <div key={i} className="glass p-8 rounded-3xl bg-surface-container border border-outline-variant/20 flex flex-col justify-between">
-                <div className="mb-6">
-                  <div className="flex text-primary mb-4">
-                    {[...Array(5)].map((_, j) => <Star key={j} size={18} fill="currentColor" />)}
+          <div className="flex items-center gap-6 mb-20">
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#E8C547]/60">003</span>
+            <div className="flex-1 h-px bg-[#F5F0E8]/8" />
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#F5F0E8]/20">The Arsenal</span>
+          </div>
+
+          {/* Asymmetric bento — editorial layout */}
+          <div className="grid grid-cols-12 gap-4 auto-rows-[200px]">
+            {/* Large feature — career path */}
+            <div
+              className="col-span-12 lg:col-span-7 row-span-2 p-10 flex flex-col justify-between border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all group"
+              style={{ background: 'linear-gradient(135deg, rgba(232,197,71,0.06) 0%, rgba(9,9,9,0) 60%)' }}
+            >
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-4">Career Intelligence</div>
+                <h3 className="font-black text-[32px] tracking-[-0.02em] leading-tight mb-4">
+                  Career Path<br />Predictor
+                </h3>
+                <p className="text-[15px] text-[#F5F0E8]/40 max-w-xs leading-relaxed">
+                  Based on your skills, the AI generates a probability-weighted map of roles you can realistically land — with timelines and what's missing.
+                </p>
+              </div>
+              <div className="flex gap-4 flex-wrap">
+                {['Senior Engineer', 'Tech Lead', 'Staff Eng', 'Solutions Arch'].map((role, i) => (
+                  <span key={role} className="text-[12px] font-bold px-3 py-1.5 border border-[#F5F0E8]/10 text-[#F5F0E8]/40 group-hover:border-[#E8C547]/30 group-hover:text-[#E8C547]/70 transition-all" style={{ transitionDelay: `${i * 50}ms` }}>
+                    {role}
+                    <span className="ml-2 text-[#E8C547]/60">{['85%', '65%', '40%', '30%'][i]}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* ATS */}
+            <div className="col-span-12 lg:col-span-5 row-span-1 p-8 border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all group">
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-3">Resume Intelligence</div>
+              <h3 className="font-black text-[22px] tracking-[-0.02em] mb-2">ATS Keyword Optimizer</h3>
+              <p className="text-[13px] text-[#F5F0E8]/35">Rewrites your experience bullets to match the linguistic patterns ATS systems look for. Same story, better signal.</p>
+            </div>
+
+            {/* Market Demand */}
+            <div className="col-span-12 lg:col-span-5 row-span-1 p-8 border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all flex flex-col justify-between">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-3">Market Intelligence</div>
+                <h3 className="font-black text-[22px] tracking-[-0.02em] mb-2">Live Demand Heatmap</h3>
+              </div>
+              <div className="flex gap-2">
+                {[['Kubernetes', 91], ['Rust', 78], ['Go', 84], ['MLOps', 88]].map(([skill, score]) => (
+                  <div key={skill} className="flex-1 text-center">
+                    <div className="text-[11px] text-[#F5F0E8]/30 font-bold uppercase tracking-wider mb-1">{skill}</div>
+                    <div className="h-1 bg-[#1A1A1A] rounded-full overflow-hidden">
+                      <div className="h-full bg-[#E8C547]" style={{ width: `${score}%`, opacity: 0.7 }} />
+                    </div>
                   </div>
-                  <p className="text-on-surface-variant italic leading-relaxed font-light">"{t.quote}"</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-bold">
-                    {t.name.charAt(0)}
+                ))}
+              </div>
+            </div>
+
+            {/* LaTeX Editor */}
+            <div
+              className="col-span-12 lg:col-span-4 row-span-2 p-8 border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all flex flex-col justify-between group"
+              style={{ background: 'rgba(14,14,14,0.8)' }}
+            >
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-4">Resume Builder</div>
+                <h3 className="font-black text-[26px] tracking-[-0.02em] leading-tight mb-4">AI-Powered LaTeX Editor</h3>
+                <p className="text-[14px] text-[#F5F0E8]/35 leading-relaxed">Generate beautiful, ATS-proof resumes in LaTeX with AI writing assistance and live PDF preview.</p>
+              </div>
+              <div className="font-mono text-[11px] bg-[#050505] p-4 border border-[#E8C547]/10">
+                <div className="text-[#C084FC] mb-1">{'\\resumeItem{'}</div>
+                <div className="text-[#4ADE80] pl-4 mb-1">{'Led 10K → 50K RPS migration'}</div>
+                <div className="text-[#E8C547]/40 pl-4 mb-1">{'% AI: add tech stack'}</div>
+                <div className="text-[#F5F0E8]/50">{'}'}</div>
+              </div>
+              <Link to="/latex" className="flex items-center gap-2 text-[13px] font-bold text-[#E8C547] hover:gap-4 transition-all">
+                Open Editor <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            {/* Negotiation */}
+            <div className="col-span-12 lg:col-span-4 row-span-1 p-8 border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all">
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-3">Compensation</div>
+              <h3 className="font-black text-[22px] tracking-[-0.02em] mb-2">Negotiation Coach</h3>
+              <p className="text-[13px] text-[#F5F0E8]/35">Real-time roleplay with an AI that knows the salary bands, your BATNA, and when to walk away.</p>
+            </div>
+
+            {/* Peer Bench */}
+            <div className="col-span-12 lg:col-span-4 row-span-1 p-8 border border-[#F5F0E8]/8 hover:border-[#E8C547]/30 transition-all">
+              <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#E8C547]/60 mb-3">Benchmarking</div>
+              <h3 className="font-black text-[22px] tracking-[-0.02em] mb-2">Peer Comparison</h3>
+              <p className="text-[13px] text-[#F5F0E8]/35">See how your profile stacks against anonymized candidates targeting the same roles. Know where you rank.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ──── TESTIMONIALS ──────────────────────────────────── */}
+      <section id="proof" className="py-40 px-8 bg-[#0E0E0E]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-6 mb-20">
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#E8C547]/60">004</span>
+            <div className="flex-1 h-px bg-[#F5F0E8]/8" />
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#F5F0E8]/20">Proof</span>
+          </div>
+
+          {/* Big pull quote */}
+          <div className="mb-20">
+            <div className="text-[120px] leading-none text-[#E8C547]/15 font-black select-none">"</div>
+            <blockquote className="text-[clamp(24px,3.5vw,52px)] font-black leading-[1.1] tracking-[-0.03em] -mt-12 max-w-4xl">
+              Gapminer told me my resume was optimized for a role I had{' '}
+              <span className="clip-gold">two years ago</span>.
+              That one sentence got me to update everything. I had an offer in 3 weeks.
+            </blockquote>
+            <div className="flex items-center gap-4 mt-10">
+              <div className="w-px h-12 bg-[#E8C547]/30" />
+              <div>
+                <div className="font-bold text-[15px]">Alex Chen</div>
+                <div className="text-[12px] text-[#F5F0E8]/30 uppercase tracking-wider">Lead Engineer · Stripe</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary testimonials — lean and editorial */}
+          <div className="grid lg:grid-cols-3 gap-0">
+            {[
+              {
+                quote: "The multi-agent pipeline catches things you'd never notice. It saw that I used 'responsible for' 14 times and explained why that tanked my ATS score.",
+                name: 'Sarah Jenkins',
+                role: 'Product Designer · Figma',
+              },
+              {
+                quote: "I paid a career coach $400 for what Gapminer gave me for free. The roadmap links were all verified and ranked by what would actually move the needle.",
+                name: 'Mark Thompson',
+                role: 'DevOps Lead · Datadog',
+              },
+              {
+                quote: "The career path predictor is uncanny. It said I was 40% of the way to a Staff Eng role. Seeing the exact gaps written out made it feel achievable.",
+                name: 'Priya Sharma',
+                role: 'Senior Engineer · Vercel',
+              },
+            ].map((t, i) => (
+              <div key={i} className={`p-10 ${i < 2 ? 'border-r border-[#F5F0E8]/6' : ''}`}>
+                <p className="text-[15px] text-[#F5F0E8]/50 leading-relaxed mb-8 font-light italic">"{t.quote}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#E8C547] text-[#090909] font-black text-[13px] flex items-center justify-center">
+                    {t.name[0]}
                   </div>
                   <div>
-                    <div className="font-bold text-sm">{t.name}</div>
-                    <div className="text-xs text-outline">{t.role}</div>
+                    <div className="font-bold text-[13px]">{t.name}</div>
+                    <div className="text-[11px] text-[#F5F0E8]/25 uppercase tracking-wider">{t.role}</div>
                   </div>
                 </div>
               </div>
@@ -632,105 +630,149 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 08 / Pricing */}
-      <section id="pricing" className="py-32 px-8">
+      {/* ──── PRICING ───────────────────────────────────────── */}
+      <section id="pricing" className="py-40 px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-primary font-bold tracking-widest uppercase text-sm">08 / Pricing</span>
-            <h2 className="text-4xl font-bold mt-2 font-headline">Ready to Bridge the Gap?</h2>
+          <div className="flex items-center gap-6 mb-20">
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#E8C547]/60">005</span>
+            <div className="flex-1 h-px bg-[#F5F0E8]/8" />
+            <span className="text-[11px] font-black uppercase tracking-[0.35em] text-[#F5F0E8]/20">Pricing</span>
           </div>
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Free */}
-            <div className="glass bg-surface-container-high p-8 rounded-3xl border border-outline-variant/10 flex flex-col">
-              <h3 className="font-bold text-xl mb-2">Free</h3>
-              <div className="text-3xl font-bold mb-6">$0<span className="text-sm font-normal text-outline">/mo</span></div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                {['1 Resume analysis / month', 'Basic Skill Gap Radar', 'Community Roadmap'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-on-surface-variant">
-                    <CheckCircle className="text-primary" size={16} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link to="/auth?signup=true" className="w-full glass py-3 rounded-full font-bold hover:bg-surface-container-highest transition-colors text-center text-on-surface">Start Free</Link>
-            </div>
-            {/* Pro */}
-            <div className="glass bg-surface-container-high p-8 rounded-3xl border-2 border-primary relative flex flex-col shadow-[0_0_40px_rgba(117,86,255,0.1)]">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-on-primary-fixed px-4 py-1 rounded-full text-xs font-bold uppercase">Most Popular</div>
-              <h3 className="font-bold text-xl mb-2">Pro</h3>
-              <div className="text-3xl font-bold mb-6">$12<span className="text-sm font-normal text-outline">/mo</span></div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                {['Unlimited analysis', 'ATS Keyword Optimizer', 'Verified Resource Roadmap', 'Peer Benchmarking'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-on-surface-variant">
-                    <CheckCircle className="text-primary" size={16} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link to="/auth?signup=true" className="w-full primary-gradient text-on-primary-fixed py-3 rounded-full font-bold shadow-lg text-center">Go Pro</Link>
-            </div>
-            {/* Teams */}
-            <div className="glass bg-surface-container-high p-8 rounded-3xl border border-outline-variant/10 flex flex-col">
-              <h3 className="font-bold text-xl mb-2">Teams</h3>
-              <div className="text-3xl font-bold mb-6">$49<span className="text-sm font-normal text-outline">/mo</span></div>
-              <ul className="space-y-4 mb-8 flex-grow">
-                {['Up to 10 members', 'Market Intelligence Dashboard', 'Hiring Trend Alerts', 'Priority Support'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-on-surface-variant">
-                    <CheckCircle className="text-primary" size={16} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link to="/auth" className="w-full glass py-3 rounded-full font-bold hover:bg-surface-container-highest transition-colors text-center text-on-surface">Contact Sales</Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-32 px-8">
-        <div className="max-w-5xl mx-auto rounded-[3rem] primary-gradient p-12 text-center shadow-[0_0_100px_rgba(117,86,255,0.2)]">
-          <h2 className="text-4xl lg:text-5xl font-black text-on-primary-fixed tracking-tight mb-6 font-headline">Stop Guessing. Start Growing.</h2>
-          <p className="text-on-primary-fixed/80 text-xl mb-10 max-w-2xl mx-auto leading-relaxed font-light">
-            Join 12,000+ professionals who use Gapminer to stay ahead of market demands.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth?signup=true" className="bg-on-primary-fixed text-primary px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform">Get Started Free</Link>
-            <button className="bg-on-primary-fixed/10 text-on-primary-fixed border border-on-primary-fixed/20 px-8 py-4 rounded-full font-bold text-lg backdrop-blur-sm">View Demo</button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-[#0e0e13] w-full py-12 border-t border-[#48474d]/15">
-        <div className="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-8">
-          <div className="flex flex-col items-center md:items-start gap-4">
-            <div className="text-lg font-bold text-[#f9f5fd] flex items-center gap-2">
-              <Sparkles className="text-primary" size={20} />
-              Gapminer
-            </div>
-            <p className="text-sm font-['Inter'] leading-relaxed text-[#acaab1] text-center md:text-left font-light">
-              © 2024 Gapminer. Precision AI Career Intelligence.<br />
-              <span className="text-xs opacity-60">Your resumes are encrypted &amp; auto-deleted after 30 days.</span>
+          <div className="grid lg:grid-cols-[1fr_auto] gap-16 items-end mb-16">
+            <h2 className="font-black tracking-[-0.03em] leading-[0.92]" style={{ fontSize: 'clamp(40px, 5vw, 80px)' }}>
+              One question:<br />
+              <span className="clip-gold">what's the gap worth to you?</span>
+            </h2>
+            <p className="text-[#F5F0E8]/40 text-[15px] max-w-xs font-light leading-relaxed">
+              A single salary negotiation win pays for a year of Pro. The ROI math isn't subtle.
             </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-8">
-            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Privacy Policy</a>
-            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Terms of Service</a>
-            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Security</a>
-            <a className="text-[#acaab1] hover:text-[#6C47FF] transition-colors text-sm font-['Inter']" href="#">Contact</a>
+
+          <div className="grid lg:grid-cols-3 gap-0 border border-[#F5F0E8]/8">
+            {[
+              {
+                name: 'Free',
+                price: '$0',
+                period: 'forever',
+                tag: null,
+                items: ['1 analysis per month', 'Basic skill gap radar', 'Community roadmap links', 'ATS score'],
+                cta: 'Start free',
+                href: '/auth?mode=signup',
+                highlight: false,
+              },
+              {
+                name: 'Pro',
+                price: '$12',
+                period: 'per month',
+                tag: 'Most chosen',
+                items: ['Unlimited analyses', 'ATS keyword optimizer', 'Verified resource roadmap', 'Career path predictor', 'Peer benchmarking', 'LaTeX editor'],
+                cta: 'Go Pro',
+                href: '/auth?mode=signup',
+                highlight: true,
+              },
+              {
+                name: 'Teams',
+                price: '$49',
+                period: 'per month',
+                tag: null,
+                items: ['Up to 10 members', 'Market intelligence dashboard', 'Hiring trend alerts', 'Recruiter CRM', 'Priority support'],
+                cta: 'Contact sales',
+                href: '/auth',
+                highlight: false,
+              },
+            ].map((plan, i) => (
+              <div
+                key={i}
+                className={`p-10 flex flex-col ${i < 2 ? 'border-r border-[#F5F0E8]/8' : ''} ${plan.highlight ? 'bg-[#E8C547]/5' : ''} relative`}
+              >
+                {plan.tag && (
+                  <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#E8C547] text-[#090909] px-3 py-1 text-[11px] font-black uppercase tracking-widest">
+                    {plan.tag}
+                  </div>
+                )}
+                <div className="mb-8">
+                  <div className="text-[11px] font-black uppercase tracking-[0.3em] text-[#F5F0E8]/30 mb-4">{plan.name}</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className={`font-black text-[52px] leading-none tracking-[-0.04em] ${plan.highlight ? 'text-[#E8C547]' : ''}`}>{plan.price}</span>
+                    <span className="text-[13px] text-[#F5F0E8]/30 font-medium">{plan.period}</span>
+                  </div>
+                </div>
+                <ul className="space-y-3 mb-10 flex-grow">
+                  {plan.items.map((item, j) => (
+                    <li key={j} className="flex items-center gap-3 text-[14px] text-[#F5F0E8]/60">
+                      <Check size={12} className="text-[#E8C547] shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={plan.href}
+                  className={`text-center py-4 font-black text-[14px] tracking-wide transition-all ${plan.highlight
+                    ? 'bg-[#E8C547] text-[#090909] hover:bg-[#F5D76E]'
+                    : 'border border-[#F5F0E8]/15 text-[#F5F0E8]/60 hover:border-[#E8C547]/40 hover:text-[#F5F0E8]'
+                    }`}
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
           </div>
-          <div className="flex gap-4">
-            <a className="w-10 h-10 rounded-full glass bg-surface-container flex items-center justify-center hover:text-primary transition-colors text-on-surface" href="#">
-              <Share2 size={18} />
-            </a>
-            <a className="w-10 h-10 rounded-full glass bg-surface-container flex items-center justify-center hover:text-primary transition-colors text-on-surface" href="#">
-              <Globe size={18} />
-            </a>
+        </div>
+      </section>
+
+      {/* ──── FINAL CTA ─────────────────────────────────────── */}
+      <section className="py-40 px-8 bg-[#0E0E0E] relative overflow-hidden">
+        {/* Giant ghost text */}
+        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+          <span className="font-black text-[clamp(100px,18vw,280px)] text-stroke opacity-30 leading-none tracking-[-0.06em]">
+            BRIDGE IT.
+          </span>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto text-center">
+          <div className="text-[11px] font-black uppercase tracking-[0.4em] text-[#E8C547]/60 mb-8">Your move</div>
+          <h2 className="font-black tracking-[-0.04em] leading-[0.88] mb-10" style={{ fontSize: 'clamp(52px, 8vw, 128px)' }}>
+            The gap is real.<br />
+            <span className="clip-gold">Close it.</span>
+          </h2>
+          <p className="text-[#F5F0E8]/35 text-[18px] max-w-lg mx-auto font-light leading-relaxed mb-12">
+            60 seconds. Five AI agents. One clear roadmap between where you are and where you want to be.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              to="/auth?mode=signup"
+              className="bg-[#E8C547] text-[#090909] px-10 py-5 font-black text-[16px] tracking-wide hover:bg-[#F5D76E] transition-all flex items-center gap-3 group"
+            >
+              Analyse My Resume Free
+              <ArrowUpRight size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+            <span className="text-[12px] text-[#F5F0E8]/20 font-medium tracking-wider">No card · No commitment</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ──── FOOTER ────────────────────────────────────────── */}
+      <footer className="py-16 px-8 border-t border-[#F5F0E8]/6">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-[auto_1fr_auto] gap-12 items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 bg-[#E8C547] rounded-sm flex items-center justify-center">
+              <span className="text-[#090909] font-black text-sm">G</span>
+            </div>
+            <span className="font-black text-[15px] tracking-[-0.02em]">GAPMINER</span>
+          </div>
+          <nav className="flex flex-wrap gap-8 justify-center">
+            {[['#story', 'The Problem'], ['#engine', 'The Engine'], ['#proof', 'Proof'], ['#pricing', 'Pricing'], ['/auth', 'Sign In']].map(([href, label]) => (
+              <a key={href} href={href} className="text-[12px] text-[#F5F0E8]/25 hover:text-[#F5F0E8]/60 transition-colors uppercase tracking-widest font-bold">
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="text-[11px] text-[#F5F0E8]/15 uppercase tracking-wider font-medium">
+            © 2025 Gapminer. Your data stays yours.
           </div>
         </div>
       </footer>
     </div>
   )
 }
-

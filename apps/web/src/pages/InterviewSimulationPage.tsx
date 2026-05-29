@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuthToken, safeReadJson } from "@/lib/authFetch";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
 export default function InterviewSimulationPage() {
   const [isStarted, setIsStarted] = useState(false);
@@ -244,6 +245,12 @@ export default function InterviewSimulationPage() {
 
       {/* ── Main Content ───────────────────────────────────── */}
       <main className="flex-grow flex p-12 gap-12 overflow-hidden">
+        <OnboardingTooltip
+          pageKey="interview"
+          icon="🎤"
+          title="Practice with AI"
+          description="Choose a role and difficulty. The AI will ask real interview questions and score your responses in real-time."
+        />
         {/* Left Side: Video/Voice Visualizer */}
         <section className="flex-grow flex flex-col gap-8 relative group">
           <div className="flex-grow relative rounded-[3rem] overflow-hidden border border-white/10 bg-[#0a0a0a] shadow-2xl">

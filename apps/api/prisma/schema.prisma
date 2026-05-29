@@ -46,6 +46,12 @@ model User {
   candidates     Candidate[]
   negotiationSessions NegotiationSession[]
   jobs           Job[]      @relation("RecruiterJobs")
+
+  currentRole        String?
+  experienceLevel    String?
+  targetRole         String?
+  topSkills          String?
+  linkedInUrl        String?
 }
 
 model Analysis {

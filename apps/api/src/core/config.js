@@ -48,7 +48,7 @@ export const config = {
       ? (() => {
           throw new Error("DATABASE_URL is required in production");
         })()
-      : "postgresql://postgres:postgres@localhost:5432/gapminer"),
+      : "postgresql://postgres:postgres@localhost:5432/gapminer_prod"),
 
   // Redis (future use)
   REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379/0",

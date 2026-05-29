@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { prisma } from '../../../core/database.js';
+import { prisma, query } from '../../../core/database.js';
 import { requireAuth } from '../../../core/security.js';
 import { gapminerAgentApp } from '../../../ai/agent.js';
 import { parseDocument } from '../../../services/documentParser.js';
@@ -12,8 +12,14 @@ const router = Router();
 
 // Middleware to check if user is a recruiter or admin
 const requireRecruiter = async (req: any, res: any, next: any) => {
-  const user = await prisma.user.findUnique({ where: { id: req.userId } });
-  if (user?.role === 'RECRUITER' || user?.role === 'ADMIN') {
+  const { rows } = await query('SELECT role FROM users WHERE id = $1', [req.userId]);
+  const role = rows[0]?.role;
+  if (role === 'RECRUITER' || role === 'ADMIN') {
+    next();
+    return;
+  }
+  const prismaUser = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (prismaUser?.role === 'RECRUITER' || prismaUser?.role === 'ADMIN') {
     next();
   } else {
     res.status(403).json({ error: 'Access denied. Recruiter or Admin role required.' });

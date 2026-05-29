@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
 export default function LinkedInOptimizerPage() {
   const [resumeText, setResumeText] = useState("");
@@ -76,6 +77,12 @@ export default function LinkedInOptimizerPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
+        <OnboardingTooltip
+          pageKey="linkedin"
+          icon="🔗"
+          title="Optimize your LinkedIn profile"
+          description="Get AI-powered suggestions to improve your profile's visibility, headline, and experience section."
+        />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Linkedin className="w-8 h-8 text-blue-600" />

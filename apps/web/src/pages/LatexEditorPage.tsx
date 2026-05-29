@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,7 +30,6 @@ import Latex from "react-latex-next";
 import "katex/dist/katex.min.css";
 import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
-import { getAuthToken } from "@/lib/authFetch";
 
 const INITIAL_LATEX = `\\documentclass{article}
 \\usepackage[utf8]{inputenc}
@@ -71,46 +70,53 @@ export default function LatexEditorPage() {
   const [showAi, setShowAi] = useState(false);
   const { id } = useParams<{ id: string }>();
   const [isSaving, setIsSaving] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const draftStorageKey = id ? `gapminer-latex-draft:${id}` : "gapminer-latex-draft:default";
 
-  // Load from DB
+  // Load the current draft from local storage so editing works even when no backend draft exists.
   useEffect(() => {
-    if (id) {
-      const token = getAuthToken();
-      fetch(`/api/v1/resume/details/${id}`, {
-        // Assuming a details endpoint or adapting logic
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.resumeText) setLatex(data.resumeText);
-          if (data.name) setActiveFile(data.name);
-        })
-        .catch((err) => console.error("Load failed:", err));
+    setPdfUrl(null);
+
+    try {
+      const rawDraft = localStorage.getItem(draftStorageKey);
+      if (!rawDraft) {
+        setActiveFile(id ? `analysis-${id}.tex` : "main.tex");
+        return;
+      }
+
+      const draft = JSON.parse(rawDraft) as {
+        latex?: string;
+        activeFile?: string;
+      };
+
+      if (draft.latex) setLatex(draft.latex);
+      if (draft.activeFile) setActiveFile(draft.activeFile);
+    } catch (err) {
+      console.error("Draft load failed:", err);
     }
   }, [id]);
 
-  // Save to DB
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  // Save draft locally so the editor remains usable without a backend save endpoint.
   const handleSave = async () => {
-    if (!id) {
-      alert(
-        "No document ID found. Save only available for existing analysis artifacts.",
-      );
-      return;
-    }
     setIsSaving(true);
     try {
-      const token = getAuthToken();
-      const response = await fetch(`/api/v1/resume/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ resumeText: latex, name: activeFile }),
-      });
-      if (response.ok) {
-        alert("Saved successfully");
-      }
+      localStorage.setItem(
+        draftStorageKey,
+        JSON.stringify({
+          latex,
+          activeFile,
+          savedAt: new Date().toISOString(),
+        }),
+      );
+      alert("Saved locally");
     } catch (err) {
       console.error("Save failed:", err);
     } finally {
@@ -132,7 +138,7 @@ export default function LatexEditorPage() {
       ],
     } as any) as any;
 
-  const handleCompile = async () => {
+  const handleCompile = async (latexSource = latex) => {
     setIsCompiling(true);
     try {
       const token = useAuthStore.getState().token;
@@ -142,20 +148,20 @@ export default function LatexEditorPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ latexCode: latex }),
+        body: JSON.stringify({ latexCode: latexSource }),
       });
 
       if (response.ok) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
         // Create a temporary link and trigger download
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${activeFile || "resume"}.pdf`;
+        a.download = `${activeFile.replace(/\.tex$/i, "") || "resume"}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
       } else {
         const error = await response.json();
         console.error("Compilation failed:", error);
@@ -183,6 +189,7 @@ export default function LatexEditorPage() {
       if (data.status === "success") {
         setOptimizationData(data.optimization);
         setLatex(data.optimization.optimizedLatex);
+        setPdfUrl(null);
         setShowOptimizationPanel(true);
       }
     } catch (err) {
@@ -247,7 +254,7 @@ export default function LatexEditorPage() {
           </button>
           <div className="h-4 w-px bg-outline-variant/30"></div>
           <button
-            onClick={handleCompile}
+            onClick={() => handleCompile()}
             disabled={isCompiling}
             className="flex items-center gap-2 px-5 py-2 primary-gradient text-on-primary-fixed rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all"
           >
@@ -302,7 +309,7 @@ export default function LatexEditorPage() {
                       onClick={() => !file.isFolder && setActiveFile(file.name)}
                       className={cn(
                         "flex items-center gap-3 px-4 py-2.5 rounded-2xl cursor-pointer transition-all border border-transparent",
-                        file.active
+                        file.active || file.name === activeFile
                           ? "bg-primary/10 text-primary border-primary/20"
                           : "text-on-surface-variant hover:bg-surface-container",
                       )}
@@ -315,7 +322,7 @@ export default function LatexEditorPage() {
                       <span className="text-sm font-semibold tracking-tight">
                         {file.name}
                       </span>
-                      {file.active && (
+                      {(file.active || file.name === activeFile) && (
                         <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
                       )}
                     </div>
@@ -332,9 +339,9 @@ export default function LatexEditorPage() {
                     </span>
                   </div>
                   <div className="text-[11px] font-medium text-on-surface-variant leading-relaxed">
-                    Lines: {latex.split("\\n").length}
+                    Lines: {latex.split("\n").length}
                     <br />
-                    Words: {latex.split(/\\s+/).length}
+                    Words: {latex.trim() ? latex.trim().split(/\s+/).length : 0}
                     <br />
                     Chars: {latex.length}
                   </div>
@@ -423,8 +430,10 @@ export default function LatexEditorPage() {
                 <div className="pt-6 mt-auto">
                   <button
                     onClick={() => {
-                      setLatex(optimizationData.optimizedLatex);
-                      handleCompile();
+                      const optimizedLatex = optimizationData.optimizedLatex;
+                      setLatex(optimizedLatex);
+                      setPdfUrl(null);
+                      handleCompile(optimizedLatex);
                     }}
                     className="w-full py-4 bg-tertiary/20 border border-tertiary/30 text-tertiary rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-tertiary hover:text-on-tertiary transition-all"
                   >
@@ -443,7 +452,10 @@ export default function LatexEditorPage() {
               value={latex}
               height="100%"
               theme={materialDark}
-              onChange={(value) => setLatex(value)}
+              onChange={(value) => {
+                setLatex(value);
+                setPdfUrl(null);
+              }}
               className="text-sm selection:bg-primary/30"
               basicSetup={{
                 lineNumbers: true,
@@ -606,11 +618,30 @@ export default function LatexEditorPage() {
                 : "scale-100",
             )}
           >
-            <div className="mx-auto w-[210mm] min-h-[297mm] bg-white text-black p-[25mm] shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-sm border border-outline-variant/10 transform-gpu origin-top">
-              <div className="prose prose-slate max-w-none latex-preview">
-                <Latex>{latex}</Latex>
+            {pdfUrl ? (
+              <iframe
+                title="Compiled PDF preview"
+                src={pdfUrl}
+                className="mx-auto h-[calc(100vh-12rem)] w-[210mm] rounded-sm border border-outline-variant/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.1)]"
+              />
+            ) : (
+              <div className="mx-auto flex min-h-[297mm] w-[210mm] flex-col justify-between bg-white p-[25mm] text-black shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-sm border border-outline-variant/10 transform-gpu origin-top">
+                <div>
+                  <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">PDF preview</p>
+                      <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Compile to render the document</h2>
+                    </div>
+                    <div className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                      Draft mode
+                    </div>
+                  </div>
+                  <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-6 text-slate-700">
+                    {latex}
+                  </pre>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Preview zoom controls */}
@@ -646,13 +677,6 @@ export default function LatexEditorPage() {
           background: rgba(108,71,255,0.2);
         }
         
-        .latex-preview h1 { font-size: 2.25rem !important; font-weight: 800 !important; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-        .latex-preview h2 { font-size: 1.5rem !important; font-weight: 700 !important; margin-top: 2rem !important; border-left: 4px solid #6C47FF; padding-left: 1rem; }
-        .latex-preview p { line-height: 1.6; color: #334155; }
-        .latex-preview ul { margin-top: 1rem; list-style-type: none; padding-left: 1.5rem; }
-        .latex-preview li { margin-bottom: 0.5rem; position: relative; }
-        .latex-preview li::before { content: "•"; color: #6C47FF; position: absolute; left: -1.2rem; font-weight: bold; }
-
         .cm-editor {
           height: 100% !important;
           font-family: 'JetBrains Mono', 'Fira Code', monospace !important;

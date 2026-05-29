@@ -2,6 +2,7 @@ import { pipeline, env } from "@huggingface/transformers";
 import { config } from "../core/config.js";
 
 env.allowLocalModels = true;
+env.allowRemoteModels = true;
 env.localModelPath = config.TRANSFORMERS_CACHE_DIR || "./models";
 env.useBrowserCache = false;
 
@@ -443,5 +444,78 @@ export async function analyzeResumeSentiment(text) {
       label,
       score: result.scores[i],
     })),
+  };
+}
+
+export async function predictCareerPath(skills, currentRole = "Software Engineer") {
+  const fe = await getFeatureExtraction();
+  const tg = await getTextGeneration();
+
+  const skillStr = skills.slice(0, 10).join(", ");
+  
+  // Dynamically generate potential next roles
+  const prompt = `Based on a professional with these skills: ${skillStr}, suggest exactly 4 logical next career roles they could pursue. Return only the job titles, separated by commas.`;
+  
+  const genResult = await tg(prompt, {
+    max_new_tokens: 64,
+    temperature: 0.7,
+    do_sample: true,
+  });
+
+  let generatedText = genResult[0]?.generated_text || "";
+  let rawRoles = generatedText.split(',').map(r => r.trim()).filter(r => r.length > 3 && r.length < 40);
+  
+  if (rawRoles.length === 0) {
+    // Fallback if generation fails
+    rawRoles = ["Senior Software Engineer", "Tech Lead", "Engineering Manager", "Solutions Architect"];
+  }
+  
+  const userEmb = await getEmbedding(skills.join(" "));
+
+  const nextRoles = [];
+  const skillGaps = {};
+  
+  // Typical skills expected for common roles (as a base dictionary to pull from dynamically)
+  const commonSkillsPool = ["System Design", "Leadership", "Architecture", "Team Management", "Communication", "Cross-team Impact", "Technical Strategy", "Mentoring", "People Management", "Project Planning", "Stakeholder Management", "Cloud Architecture", "Client Communication"];
+
+  for (const role of rawRoles) {
+    const roleEmb = await getEmbedding(role);
+    const score = cosineSimilarity(userEmb, roleEmb);
+    const probability = Math.max(10, Math.min(Math.round(score * 100 + 40), 95));
+    
+    // Pick 3 random relevant skills for this role from the pool based on embedding
+    const skillScores = await Promise.all(commonSkillsPool.map(async poolSkill => {
+      const poolEmb = await getEmbedding(role + " " + poolSkill);
+      return { skill: poolSkill, score: cosineSimilarity(roleEmb, poolEmb) };
+    }));
+    
+    skillScores.sort((a, b) => b.score - a.score);
+    const targetSkills = skillScores.slice(0, 3).map(s => s.skill);
+
+    let timeline = probability > 70 ? "1-2 years" : (probability > 40 ? "2-4 years" : "3-5 years");
+
+    nextRoles.push({
+      role: role,
+      probability,
+      timeline,
+      skills: targetSkills
+    });
+
+    targetSkills.forEach(reqSkill => {
+      if (!skills.includes(reqSkill) && !skillGaps[reqSkill]) {
+         skillGaps[reqSkill] = {
+           priority: probability > 60 ? "high" : "medium",
+           effort: probability > 60 ? "3-6 months" : "6-12 months"
+         };
+      }
+    });
+  }
+
+  nextRoles.sort((a, b) => b.probability - a.probability);
+
+  return {
+    currentRole,
+    nextRoles,
+    skillGaps
   };
 }

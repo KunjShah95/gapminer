@@ -34,6 +34,7 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import type { RoadmapMilestone, SkillGap } from "@gapminer/types";
 import { getAuthToken } from "@/lib/authFetch";
+import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
 
 interface AnalysisData {
   id: string;
@@ -329,6 +330,12 @@ export default function RoadmapPage() {
   return (
     <div className="flex-grow overflow-y-auto">
       <main className="py-12 px-8 max-w-7xl mx-auto">
+        <OnboardingTooltip
+          pageKey="roadmap"
+          icon="🗺️"
+          title="Your personalized upskilling plan"
+          description="Milestones are ordered by impact. Complete each to unlock the next. Track progress with the checkboxes."
+        />
         {/* Page Actions */}
         <div className="flex justify-between items-center mb-12 animate-in fade-in slide-in-from-top-2 duration-500">
           <div className="flex items-center gap-6">
