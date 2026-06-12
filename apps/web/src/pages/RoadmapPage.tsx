@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Award,
   ArrowLeft,
+  ArrowRight,
   Zap,
   Star,
   ExternalLink,
@@ -75,6 +76,15 @@ interface AnalysisData {
   skillGaps?: any[];
   created_at: string;
 }
+
+type CourseSuggestion = {
+  id: string;
+  title: string;
+  provider: string;
+  rating: number;
+  price: string;
+  url: string;
+};
 
 const resourceTypeIcon = (type: string) => {
   switch (type) {
@@ -244,6 +254,8 @@ export default function RoadmapPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [courses, setCourses] = useState<CourseSuggestion[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
 
   useEffect(() => {
     async function fetchAnalysis() {
@@ -271,6 +283,32 @@ export default function RoadmapPage() {
     }
     fetchAnalysis();
   }, [id]);
+
+  useEffect(() => {
+    const skills = analysis?.gapAnalysis?.missingSkills;
+    if (!skills || skills.length === 0) return;
+    let cancelled = false;
+    async function fetchCourses() {
+      setCoursesLoading(true);
+      try {
+        const token = getAuthToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch("/api/v1/courses/recommend", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ skillGaps: skills }),
+        });
+        if (!cancelled && res.ok) setCourses(await res.json());
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setCoursesLoading(false);
+      }
+    }
+    fetchCourses();
+    return () => { cancelled = true; };
+  }, [analysis?.gapAnalysis?.missingSkills]);
 
   const radarData = useMemo(() => {
     if (!analysis?.skillGaps || analysis.skillGaps.length === 0) {
@@ -390,6 +428,78 @@ export default function RoadmapPage() {
               </div>
             </Card>
           )}
+
+          {/* Course Recommendations Widget */}
+          <Card padding="lg">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BookOpen className="text-primary" size={24} />
+                <div>
+                  <h3 className="text-lg font-bold text-on-surface">Recommended Courses</h3>
+                  <p className="text-xs text-on-surface-variant">
+                    Courses to bridge your skill gaps
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/learn"
+                className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+              >
+                Browse All <ArrowRight size={14} />
+              </Link>
+            </div>
+            {missing.length > 0 ? (
+              <div className="space-y-3">
+                {coursesLoading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex animate-pulse items-center gap-4 rounded-xl border border-outline-variant/15 bg-surface-container-low p-4"
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-surface-container-highest" />
+                        <div className="flex-1">
+                          <div className="mb-1 h-3 w-3/4 rounded bg-surface-container-highest" />
+                          <div className="h-2 w-1/3 rounded bg-surface-container-highest" />
+                        </div>
+                      </div>
+                    ))
+                  : courses.slice(0, 3).map((course) => (
+                      <div
+                        key={course.id}
+                        className="flex items-center gap-4 rounded-xl border border-outline-variant/15 bg-surface-container-low p-4 transition-all hover:border-primary/25"
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-[8px] font-black uppercase text-primary">
+                          {course.provider.slice(0, 2)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-on-surface">{course.title}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-on-surface-variant">
+                            <span>{course.provider}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-0.5">
+                              <Star size={10} className="text-amber-400" /> {course.rating}
+                            </span>
+                            <span>·</span>
+                            <span className="text-primary">{course.price}</span>
+                          </div>
+                        </div>
+                        <ExternalLink size={14} className="shrink-0 text-outline" />
+                      </div>
+                    ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-outline-variant/20 bg-surface-container-low p-6 text-center">
+                <p className="text-sm text-on-surface-variant">
+                  Complete an analysis to get course recommendations.
+                </p>
+              </div>
+            )}
+            {!coursesLoading && courses.length === 0 && missing.length > 0 && (
+              <p className="mt-3 text-center text-xs text-on-surface-variant">
+                No course recommendations available at this time.
+              </p>
+            )}
+          </Card>
         </div>
 
         <aside className="space-y-6">

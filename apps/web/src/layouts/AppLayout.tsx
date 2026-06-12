@@ -49,11 +49,13 @@ const NAV_SECTIONS = [
     title: "Career tools",
     items: [
       { path: "/latex", label: "LaTeX Editor", icon: FileText },
+      { path: "/resume/builder", label: "Resume Builder", icon: FileText },
       { path: "/cover-letter", label: "Cover Letter", icon: PenTool },
       { path: "/linkedin", label: "LinkedIn", icon: Linkedin },
       { path: "/interview", label: "Interview", icon: Mic },
       { path: "/negotiate", label: "Negotiate", icon: Target },
       { path: "/negotiation-roleplay", label: "Role-play", icon: MessageSquare },
+      { path: "/ats", label: "ATS Score", icon: Target },
     ],
   },
   {
@@ -68,6 +70,7 @@ const NAV_SECTIONS = [
       { path: "/career-path", label: "Career Path", icon: Map },
       { path: "/market-demand", label: "Market Demand", icon: Globe },
       { path: "/benchmark", label: "Benchmark", icon: BarChart2 },
+      { path: "/jobs/browse", label: "Job Board", icon: Search },
       { path: "/recommendations", label: "Jobs Match", icon: Star },
       { path: "/chat", label: "AI Chat", icon: Bot },
     ],

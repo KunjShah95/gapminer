@@ -4,7 +4,9 @@ import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  Briefcase,
   Download,
+  ExternalLink,
   FileText,
   Globe,
   Share2,
@@ -47,6 +49,16 @@ type AnalysisResults = {
   marketSignificance: Array<{ skill: string; demand: number; trend: string }>;
   peerBenchmark: { userPercentile: number };
   missingKeywords: string[];
+  targetRole?: string;
+  keywordMatchPercentage?: number;
+};
+
+type JobSuggestion = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  salary: string;
 };
 
 const fallbackResults: AnalysisResults = {
@@ -62,6 +74,8 @@ const fallbackResults: AnalysisResults = {
   ],
   peerBenchmark: { userPercentile: 32 },
   missingKeywords: ["microservices", "CI/CD pipelines"],
+  targetRole: "Senior Full-Stack Engineer",
+  keywordMatchPercentage: 62,
 };
 
 function LoadingState() {
@@ -138,9 +152,34 @@ export default function AnalysisResultsPage() {
     };
   }, [id]);
 
+  const [jobs, setJobs] = useState<JobSuggestion[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!results?.targetRole) return;
+    let cancelled = false;
+    async function fetchJobs() {
+      setJobsLoading(true);
+      try {
+        const token = getAuthToken();
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`/api/v1/jobs/search?q=${encodeURIComponent(results.targetRole)}`, { headers });
+        if (!cancelled && res.ok) setJobs(await res.json());
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setJobsLoading(false);
+      }
+    }
+    fetchJobs();
+    return () => { cancelled = true; };
+  }, [results?.targetRole]);
+
   if (loading) return <LoadingState />;
   if (!results) return <EmptyState />;
 
+  const hasAtsData = results.ats_score > 0 || results.missingKeywords.length > 0;
   const radarData = [
     { subject: "Technical", A: results.overall_score },
     { subject: "Experience", A: results.resume_strength_score || 70 },
@@ -353,50 +392,142 @@ export default function AnalysisResultsPage() {
         </div>
 
         <Card padding="lg" className="mt-6 border-primary/25">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <FileText className="text-primary" size={24} />
+          {hasAtsData ? (
+            <>
+              <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="text-primary" size={24} />
+                  <div>
+                    <h3 className="text-xl font-bold text-on-surface">ATS Compatibility</h3>
+                    <p className="text-xs text-on-surface-variant">
+                      Resume optimization for Applicant Tracking Systems
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-4xl font-black text-on-surface">{results.ats_score}</span>
+                  <span className="text-sm text-on-surface-variant">/100</span>
+                </div>
+              </div>
+              <div className="mb-6 grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-outline">
+                    Keyword Match
+                  </p>
+                  <p className="text-2xl font-black text-on-surface">
+                    {results.keywordMatchPercentage ?? results.ats_score}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-outline">
+                    Missing Keywords
+                  </p>
+                  <p className="text-2xl font-black text-error">{results.missingKeywords.length}</p>
+                </div>
+              </div>
+              {results.missingKeywords.length > 0 && (
+                <div className="mb-6">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Top Missing Keywords
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {results.missingKeywords.slice(0, 5).map((keyword, idx) => (
+                      <span
+                        key={idx}
+                        className="rounded-full border border-error/20 bg-surface-container-low px-4 py-1.5 font-mono text-xs text-error"
+                      >
+                        &quot;{keyword}&quot;
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link
+                  to={id ? `/latex/${id}` : "/latex"}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
+                >
+                  <Zap size={18} />
+                  Optimize Resume
+                </Link>
+                <Button variant="outline" className="sm:flex-initial">
+                  <Download size={18} />
+                  Download Report
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <FileText className="text-outline" size={40} />
               <div>
-                <h3 className="text-xl font-bold text-on-surface">ATS Keyword Match</h3>
-                <p className="text-xs text-on-surface-variant">
-                  Resume optimization for Applicant Tracking Systems
+                <h3 className="text-xl font-bold text-on-surface">ATS Compatibility</h3>
+                <p className="text-sm text-on-surface-variant">
+                  Run an ATS check to see how your resume performs.
                 </p>
               </div>
+              <Link
+                to={`/ats${results.targetRole ? `?role=${encodeURIComponent(results.targetRole)}` : ""}`}
+                className="inline-flex items-center gap-2 rounded-xl px-6 py-3 font-bold primary-gradient text-on-primary-fixed transition-all hover:shadow-lg hover:shadow-primary/20"
+              >
+                Run an ATS Check <ArrowRight size={18} />
+              </Link>
             </div>
-            <div className="text-right">
-              <span className="text-4xl font-black text-on-surface">{results.ats_score}</span>
-              <span className="text-sm text-on-surface-variant">/100</span>
-            </div>
-          </div>
-          <div className="mb-6">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-              Missing Keywords
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {results.missingKeywords.map((keyword, idx) => (
-                <span
-                  key={idx}
-                  className="rounded-full border border-error/20 bg-surface-container-low px-4 py-1.5 font-mono text-xs text-error"
-                >
-                  &quot;{keyword}&quot;
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Link
-              to={id ? `/latex/${id}` : "/latex"}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]"
-            >
-              <Zap size={18} />
-              Optimize Resume
-            </Link>
-            <Button variant="outline" className="sm:flex-initial">
-              <Download size={18} />
-              Download Report
-            </Button>
-          </div>
+          )}
         </Card>
+
+        {/* Job Suggestions Widget */}
+        {results.targetRole && (
+          <Card padding="lg" className="mt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Briefcase className="text-primary" size={24} />
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface">Relevant Jobs</h3>
+                  <p className="text-xs text-on-surface-variant">
+                    Positions matching your target role
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/jobs/browse"
+                className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+              >
+                View All <ExternalLink size={14} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {jobsLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="animate-pulse rounded-xl border border-outline-variant/15 bg-surface-container-low p-4"
+                    >
+                      <div className="mb-2 h-4 w-3/4 rounded bg-surface-container-highest" />
+                      <div className="mb-1 h-3 w-1/2 rounded bg-surface-container-highest" />
+                      <div className="h-3 w-1/3 rounded bg-surface-container-highest" />
+                    </div>
+                  ))
+                : jobs.slice(0, 5).map((job) => (
+                    <div
+                      key={job.id}
+                      className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-4 transition-all hover:border-primary/25"
+                    >
+                      <p className="mb-1 text-sm font-bold text-on-surface">{job.title}</p>
+                      <p className="mb-1 text-xs text-on-surface-variant">{job.company}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-on-surface-variant">{job.location}</span>
+                        <span className="text-xs font-bold text-primary">{job.salary}</span>
+                      </div>
+                    </div>
+                  ))}
+            </div>
+            {!jobsLoading && jobs.length === 0 && (
+              <p className="py-4 text-center text-sm text-on-surface-variant">
+                No job listings found for this role.
+              </p>
+            )}
+          </Card>
+        )}
 
         {/* Resume Heatmap Section */}
         <div className="mt-6">

@@ -19,9 +19,12 @@ import RecruiterDashboardPage from "@/pages/RecruiterDashboardPage";
 import NegotiationCompanionPage from "@/pages/NegotiationCompanionPage";
 import { CoverLetterPage } from "@/pages/CoverLetterPage";
 import JobTrackerPage from "@/pages/JobTrackerPage";
+import JobBoardPage from "@/pages/JobBoardPage";
+import ATSPage from "@/pages/ATSPage";
 import SkillProgressPage from "@/pages/SkillProgressPage";
 import LinkedInOptimizerPage from "@/pages/LinkedInOptimizerPage";
 import ResumeVersionsPage from "@/pages/ResumeVersionsPage";
+import ResumeBuilderPage from "@/pages/ResumeBuilderPage";
 import BenchmarkPage from "@/pages/BenchmarkPage";
 import NegotiationRoleplayPage from "@/pages/NegotiationRoleplayPage";
 import RecommendationsPage from "@/pages/RecommendationsPage";
@@ -177,6 +180,22 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/jobs/browse"
+          element={
+            <ProtectedRoute>
+              <JobBoardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ats"
+          element={
+            <ProtectedRoute>
+              <ATSPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/progress"
           element={
             <ProtectedRoute>
@@ -189,6 +208,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <LinkedInOptimizerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/resume/builder"
+          element={
+            <ProtectedRoute>
+              <ResumeBuilderPage />
             </ProtectedRoute>
           }
         />
