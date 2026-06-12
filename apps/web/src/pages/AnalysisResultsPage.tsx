@@ -99,18 +99,6 @@ const fallbackResults: AnalysisResults = {
   resumeText: "Professional Summary\nExperienced developer with expertise in React, TypeScript.\n\nSkills\nReact, TypeScript\n\nAdditional Skills\nKubernetes, Go, Terraform\n\nExperience\nBuilt applications using React and TypeScript\nExperience with microservices and CI/CD pipelines",
 };
 
-function LoadingState() {
-  return (
-    <PageShell>
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-        <div className="primary-gradient animate-pulse rounded-full px-8 py-4 font-bold text-on-primary-fixed">
-          Loading Analysis Results...
-        </div>
-      </div>
-    </PageShell>
-  );
-}
-
 function EmptyState() {
   return (
     <PageShell>

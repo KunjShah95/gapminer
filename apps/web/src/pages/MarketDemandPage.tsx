@@ -17,7 +17,6 @@ import {
   RefreshCw,
   BarChart3,
   Info,
-  Loader2,
   DollarSign,
   Briefcase,
   Radio,
