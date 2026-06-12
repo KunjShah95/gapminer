@@ -36,6 +36,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { MarketDemandSkeleton } from "@/components/skeletons/SkeletonPages";
 
 type TrendRow = {
   skill: string;
@@ -45,10 +46,10 @@ type TrendRow = {
   demandScore: number;
   growthRate?: number;
   source?: string;
-  liveJobCount?: number;
-  salaryMin?: number;
-  salaryMedian?: number;
-  salaryMax?: number;
+  liveJobCount: number;
+  salaryMin: number;
+  salaryMedian: number;
+  salaryMax: number;
   dataSource?: string;
 };
 
@@ -197,6 +198,8 @@ export default function MarketDemandPage() {
 
   const totalLiveJobs = trends.reduce((sum, t) => sum + (t.liveJobCount || 0), 0);
 
+  if (loading) return <MarketDemandSkeleton />;
+
   const chartData = trends
     .sort((a, b) => b.demandScore - a.demandScore)
     .slice(0, 10)
@@ -283,12 +286,7 @@ export default function MarketDemandPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             Top skills by demand
           </h2>
-          {loading ? (
-            <div className="flex h-[300px] items-center justify-center gap-2 text-on-surface-variant">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              Loading...
-            </div>
-          ) : chartData.length > 0 ? (
+          {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />

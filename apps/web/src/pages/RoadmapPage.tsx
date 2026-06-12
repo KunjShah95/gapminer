@@ -30,6 +30,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { RoadmapMilestone } from "@gapminer/types";
 import { getAuthToken } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
+import { RoadmapSkeleton } from "@/components/skeletons/SkeletonPages";
 import {
   PageShell,
   PageHeader,
@@ -302,16 +303,7 @@ export default function RoadmapPage() {
   const matchPercentage =
     analysis?.gapAnalysis?.matchPercentage ?? analysis?.overall_score ?? 0;
 
-  if (loading) {
-    return (
-      <PageShell>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-on-surface-variant">Loading analysis...</p>
-        </div>
-      </PageShell>
-    );
-  }
+  if (loading) return <RoadmapSkeleton />;
 
   if (error || !analysis) {
     return (

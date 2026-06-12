@@ -18,7 +18,6 @@ import {
   Clock,
   Star,
   ThumbsDown,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
@@ -34,6 +33,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { JobTrackerSkeleton } from "@/components/skeletons/SkeletonPages";
 
 const STATUSES = [
   { id: "saved", label: "Saved", color: "bg-slate-400", icon: Target },
@@ -244,6 +244,8 @@ export default function JobTrackerPage() {
       job.role.toLowerCase().includes(search.toLowerCase()),
   );
 
+  if (loading) return <JobTrackerSkeleton />;
+
   const groupedJobs = STATUSES.reduce(
     (acc, status) => {
       acc[status.id] = filteredJobs.filter((j) => j.status === status.id);
@@ -303,13 +305,7 @@ export default function JobTrackerPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-on-surface-variant">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          Loading...
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {STATUSES.map((status) => {
             const statusJobs = groupedJobs[status.id] || [];
             return (
@@ -408,7 +404,6 @@ export default function JobTrackerPage() {
             );
           })}
         </div>
-      )}
 
       <AnimatePresence>
         {showForm && (

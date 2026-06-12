@@ -9,7 +9,6 @@ import {
   Save,
   AlertCircle,
   Minus,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import {
@@ -24,6 +23,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { SkeletonList } from "@/components/skeletons/SkeletonPrimitives";
 
 export default function ResumeVersionsPage() {
   const [versions, setVersions] = useState<any[]>([]);
@@ -164,10 +164,7 @@ export default function ResumeVersionsPage() {
         <div className="space-y-3 lg:col-span-1">
           <h2 className="mb-3 font-bold text-on-surface">Version history</h2>
           {loading ? (
-            <div className="flex items-center gap-2 text-on-surface-variant">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Loading...
-            </div>
+            <SkeletonList count={4} />
           ) : versions.length === 0 ? (
             <EmptyState
               icon={<Clock size={28} />}

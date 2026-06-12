@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import OnboardingChecklist from "@/components/onboarding/OnboardingChecklist";
+import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import {
   Clock,
   ArrowRight,
@@ -131,6 +132,8 @@ export default function Dashboard() {
 
   const firstName = user?.name?.split(" ")[0] || "there";
 
+  if (loading) return <DashboardSkeleton />;
+
   return (
     <>
       <PageShell>
@@ -212,11 +215,7 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            {loading ? (
-              <Card padding="lg" className="text-center">
-                <p className="animate-pulse text-on-surface-variant">Loading analyses...</p>
-              </Card>
-            ) : analyses.length === 0 ? (
+            {analyses.length === 0 ? (
               <Card padding="lg" className="text-center">
                 <p className="mb-4 text-on-surface-variant">No analyses yet</p>
                 <Link to="/analyze" className="text-sm font-bold text-primary hover:underline">
@@ -319,9 +318,7 @@ export default function Dashboard() {
                 Top Skill Gaps
               </h3>
               <div className="space-y-3">
-                {loading ? (
-                  <div className="h-16 animate-pulse rounded-xl bg-surface-container" />
-                ) : analyses.length > 0 && (analyses[0] as Record<string, any>)?.top_gaps?.length > 0 ? (
+                {analyses.length > 0 && (analyses[0] as Record<string, any>)?.top_gaps?.length > 0 ? (
                   (analyses[0] as Record<string, any>).top_gaps.map((gap: Record<string, any>, i: number) => (
                     <div key={i} className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">

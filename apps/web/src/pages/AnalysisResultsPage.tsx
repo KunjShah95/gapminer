@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import { getAuthToken } from "@/lib/authFetch";
 import OnboardingTooltip from "@/components/onboarding/OnboardingTooltip";
+import { AnalysisResultsSkeleton } from "@/components/skeletons/SkeletonPages";
 import {
   PageShell,
   PageHeader,
@@ -47,7 +48,40 @@ type AnalysisResults = {
   marketSignificance: Array<{ skill: string; demand: number; trend: string }>;
   peerBenchmark: { userPercentile: number };
   missingKeywords: string[];
+  resumeText?: string;
 };
+
+/**
+ * Build synthetic resume text from analysis data for the heatmap.
+ * This gives the heatmap meaningful content to analyze even when
+ * the raw resume text isn't available from the API response yet.
+ */
+function buildResumeText(results: AnalysisResults): string {
+  const lines: string[] = [];
+  lines.push("Professional Summary");
+  lines.push(
+    `Experienced developer with expertise in ${results.matchedSkills.slice(0, 3).join(", ") || "software development"}.`,
+  );
+  lines.push("");
+  lines.push("Skills");
+  lines.push(results.matchedSkills.join(", "));
+  if (results.missingSkills.length > 0) {
+    lines.push("");
+    lines.push("Additional Skills");
+    lines.push(results.missingSkills.slice(0, 3).join(", "));
+  }
+  lines.push("");
+  lines.push("Experience");
+  lines.push(
+    `Built applications using ${results.matchedSkills.slice(0, 2).join(" and ")}`,
+  );
+  if (results.missingKeywords.length > 0) {
+    lines.push(
+      `Experience with ${results.missingKeywords.slice(0, 2).join(" and ")}`,
+    );
+  }
+  return lines.join("\n");
+}
 
 const fallbackResults: AnalysisResults = {
   overall_score: 76,
@@ -62,6 +96,7 @@ const fallbackResults: AnalysisResults = {
   ],
   peerBenchmark: { userPercentile: 32 },
   missingKeywords: ["microservices", "CI/CD pipelines"],
+  resumeText: "Professional Summary\nExperienced developer with expertise in React, TypeScript.\n\nSkills\nReact, TypeScript\n\nAdditional Skills\nKubernetes, Go, Terraform\n\nExperience\nBuilt applications using React and TypeScript\nExperience with microservices and CI/CD pipelines",
 };
 
 function LoadingState() {
@@ -115,7 +150,48 @@ export default function AnalysisResultsPage() {
 
         const res = await fetch(`/api/v1/analysis/${id ?? ""}`, { headers });
         if (!cancelled && res.ok) {
-          setResults(await res.json());
+          const data = await res.json();
+          // Extract resumeText from API response — try parsed_data first, then resumeData
+          const resumeText =
+            typeof data.resumeData === "string"
+              ? data.resumeData
+              : data.resumeData?.rawText ||
+                data.resumeData?.text ||
+                data.resumeData?.summary ||
+                (data.jdData ?"Job Description: " + (data.jdData?.title || "") + "\n" + (data.jdData?.description || "") : "") ||
+                "";
+
+          const mapped: AnalysisResults = {
+            overall_score: data.overall_score ?? 0,
+            resume_strength_score: data.resume_strength_score ?? 0,
+            ats_score: data.ats_score ?? 0,
+            matchPercentage: data.gapAnalysis?.matchPercentage ?? data.overall_score ?? 0,
+            missingSkills: data.gapAnalysis?.missingSkills || [],
+            matchedSkills: data.gapAnalysis?.matchedSkills || [],
+            marketSignificance:
+              data.skillGaps
+                ?.filter((g: any) => g.skill && g.market_demand != null)
+                ?.slice(0, 6)
+                ?.map((g: any) => ({
+                  skill: g.skill,
+                  demand: g.market_demand,
+                  trend: g.trend_delta ? (g.trend_delta > 0 ? "Rising" : "Declining") : "Stable",
+                })) || [],
+            peerBenchmark: { userPercentile: 32 },
+            missingKeywords: data.gapAnalysis?.missingSkills?.slice(0, 5) || [],
+            resumeText: resumeText || buildResumeText({
+              overall_score: data.overall_score ?? 0,
+              resume_strength_score: data.resume_strength_score ?? 0,
+              ats_score: data.ats_score ?? 0,
+              matchPercentage: data.gapAnalysis?.matchPercentage ?? data.overall_score ?? 0,
+              missingSkills: data.gapAnalysis?.missingSkills || [],
+              matchedSkills: data.gapAnalysis?.matchedSkills || [],
+              marketSignificance: [],
+              peerBenchmark: { userPercentile: 32 },
+              missingKeywords: data.gapAnalysis?.missingSkills?.slice(0, 5) || [],
+            }),
+          };
+          setResults(mapped);
           return;
         }
       } catch {
@@ -138,7 +214,7 @@ export default function AnalysisResultsPage() {
     };
   }, [id]);
 
-  if (loading) return <LoadingState />;
+  if (loading) return <AnalysisResultsSkeleton />;
   if (!results) return <EmptyState />;
 
   const radarData = [
@@ -411,7 +487,7 @@ export default function AnalysisResultsPage() {
             </summary>
             <div className="mt-4">
               <ResumeHeatmap
-                resumeText={results.resumeData || ""}
+                resumeText={results.resumeText || ""}
                 jdKeywords={[...results.missingSkills, ...results.matchedSkills]}
               />
             </div>
