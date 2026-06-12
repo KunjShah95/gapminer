@@ -187,7 +187,7 @@ export default function LandingPage() {
       />
 
       {/* Proof */}
-      <section className="bg-surface-container-low px-6 py-28 lg:px-8">
+      <section className="bg-surface-container-low px-6 py-16 sm:py-20 lg:px-8 lg:py-28">
         <div className="mx-auto max-w-7xl">
           <Label n="004" t="Proof" />
           <blockquote
@@ -198,7 +198,7 @@ export default function LandingPage() {
             <span className="text-gradient">two years ago</span>. Offer in 3
             weeks.&rdquo;
           </blockquote>
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               [
                 'The pipeline caught "responsible for" 14 times.',
@@ -216,7 +216,7 @@ export default function LandingPage() {
                 "Vercel",
               ],
             ].map(([q, n, co]) => (
-              <div key={n} className="glass-card p-7">
+              <div key={n} className="glass-card p-5 sm:p-7">
                 <p className="mb-6 text-sm italic text-on-surface-variant">
                   &ldquo;{q}&rdquo;
                 </p>
@@ -238,7 +238,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="relative overflow-hidden bg-surface-container-low px-6 py-28 text-center lg:px-8">
+      <section className="relative overflow-hidden bg-surface-container-low px-6 py-16 text-center sm:py-20 lg:px-8 lg:py-28">
         <div
           className="pointer-events-none absolute inset-0 flex items-center justify-center font-black text-outline/[0.05]"
           style={{ fontSize: "clamp(72px, 14vw, 180px)" }}

@@ -246,11 +246,11 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <div className="mb-32 grid gap-6 lg:grid-cols-4 lg:gap-8">
+          <div className="mb-32 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {PLANS.map((plan) => (
               <div
                 key={plan.id}
-                className={`glass-card relative flex flex-col p-8 transition duration-300 hover:-translate-y-1 ${
+                className={`glass-card relative flex flex-col p-6 sm:p-8 transition duration-300 hover:-translate-y-1 ${
                   plan.highlighted
                     ? "border-primary/40 ring-2 ring-primary/10"
                     : ""
@@ -349,19 +349,19 @@ export default function PricingPage() {
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="border-b border-outline-variant/20 bg-surface-container-high">
-                      <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-outline">
+                      <th className="px-4 sm:px-8 py-4 sm:py-6 text-sm font-bold uppercase tracking-widest text-outline">
                         Capability
                       </th>
-                      <th className="px-8 py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
+                      <th className="px-4 sm:px-8 py-4 sm:py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
                         Free
                       </th>
-                      <th className="border-x border-primary/10 bg-primary/5 px-8 py-6 text-center text-sm font-bold uppercase tracking-widest text-primary">
+                      <th className="border-x border-primary/10 bg-primary/5 px-4 sm:px-8 py-4 sm:py-6 text-center text-sm font-bold uppercase tracking-widest text-primary">
                         Pro
                       </th>
-                      <th className="px-8 py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
+                      <th className="px-4 sm:px-8 py-4 sm:py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
                         Teams
                       </th>
-                      <th className="px-8 py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
+                      <th className="px-4 sm:px-8 py-4 sm:py-6 text-center text-sm font-bold uppercase tracking-widest text-outline">
                         Enterprise
                       </th>
                     </tr>
@@ -372,15 +372,15 @@ export default function PricingPage() {
                         key={row.feature}
                         className="transition-colors hover:bg-primary/5"
                       >
-                        <td className="px-8 py-6 font-medium text-on-surface">
+                        <td className="px-4 sm:px-8 py-4 sm:py-6 font-medium text-on-surface">
                           {row.feature}
                         </td>
-                        <td className="px-8 py-6 text-center">{row.free}</td>
-                        <td className="border-x border-primary/10 bg-primary/[0.03] px-8 py-6 text-center font-bold text-on-surface">
+                        <td className="px-4 sm:px-8 py-4 sm:py-6 text-center">{row.free}</td>
+                        <td className="border-x border-primary/10 bg-primary/[0.03] px-4 sm:px-8 py-4 sm:py-6 text-center font-bold text-on-surface">
                           {row.pro}
                         </td>
-                        <td className="px-8 py-6 text-center">{row.teams}</td>
-                        <td className="px-8 py-6 text-center">
+                        <td className="px-4 sm:px-8 py-4 sm:py-6 text-center">{row.teams}</td>
+                        <td className="px-4 sm:px-8 py-4 sm:py-6 text-center">
                           {row.enterprise}
                         </td>
                       </tr>
@@ -407,7 +407,7 @@ export default function PricingPage() {
               {FAQS.map((faq, i) => (
                 <div
                   key={i}
-                  className="glass-card p-8 transition hover:border-primary/30"
+                  className="glass-card p-6 sm:p-8 transition hover:border-primary/30"
                 >
                   <h3 className="mb-3 flex items-center gap-2 text-lg font-bold">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary" />

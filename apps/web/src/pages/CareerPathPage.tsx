@@ -14,7 +14,6 @@ import {
   Briefcase,
   AlertCircle,
   Brain,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import {
@@ -29,6 +28,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { AnalysisResultsSkeleton } from "@/components/skeletons/SkeletonPages";
 
 export default function CareerPathPage() {
   const [predictions, setPredictions] = useState<any>(null);
@@ -87,16 +87,7 @@ export default function CareerPathPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <PageShell>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-on-surface-variant">Analyzing your career trajectory...</p>
-        </div>
-      </PageShell>
-    );
-  }
+  if (loading) return <AnalysisResultsSkeleton />;
 
   if (!predictions) {
     return (

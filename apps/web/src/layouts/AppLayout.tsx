@@ -3,6 +3,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   LayoutDashboard,
   Search,
@@ -369,6 +370,7 @@ export default function AppLayout() {
           </Link>
           <div className="hidden flex-1 lg:block" />
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <NotificationsDropdown />
             <Link
               to="/profile"

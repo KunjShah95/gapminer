@@ -164,26 +164,26 @@ export default function DeveloperPortalPage() {
         </Card>
       )}
 
-      {/* Usage stats */}
+      {/* Usage stats — show '-' while loading or before data arrives */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Active Keys"
-          value={usage?.activeKeys ?? "-"}
+          value={loading ? "-" : (usage?.activeKeys ?? 0)}
           icon={<Key size={18} />}
         />
         <StatCard
           label="Requests (30d)"
-          value={usage?.last30Days ?? "-"}
+          value={loading ? "-" : (usage?.last30Days ?? 0)}
           icon={<BarChart3 size={18} />}
         />
         <StatCard
           label="Total Requests"
-          value={usage?.totalRequests ?? "-"}
+          value={loading ? "-" : (usage?.totalRequests ?? 0)}
           icon={<BarChart3 size={18} />}
         />
         <StatCard
           label="Active Days"
-          value={usage?.activeDays ?? "-"}
+          value={loading ? "-" : (usage?.activeDays ?? 0)}
           icon={<Shield size={18} />}
         />
       </div>

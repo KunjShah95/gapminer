@@ -15,7 +15,6 @@ import {
   Zap,
   Brain,
   AlertCircle,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import { useAuthStore } from "@/stores/authStore";
@@ -31,6 +30,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { AnalysisResultsSkeleton } from "@/components/skeletons/SkeletonPages";
 
 const CHART_GRID = "rgba(148, 163, 184, 0.12)";
 const CHART_TICK = { fill: "rgb(148 163 184)", fontSize: 12 };
@@ -71,16 +71,7 @@ export default function BenchmarkPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <PageShell>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-on-surface-variant">Loading benchmark data...</p>
-        </div>
-      </PageShell>
-    );
-  }
+  if (loading) return <AnalysisResultsSkeleton />;
 
   if (!benchmark) {
     return (

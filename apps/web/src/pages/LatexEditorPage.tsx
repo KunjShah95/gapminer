@@ -483,7 +483,7 @@ export default function LatexEditorPage() {
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: 220, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="border-r border-white/5 bg-[#16162a] flex flex-col shrink-0 overflow-hidden"
+              className="border-r border-white/5 bg-[#16162a] flex flex-col overflow-hidden max-w-[180px] lg:max-w-none lg:shrink-0"
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">

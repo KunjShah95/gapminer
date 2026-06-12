@@ -552,8 +552,8 @@ export default function RecruiterDashboardPage() {
 
             {activeTab === "analytics" && (
               <div className="space-y-12">
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="p-8 rounded-[2rem] bg-primary/5 border border-primary/10">
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+                  <div className="p-6 sm:p-8 rounded-[2rem] bg-primary/5 border border-primary/10">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-6">Talent Availability Index</h4>
                     <div className="flex items-end gap-4 mb-6">
                       <div className="text-4xl font-black tracking-tighter">8.4<span className="text-sm opacity-40">/10</span></div>
@@ -575,7 +575,7 @@ export default function RecruiterDashboardPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="p-8 rounded-[2rem] bg-tertiary/5 border border-tertiary/10">
+                  <div className="p-6 sm:p-8 rounded-[2rem] bg-tertiary/5 border border-tertiary/10">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-tertiary mb-6">Salary Benchmarks (Aggregated)</h4>
                     <div className="space-y-6">
                       {[
@@ -694,9 +694,9 @@ export default function RecruiterDashboardPage() {
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            className="fixed bottom-8 left-1/2 z-50 max-h-[65vh] w-[900px] -translate-x-1/2 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-high/95 shadow-2xl shadow-black/40 backdrop-blur-xl"
+            className="fixed bottom-8 left-1/2 z-50 max-h-[65vh] w-[calc(100vw-32px)] max-w-[900px] -translate-x-1/2 overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-high/95 shadow-2xl shadow-black/40 backdrop-blur-xl"
           >
-            <div className="flex items-center justify-between px-8 py-5 border-b border-outline-variant/10">
+            <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 border-b border-outline-variant/10">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
                   <CheckCircle size={18} className="text-primary" />
@@ -712,7 +712,7 @@ export default function RecruiterDashboardPage() {
             </div>
             <div className="overflow-y-auto custom-scrollbar max-h-[calc(65vh-80px)]">
               {shortlistResults.map((c, i) => (
-                <div key={c.applicationId} className="flex items-center gap-6 px-8 py-4 border-b border-outline-variant/5 last:border-0 hover:bg-surface-container/20 transition-all">
+                <div key={c.applicationId} className="flex items-center gap-3 sm:gap-6 px-4 sm:px-8 py-4 border-b border-outline-variant/5 last:border-0 hover:bg-surface-container/20 transition-all">
                   <div className="w-8 text-center">
                     <span className={`text-lg font-black ${i === 0 ? "text-primary" : "text-outline"}`}>#{i + 1}</span>
                   </div>
@@ -767,7 +767,7 @@ export default function RecruiterDashboardPage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-card relative w-full max-w-[640px] overflow-hidden rounded-3xl p-10"
+              className="glass-card relative w-full max-w-[640px] overflow-hidden rounded-3xl p-6 sm:p-10"
             >
               <div className="absolute right-4 top-4">
                 <Button variant="ghost" size="sm" onClick={() => setShowNewJobModal(false)}>
@@ -820,7 +820,7 @@ export default function RecruiterDashboardPage() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="glass-card relative flex max-h-[85vh] w-full max-w-[1000px] flex-col overflow-hidden rounded-3xl p-10"
+              className="glass-card relative flex max-h-[85vh] w-full max-w-[1000px] flex-col overflow-hidden rounded-3xl p-6 sm:p-10"
             >
               <div className="mb-8 flex shrink-0 flex-wrap items-center justify-between gap-4">
                 <div>

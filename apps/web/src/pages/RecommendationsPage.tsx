@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Target,
   Briefcase,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import {
@@ -22,6 +21,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { SkeletonList } from "@/components/skeletons/SkeletonPrimitives";
 
 export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -145,10 +145,7 @@ export default function RecommendationsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-on-surface-variant">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          Loading recommendations...
-        </div>
+        <SkeletonList count={4} />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Briefcase size={28} />}

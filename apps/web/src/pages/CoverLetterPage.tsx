@@ -281,11 +281,18 @@ export function CoverLetterPage() {
   const handleTrackVariant = async (variantId: string, status: "sent" | "rejected" | "interview") => {
     const token = getAuthToken();
     if (!token) return;
-    await fetch(`/api/v1/cover-letter/variants/${variantId}/status`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      const res = await fetch(`/api/v1/cover-letter/variants/${variantId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        console.error("Failed to track variant status");
+      }
+    } catch (err) {
+      console.error("Failed to track variant status:", err);
+    }
   };
 
   const handleCopy = async () => {
@@ -609,7 +616,7 @@ export function CoverLetterPage() {
                 />
               </>
             ) : (
-              <Card padding="xl" className="flex min-h-[300px] flex-col items-center justify-center text-center">
+              <Card padding="lg" className="flex min-h-[300px] flex-col items-center justify-center text-center">
                 <Layers className="mb-4 h-12 w-12 text-outline opacity-40" />
                 <h3 className="text-lg font-bold text-on-surface">Select or Create a Template</h3>
                 <p className="mt-2 max-w-md text-sm text-on-surface-variant">
@@ -624,3 +631,5 @@ export function CoverLetterPage() {
     </PageShell>
   );
 }
+
+export default CoverLetterPage;

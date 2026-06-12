@@ -20,7 +20,6 @@ import {
   Brain,
   BarChart3,
   ChevronRight,
-  Loader2,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import { useAuthStore } from "@/stores/authStore";
@@ -36,6 +35,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { SkillProgressSkeleton } from "@/components/skeletons/SkeletonPages";
 
 const CHART_GRID = "rgba(148, 163, 184, 0.12)";
 const CHART_TICK = { fill: "rgb(148 163 184)", fontSize: 11 };
@@ -125,16 +125,7 @@ export default function SkillProgressPage() {
     )
     .slice(0, 5);
 
-  if (loading) {
-    return (
-      <PageShell>
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-on-surface-variant">Loading your progress...</p>
-        </div>
-      </PageShell>
-    );
-  }
+  if (loading) return <SkillProgressSkeleton />;
 
   return (
     <PageShell maxWidth="2xl">
