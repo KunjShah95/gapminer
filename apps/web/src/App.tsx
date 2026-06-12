@@ -7,6 +7,7 @@ import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
 import FeaturesPage from "@/pages/FeaturesPage";
 import AuthPage from "@/pages/AuthPage";
+import AppLayout from "@/layouts/AppLayout";
 import SuspensePage from "@/components/SuspensePage";
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const AnalysisResultsPage = lazy(() => import("@/pages/AnalysisResultsPage"));
@@ -31,7 +32,6 @@ const CareerPathPage = lazy(() => import("@/pages/CareerPathPage"));
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
 const AdminDashboardPage = lazy(() => import("@/pages/AdminDashboardPage"));
 const DeveloperPortalPage = lazy(() => import("@/pages/DeveloperPortalPage"));
-import AppLayout from "@/layouts/AppLayout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
