@@ -1,5 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
+import { useOnboardingStore } from "@/stores/onboardingStore";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 import {
   LayoutDashboard,
   Search,
@@ -25,8 +28,12 @@ import {
   PenTool,
   Mic,
   Users,
+  Rocket,
+  Bot,
+  Shield,
+  Key,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const NAV_SECTIONS = [
@@ -50,12 +57,19 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    title: "Developer",
+    items: [
+      { path: "/dev", label: "Developer Portal", icon: Key },
+    ],
+  },
+  {
     title: "Intelligence",
     items: [
       { path: "/career-path", label: "Career Path", icon: Map },
       { path: "/market-demand", label: "Market Demand", icon: Globe },
       { path: "/benchmark", label: "Benchmark", icon: BarChart2 },
       { path: "/recommendations", label: "Jobs Match", icon: Star },
+      { path: "/chat", label: "AI Chat", icon: Bot },
     ],
   },
   {
@@ -68,7 +82,10 @@ const NAV_SECTIONS = [
   },
   {
     title: "Enterprise",
-    items: [{ path: "/recruiter", label: "Recruiter", icon: Users }],
+    items: [
+      { path: "/recruiter", label: "Recruiter", icon: Users },
+      { path: "/admin", label: "Admin", icon: Shield },
+    ],
   },
 ];
 
@@ -110,7 +127,15 @@ function NavLink({
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const { completedSteps, wizardCompleted } = useOnboardingStore();
   const navigate = useNavigate();
+
+  const onboardingProgress = Math.min(100, (completedSteps.length / 5) * 100);
+  const showOnboardingBanner = !wizardCompleted && completedSteps.length < 5;
+
+  // Hide role-gated nav items for unauthorized users
+  const isAdmin = user?.role === "ADMIN";
+  const isRecruiter = user?.role === "RECRUITER" || user?.role === "ADMIN";
 
   return (
     <>
@@ -132,27 +157,72 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.title}>
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-outline/80">
-              {section.title}
-            </p>
-            <div className="space-y-0.5">
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  item={item}
-                  active={
-                    location.pathname === item.path ||
-                    location.pathname.startsWith(item.path + "/")
-                  }
-                  onClick={onNavigate}
-                />
-              ))}
-            </div>
+      {/* Onboarding progress banner */}
+      {showOnboardingBanner && (
+        <Link
+          to="/dashboard"
+          onClick={onNavigate}
+          className="mx-4 mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 transition-all hover:bg-primary/10"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <Rocket size={14} className="text-primary" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              Getting Started
+            </span>
+            <span className="ml-auto text-[10px] font-bold text-on-surface-variant">
+              {completedSteps.length}/5
+            </span>
           </div>
-        ))}
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface-container">
+            <div
+              className="h-full rounded-full primary-gradient transition-all duration-700"
+              style={{ width: `${onboardingProgress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[10px] text-on-surface-variant">
+            {completedSteps.length === 0
+              ? "Complete setup to unlock all features"
+              : completedSteps.length >= 4
+                ? "Almost done! One step left"
+                : `${5 - completedSteps.length} steps remaining`}
+          </p>
+        </Link>
+      )}
+
+      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+        {NAV_SECTIONS.map((section) => {
+          // Filter role-gated items for unauthorized users
+          const items = section.title === "Enterprise"
+            ? section.items.filter((item) => {
+                if (item.path === "/admin" && !isAdmin) return false;
+                if (item.path === "/recruiter" && !isRecruiter) return false;
+                return true;
+              })
+            : section.items;
+
+          if (items.length === 0) return null;
+
+          return (
+            <div key={section.title}>
+              <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-outline/80">
+                {section.title}
+              </p>
+              <div className="space-y-0.5">
+                {items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    item={item}
+                    active={
+                      location.pathname === item.path ||
+                      location.pathname.startsWith(item.path + "/")
+                    }
+                    onClick={onNavigate}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
         <div className="border-t border-outline-variant/10 pt-4">
           <NavLink
@@ -223,10 +293,43 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function AppLayout() {
   const { user } = useAuthStore();
+  const { wizardCompleted } = useOnboardingStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [analysesCount, setAnalysesCount] = useState(-1);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user has any analyses to determine if wizard should show
+  useEffect(() => {
+    async function checkAnalyses() {
+      try {
+        const token = useAuthStore.getState().token;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/v1/analysis", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => []);
+          setAnalysesCount(Array.isArray(data) ? data.length : 0);
+        }
+      } catch {
+        /* silent */
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (user && analysesCount === -1) checkAnalyses();
+  }, [user]);
+
+  // Show wizard if user has no analyses and hasn't completed it
+  const showWizard = !wizardCompleted && !loading && analysesCount === 0;
 
   return (
-    <div className="flex min-h-screen bg-surface font-body text-on-surface">
+    <>
+      <OnboardingWizard open={showWizard} />
+      <div className="flex min-h-screen bg-surface font-body text-on-surface">
       <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-outline-variant/10 bg-surface-container-low lg:flex">
         <SidebarContent />
       </aside>
@@ -266,12 +369,7 @@ export default function AppLayout() {
           </Link>
           <div className="hidden flex-1 lg:block" />
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/15 text-outline hover:text-primary"
-            >
-              <Bell size={18} />
-            </button>
+            <NotificationsDropdown />
             <Link
               to="/profile"
               className="flex items-center gap-2 rounded-xl border border-outline-variant/10 bg-surface-container-high px-2 py-1.5 pr-3"
@@ -292,5 +390,6 @@ export default function AppLayout() {
         </main>
       </div>
     </div>
+    </>
   );
 }

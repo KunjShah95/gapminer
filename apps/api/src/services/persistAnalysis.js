@@ -167,6 +167,7 @@ export async function persistAnalysisResult(
     !(gapAnalysis.matchedSkills?.length) &&
     jdData.requiredSkills?.length
   ) {
+    const matchedSet = new Set(matchedSkills.map((s: string) => String(s).toLowerCase()));
     for (const req of jdData.requiredSkills) {
       const name = req.name || req;
       const isMatch = matchedSet.has(String(name).toLowerCase());

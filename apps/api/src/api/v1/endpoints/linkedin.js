@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAuth } from "../../../core/security.js";
 import { llm } from "../../../ai/model.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
@@ -17,30 +18,28 @@ router.post("/optimize", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Resume text is required" });
     }
 
-    const extractedSkills = await extractSkills(resumeText);
-
-    const response = await llm
+    const extractedSkills = await extractSkills(resumeText);      const response = await llm
       .withStructuredOutput(
-        require("zod").z.object({
-          headline: require("zod")
-            .z.string()
+        z.object({
+          headline: z
+            .string()
             .describe("Optimized LinkedIn headline (max 220 chars)"),
-          about: require("zod")
-            .z.string()
+          about: z
+            .string()
             .describe("Optimized About/Summary section (max 2600 chars)"),
-          experienceBullets: require("zod")
-            .z.array(
-              require("zod").z.object({
-                role: require("zod").z.string(),
-                bullets: require("zod").z.array(require("zod").z.string()),
+          experienceBullets: z
+            .array(
+              z.object({
+                role: z.string(),
+                bullets: z.array(z.string()),
               }),
             )
             .describe("Optimized experience bullet points using XYZ formula"),
-          skills: require("zod")
-            .z.array(require("zod").z.string())
+          skills: z
+            .array(z.string())
             .describe("Top 10 skills to highlight"),
-          recommendations: require("zod")
-            .z.array(require("zod").z.string())
+          recommendations: z
+            .array(z.string())
             .describe("General LinkedIn optimization tips"),
         }),
       )

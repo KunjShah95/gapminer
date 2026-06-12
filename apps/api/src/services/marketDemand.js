@@ -5,6 +5,8 @@
 
 import { prisma } from "../core/database.js";
 import { predictMarketTrends } from "./transformerModels.js";
+import { searchJobs, extractSalaryRange } from "./jobBoardApi.js";
+import { getCache, setCache } from "./cacheService.js";
 
 /** @type {Record<string, Array<{ skill: string; baseDemand: number; trend: 'emerging' | 'stable' | 'declining' }>>} */
 export const SKILL_CATALOG = {
@@ -130,6 +132,7 @@ function catalogEntryForSkill(skillName) {
 export async function resolveSkillTrend(skillName, categoryHint) {
   const catalog = catalogEntryForSkill(skillName);
   if (catalog) {
+    const liveData = await enrichWithLiveData(catalog.skill).catch(() => null);
     return {
       skill: catalog.skill,
       category: catalog.category,
@@ -142,6 +145,11 @@ export async function resolveSkillTrend(skillName, categoryHint) {
         catalog.baseDemand,
       ),
       source: "catalog",
+      liveJobCount: liveData?.liveJobCount ?? 0,
+      salaryMin: liveData?.salaryRange?.min ?? 0,
+      salaryMedian: liveData?.salaryRange?.median ?? 0,
+      salaryMax: liveData?.salaryRange?.max ?? 0,
+      dataSource: liveData?.liveJobCount > 0 ? "adzuna" : "catalog",
     };
   }
 
@@ -160,6 +168,7 @@ export async function resolveSkillTrend(skillName, categoryHint) {
       const trend =
         u > 0.65 ? "emerging" : u > 0.25 ? "stable" : "declining";
       const demandScore = Math.round(55 + u * 40);
+      const liveData = await enrichWithLiveData(dbSkill.name).catch(() => null);
       return {
         skill: dbSkill.name,
         category: dbSkill.category?.name || categoryHint || "Technical Skills",
@@ -168,6 +177,11 @@ export async function resolveSkillTrend(skillName, categoryHint) {
         growthRate: growthRateForTrend(trend, dbSkill.name),
         historicalData: generateSkillTrendData(dbSkill.name, trend, demandScore),
         source: "database",
+        liveJobCount: liveData?.liveJobCount ?? 0,
+        salaryMin: liveData?.salaryRange?.min ?? 0,
+        salaryMedian: liveData?.salaryRange?.median ?? 0,
+        salaryMax: liveData?.salaryRange?.max ?? 0,
+        dataSource: liveData?.liveJobCount > 0 ? "adzuna" : "database",
       };
     }
   } catch {
@@ -177,6 +191,7 @@ export async function resolveSkillTrend(skillName, categoryHint) {
   const u = hashUnit(skillName);
   const trend = u > 0.6 ? "emerging" : u > 0.3 ? "stable" : "declining";
   const demandScore = Math.round(58 + u * 35);
+  const liveData = await enrichWithLiveData(skillName).catch(() => null);
   return {
     skill: skillName,
     category: categoryHint || "General",
@@ -185,6 +200,11 @@ export async function resolveSkillTrend(skillName, categoryHint) {
     growthRate: growthRateForTrend(trend, skillName),
     historicalData: generateSkillTrendData(skillName, trend, demandScore),
     source: "estimated",
+    liveJobCount: liveData?.liveJobCount ?? 0,
+    salaryMin: liveData?.salaryRange?.min ?? 0,
+    salaryMedian: liveData?.salaryRange?.median ?? 0,
+    salaryMax: liveData?.salaryRange?.max ?? 0,
+    dataSource: liveData?.liveJobCount > 0 ? "adzuna" : "estimated",
   };
 }
 
@@ -198,6 +218,7 @@ export async function getTopTrendingSkills(category, limit = 10) {
   for (const [cat, skills] of Object.entries(SKILL_CATALOG)) {
     if (category && category !== cat) continue;
     for (const skill of skills) {
+      const liveData = await enrichWithLiveData(skill.skill).catch(() => null);
       allSkills.push({
         skill: skill.skill,
         category: cat,
@@ -210,6 +231,9 @@ export async function getTopTrendingSkills(category, limit = 10) {
           skill.baseDemand,
         ),
         source: "catalog",
+        liveJobCount: liveData?.liveJobCount ?? 0,
+        salaryMedian: liveData?.salaryRange?.median ?? 0,
+        dataSource: liveData?.liveJobCount > 0 ? "adzuna" : "catalog",
       });
     }
   }
@@ -269,4 +293,40 @@ export async function getSkillTrendWithTransformer(skillName) {
   }
 
   return catalog;
+}
+
+/**
+ * Enrich skill trend data with live job posting counts from Adzuna.
+ * Results are cached for 6 hours.
+ */
+export async function enrichWithLiveData(skillName) {
+  const cacheKey = `live:${skillName.toLowerCase()}`;
+  const cached = await getCache(cacheKey);
+  if (cached) return cached;
+
+  const liveJobs = await searchJobs(skillName, "", 1);
+  const salaryRange = extractSalaryRange(liveJobs);
+  const jobCount = liveJobs.length;
+
+  const result = {
+    skill: skillName,
+    liveJobCount: jobCount,
+    salaryRange,
+    dataSource: jobCount > 0 ? "adzuna" : "estimated",
+    fetchedAt: new Date().toISOString(),
+  };
+
+  if (jobCount > 0) {
+    await setCache(cacheKey, result, 21600);
+  }
+
+  return result;
+}
+
+/**
+ * Get live job posting count for a skill from Adzuna.
+ */
+export async function getLiveJobCount(skillName) {
+  const enriched = await enrichWithLiveData(skillName);
+  return enriched.liveJobCount;
 }

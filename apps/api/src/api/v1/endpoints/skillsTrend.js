@@ -56,28 +56,31 @@ router.get('/trends', requireAuth, async (req, res, next) => {
         timeframe: months,
         dataSource: 'catalog+database+transformer',
         generatedAt: new Date().toISOString(),
+        });
+      }
+
+      // Otherwise return all trending skills (optionally filtered by category)
+      const trendingSkills = await getTopTrendingSkills(
+        category || undefined,
+        50 // Return more for filtering/display purposes
+      );
+
+      // Limit historical data to requested timeframe
+      const limitedTrends = trendingSkills.map(skill => ({
+        ...skill,
+        historicalData: skill.historicalData.slice(-months)
+      }));
+
+      const hasLiveData = limitedTrends.some(s => s.liveJobCount > 0);
+      const dataSourceStr = hasLiveData ? 'catalog+database+adzuna' : 'catalog+database';
+
+      return res.json({
+        skills: limitedTrends,
+        timeframe: months,
+        categories: [...new Set(limitedTrends.map((s) => s.category))],
+        dataSource: dataSourceStr,
+        generatedAt: new Date().toISOString(),
       });
-    }
-
-    // Otherwise return all trending skills (optionally filtered by category)
-    const trendingSkills = await getTopTrendingSkills(
-      category || undefined,
-      50 // Return more for filtering/display purposes
-    );
-
-    // Limit historical data to requested timeframe
-    const limitedTrends = trendingSkills.map(skill => ({
-      ...skill,
-      historicalData: skill.historicalData.slice(-months)
-    }));
-
-    return res.json({
-      skills: limitedTrends,
-      timeframe: months,
-      categories: [...new Set(limitedTrends.map((s) => s.category))],
-      dataSource: 'catalog+database',
-      generatedAt: new Date().toISOString(),
-    });
   } catch (err) {
     next(err);
   }

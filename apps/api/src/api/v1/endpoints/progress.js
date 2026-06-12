@@ -102,8 +102,8 @@ router.get(
       }
 
       const { rows: analyses } = await query(
-        "SELECT * FROM analyses WHERE id IN ($1, $2) AND user_id = $3",
-        [analysisId1, analysisId2, userId],
+        "SELECT * FROM analyses WHERE id = ANY($1::text[]) AND user_id = $2",
+        [[analysisId1, analysisId2], userId],
       );
 
       if (analyses.length < 2) {

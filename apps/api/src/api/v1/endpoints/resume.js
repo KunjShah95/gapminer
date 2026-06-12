@@ -1,5 +1,5 @@
-// Resume endpoints — mirrors app/api/endpoints/resumes.py + app/api/v1/endpoints/resume.py
-// Routes: POST /upload, GET /:id, DELETE /:id
+// Resume endpoints
+// Routes: POST /upload, GET /, GET /:id, GET /:id/status, DELETE /:id
 
 import { Router } from 'express';
 import multer from 'multer';
@@ -8,6 +8,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../../../core/database.js';
 import { requireAuth } from '../../../core/security.js';
+import { enqueueResumeParsing } from '../../../services/batchQueue.js';
 
 const router = Router();
 
@@ -52,23 +53,45 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res, next
     const resumeId = uuidv4();
     const fileUrl = `/uploads/${req.userId}/${req.file.filename}`;
     const fileType = req.file.mimetype;
+    const filePath = req.file.path;
 
-    // Persist to DB
+    // Persist to DB with pending parsing status
     await query(
-      `INSERT INTO resumes (id, user_id, filename, file_url, file_type, uploaded_at)
-       VALUES ($1,$2,$3,$4,$5,NOW())`,
+      `INSERT INTO resumes (id, user_id, filename, file_url, file_type, parsing_status, uploaded_at)
+       VALUES ($1,$2,$3,$4,$5,'pending',NOW())`,
       [resumeId, req.userId, req.file.originalname, fileUrl, fileType]
     );
 
-    // TODO: Queue parsing job (Bull/BullMQ / Redis)
+    // Enqueue parsing job (runs inline if Redis unavailable)
+    enqueueResumeParsing(resumeId, filePath, fileType).catch((err) => {
+      console.error(`Background parsing failed for resume ${resumeId}:`, err);
+    });
 
     return res.status(201).json({
       id: resumeId,
       filename: req.file.originalname,
       size_bytes: req.file.size,
-      status: 'uploaded',
-      message: 'Resume received and queued for parsing',
+      status: 'pending',
+      parsing_status: 'pending',
+      message: 'Resume uploaded and queued for parsing',
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── GET /resume/ — list all resumes for the current user ─────
+router.get('/', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, filename, file_url, file_type, parsing_status, uploaded_at
+       FROM resumes
+       WHERE user_id = $1
+       ORDER BY uploaded_at DESC
+       LIMIT 20`,
+      [req.userId]
+    );
+    return res.json(rows);
   } catch (err) {
     next(err);
   }
@@ -83,6 +106,44 @@ router.get('/:resumeId', requireAuth, async (req, res, next) => {
     );
     if (!rows[0]) return res.status(404).json({ error: 'Resume not found' });
     return res.json(rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── GET /resume/:resumeId/status — polling endpoint ──────────
+router.get('/:resumeId/status', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, filename, parsing_status, 
+              parsed_data IS NOT NULL as has_parsed_data,
+              uploaded_at
+       FROM resumes 
+       WHERE id = $1 AND user_id = $2`,
+      [req.params.resumeId, req.userId]
+    );
+    
+    if (!rows[0]) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    const r = rows[0];
+    const status = r.parsing_status;
+
+    return res.json({
+      id: r.id,
+      filename: r.filename,
+      status,
+      hasParsedData: r.has_parsed_data,
+      uploadedAt: r.uploaded_at,
+      // Provide human-readable status messages
+      message:
+        status === 'pending' ? 'Waiting in queue...' :
+        status === 'parsing' ? 'Extracting text and skills...' :
+        status === 'completed' ? 'Resume parsed successfully' :
+        status === 'failed' ? 'Parsing failed — please re-upload' :
+        'Unknown status',
+    });
   } catch (err) {
     next(err);
   }

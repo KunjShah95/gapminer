@@ -8,7 +8,7 @@ const router = Router();
 router.post("/:analysisId", requireAuth, async (req, res, next) => {
   try {
     const { analysisId } = req.params;
-    const { rating, comment, category } = req.body;
+    const { rating, comment } = req.body;
     const userId = req.userId;
 
     if (!rating || rating < 1 || rating > 5) {
@@ -16,9 +16,9 @@ router.post("/:analysisId", requireAuth, async (req, res, next) => {
     }
 
     await query(
-      `INSERT INTO feedback (id, analysis_id, user_id, rating, comment, category, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())`,
-      [analysisId, userId, rating, comment || null, category || null],
+      `INSERT INTO feedback (id, analysis_id, user_id, rating, comment, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
+      [analysisId, userId, rating, comment || null],
     );
 
     return res

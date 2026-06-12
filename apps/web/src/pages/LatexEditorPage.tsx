@@ -1,39 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "@/stores/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Play,
   Download,
   Save,
-  Settings,
   Sparkles,
-  History,
-  Search,
   Layout,
-  Sidebar,
-  ChevronRight,
-  ChevronLeft,
-  MoreHorizontal,
   Plus,
-  Trash2,
   Folder,
-  ExternalLink,
   Send,
   Bot,
   X,
+  PanelRightOpen,
+  PanelRightClose,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  SplitSquareHorizontal,
+  Undo2,
+  Redo2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import { materialDark } from "@uiw/codemirror-theme-material";
-import Latex from "react-latex-next";
-import "katex/dist/katex.min.css";
 import { useChat } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
-import { PageShell } from "@/components/ui";
 
-const INITIAL_LATEX = `\\documentclass{article}
+// ─── Initial LaTeX template (Overleaf-like) ────────────────
+const INITIAL_LATEX = `\\documentclass[11pt]{article}
 \\usepackage[utf8]{inputenc}
+\\usepackage{amsmath, amssymb, amsthm}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage{geometry}
+\\geometry{margin=1in}
 
 \\title{Software Engineering Career Roadmap}
 \\author{Gapminer AI}
@@ -46,78 +50,159 @@ const INITIAL_LATEX = `\\documentclass{article}
 \\section{Introduction}
 This document outlines my career progression strategy based on AI analysis of current market trends and my skill sets.
 
-\\section{Core Skills}
+\\subsection{Current Focus Areas}
 \\begin{itemize}
-    \\item Rust \\& Systems Programming
-    \\item WebAssembly
-    \\item gRPC \\& Backend Architecture
-    \\item Kubernetes
+    \\item Distributed Systems \\& Scalable Architecture
+    \\item Advanced Rust Programming
+    \\item Systems Programming with WebAssembly
+    \\item gRPC \\& Event-Driven Architecture
 \\end{itemize}
 
-\\section{Goal: Senior Staff Engineer}
-Focus on distributed systems and high-throughput networking.
+\\section{Career Objectives}
+
+\\subsection{Short-term (6 months)}
+\\begin{enumerate}
+    \\item Master Kubernetes operator patterns
+    \\item Contribute to an open-source Rust project
+    \\item Achieve AWS Solutions Architect certification
+\\end{enumerate}
+
+\\subsection{Long-term (2 years)}
+\\begin{enumerate}
+    \\item Lead distributed systems team
+    \\item Publish technical research on performance optimization
+    \\item Build a production-grade WebAssembly runtime
+\\end{enumerate}
+
+\\section{Skills Matrix}
+
+\\begin{tabular}{|l|c|c|}
+\\hline
+\\textbf{Skill} & \\textbf{Proficiency} & \\textbf{Priority} \\\\
+\\hline
+Rust & Advanced & High \\\\
+Kubernetes & Intermediate & High \\\\
+WebAssembly & Intermediate & Medium \\\\
+Distributed Systems & Advanced & High \\\\
+Machine Learning & Beginner & Low \\\\
+\\hline
+\\end{tabular}
+
+\\section{Learning Resources}
+\\begin{itemize}
+    \\item \\href{https://doc.rust-lang.org/book/}{The Rust Programming Language} - Official Book
+    \\item \\href{https://kubernetes.io/docs/}{Kubernetes Documentation} - CNCF
+    \\item \\href{https://webassembly.org/}{WebAssembly Specification} - W3C
+\\end{itemize}
 
 \\end{document}
 `;
 
-export default function LatexEditorPage() {
-  const [latex, setLatex] = useState(INITIAL_LATEX);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [showOptimizationPanel, setShowOptimizationPanel] = useState(false);
-  const [optimizationData, setOptimizationData] = useState<any>(null);
-  const [activeFile, setActiveFile] = useState("main.tex");
-  const [showAi, setShowAi] = useState(false);
-  const { id } = useParams<{ id: string }>();
-  const [isSaving, setIsSaving] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const draftStorageKey = id ? `gapminer-latex-draft:${id}` : "gapminer-latex-draft:default";
+// ─── File type for project explorer ─────────────────────────
+interface ProjectFile {
+  name: string;
+  isFolder?: boolean;
+  children?: ProjectFile[];
+  content?: string;
+}
 
-  // Load the current draft from local storage so editing works even when no backend draft exists.
+const DEFAULT_FILES: ProjectFile[] = [
+  { name: "main.tex", content: INITIAL_LATEX },
+  { name: "references.bib", content: "% Add your references here\n" },
+  { name: "images/", isFolder: true, children: [] },
+];
+
+// ─── Auto-save debounce ────────────────────────────────────
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
+// ─── Main Component ─────────────────────────────────────────
+export default function LatexEditorPage() {
+  const { id } = useParams<{ id: string }>();
+
+  // Editor state
+  const [latex, setLatex] = useState(INITIAL_LATEX);
+  const [previousLatex, setPreviousLatex] = useState(INITIAL_LATEX);
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [compileError, setCompileError] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showAi, setShowAi] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(true);
+  const [activeFile, setActiveFile] = useState("main.tex");
+  const [files] = useState<ProjectFile[]>(DEFAULT_FILES);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Array<{ line: number; message: string }>>([]);
+  const [showValidation, setShowValidation] = useState(false);
+
+  const draftStorageKey = id
+    ? `gapminer-latex-draft:${id}`
+    : "gapminer-latex-draft:default";
+
+  // ─── Load draft ──────────────────────────────────────────
   useEffect(() => {
     setPdfUrl(null);
-
+    setCompileError(null);
     try {
       const rawDraft = localStorage.getItem(draftStorageKey);
-      if (!rawDraft) {
-        setActiveFile(id ? `analysis-${id}.tex` : "main.tex");
-        return;
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft) as { latex?: string; activeFile?: string };
+      if (draft.latex) {
+        setLatex(draft.latex);
+        setPreviousLatex(draft.latex);
       }
-
-      const draft = JSON.parse(rawDraft) as {
-        latex?: string;
-        activeFile?: string;
-      };
-
-      if (draft.latex) setLatex(draft.latex);
       if (draft.activeFile) setActiveFile(draft.activeFile);
     } catch (err) {
       console.error("Draft load failed:", err);
     }
   }, [id]);
 
+  // ─── Cleanup PDF URL on unmount ─────────────────────────
   useEffect(() => {
     return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     };
   }, [pdfUrl]);
 
-  // Save draft locally so the editor remains usable without a backend save endpoint.
+  // ─── Auto-save with debounce ─────────────────────────────
+  const debouncedLatex = useDebounce(latex, 2000);
+
+  useEffect(() => {
+    if (debouncedLatex !== previousLatex) {
+      handleAutoSave();
+      setPreviousLatex(debouncedLatex);
+    }
+  }, [debouncedLatex]);
+
+  const handleAutoSave = () => {
+    try {
+      localStorage.setItem(
+        draftStorageKey,
+        JSON.stringify({ latex, activeFile, savedAt: new Date().toISOString() }),
+      );
+      setLastSaved(new Date());
+    } catch {
+      // Storage full - silent fail
+    }
+  };
+
+  // ─── Manual Save ─────────────────────────────────────────
   const handleSave = async () => {
     setIsSaving(true);
     try {
       localStorage.setItem(
         draftStorageKey,
-        JSON.stringify({
-          latex,
-          activeFile,
-          savedAt: new Date().toISOString(),
-        }),
+        JSON.stringify({ latex, activeFile, savedAt: new Date().toISOString() }),
       );
-      alert("Saved locally");
+      setLastSaved(new Date());
+      await new Promise((r) => setTimeout(r, 300)); // subtle feedback
     } catch (err) {
       console.error("Save failed:", err);
     } finally {
@@ -125,22 +210,31 @@ export default function LatexEditorPage() {
     }
   };
 
-  // Vercel AI SDK Integration
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({
-      api: "/api/v1/chat", // Unified API endpoint
-      initialMessages: [
-        {
-          id: "1",
-          role: "system",
-          content:
-            "You are an expert LaTeX assistant. Help the user write professional documents.",
-        },
-      ],
-    } as any) as any;
+  // ─── Vercel AI SDK Chat ──────────────────────────────────
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+  }: any = (useChat as any)({
+    api: "/api/v1/chat",
+    initialMessages: [
+      {
+        id: "1",
+        role: "system",
+        content:
+          "You are an expert LaTeX assistant integrated into a resume editor. Help the user write professional documents, fix LaTeX errors, generate sections, and suggest improvements. Be concise and provide LaTeX code snippets when helpful.",
+      },
+    ],
+  });
 
-  const handleCompile = async (latexSource = latex) => {
+  // ─── Compile LaTeX (returns generated URL or null) ────
+  const handleCompile = async (source = latex): Promise<string | null> => {
     setIsCompiling(true);
+    setCompileError(null);
+    setPdfUrl(null);
+
     try {
       const token = useAuthStore.getState().token;
       const response = await fetch("/api/v1/latex/compile", {
@@ -149,203 +243,296 @@ export default function LatexEditorPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ latexCode: latexSource }),
+        body: JSON.stringify({ latexCode: source }),
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setPdfUrl(url);
-        // Create a temporary link and trigger download
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${activeFile.replace(/\.tex$/i, "") || "resume"}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } else {
-        const error = await response.json();
-        console.error("Compilation failed:", error);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: "Compilation failed" }));
+        setCompileError(error.details || error.error || "Unknown compilation error");
+        return null;
       }
-    } catch (err) {
-      console.error("Compile system error:", err);
+
+      const contentType = response.headers.get("content-type") || "";
+      let url: string | null = null;
+
+      if (contentType.includes("application/pdf")) {
+        const blob = await response.blob();
+        url = URL.createObjectURL(blob);
+      } else if (contentType.includes("text/html")) {
+        const html = await response.text();
+        const blob = new Blob([html], { type: "text/html" });
+        url = URL.createObjectURL(blob);
+      }
+
+      if (url) setPdfUrl(url);
+      return url;
+    } catch (err: any) {
+      setCompileError(err.message || "Compilation system error");
+      return null;
     } finally {
       setIsCompiling(false);
     }
   };
 
-  const handleOptimizeATS = async () => {
-    setIsOptimizing(true);
+  // ─── Validate LaTeX ──────────────────────────────────────
+  const handleValidate = async () => {
     try {
-      const response = await fetch("/api/v1/agent/optimize", {
+      const token = useAuthStore.getState().token;
+      const response = await fetch("/api/v1/latex/validate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText: latex, // For now passing current latex, but ideally we'd pass raw resume content
-          jobDescriptionText:
-            "Senior Software Engineer with Rust and Distributed Systems expertise", // Mock for now
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ latexCode: latex }),
       });
       const data = await response.json();
-      if (data.status === "success") {
-        setOptimizationData(data.optimization);
-        setLatex(data.optimization.optimizedLatex);
-        setPdfUrl(null);
-        setShowOptimizationPanel(true);
+      if (data.errors) {
+        setValidationErrors(data.errors);
+        setShowValidation(true);
       }
-    } catch (err) {
-      console.error("Optimization failed:", err);
-    } finally {
-      setIsOptimizing(false);
+    } catch {
+      // Silent fail
     }
   };
 
+  // ─── Download PDF ────────────────────────────────────────
+  const handleDownload = async () => {
+    // If we already have a compiled URL, download it directly
+    if (pdfUrl) {
+      downloadBlob(pdfUrl, activeFile);
+      return;
+    }
+
+    // Compile first, then download from the returned URL
+    const compiledUrl = await handleCompile();
+    if (compiledUrl) {
+      downloadBlob(compiledUrl, activeFile);
+    }
+  };
+
+  // Helper: trigger a file download from a blob URL
+  const downloadBlob = (url: string, filename: string) => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename.replace(/\.tex$/i, "") || "resume"}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  // ─── Keyboard shortcuts ──────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        handleCompile();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [latex]);
+
+  // ─── Auto-compile on significant edit pause ──────────────
+  const autoCompileTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Use a ref to always have the latest latex value for async callbacks
+  const latexRef = useRef(latex);
+  latexRef.current = latex;
+
+  const handleLatexChange = useCallback((value: string) => {
+    setLatex(value);
+    setPdfUrl(null);
+    setCompileError(null);
+
+    // Auto-validate after 1.5s of no editing (reads from ref to avoid stale closure)
+    if (autoCompileTimeout.current) clearTimeout(autoCompileTimeout.current);
+    autoCompileTimeout.current = setTimeout(async () => {
+      try {
+        const token = useAuthStore.getState().token;
+        const response = await fetch("/api/v1/latex/validate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ latexCode: latexRef.current }),
+        });
+        const data = await response.json();
+        if (data.errors) {
+          setValidationErrors(data.errors);
+          setShowValidation(true);
+        }
+      } catch {
+        // Silent fail
+      }
+    }, 1500);
+  }, []);
+
+  // ─── Render ──────────────────────────────────────────────
   return (
-    <PageShell noPadding maxWidth="full" className="!p-0 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-    <div className="flex flex-col h-full bg-surface-container-low overflow-hidden font-body text-on-surface">
-      {/* ── Editor Toolbar ──────────────────────────────────── */}
-      <header className="h-14 border-b border-outline-variant/15 flex items-center justify-between px-6 bg-surface/50 backdrop-blur-md z-30 shrink-0">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#1a1a2e] overflow-hidden font-body text-[#e0e0e0]">
+      {/* ── Top Toolbar ───────────────────────────────────── */}
+      <header className="h-12 border-b border-white/5 flex items-center justify-between px-4 bg-[#1e1e2e]/95 backdrop-blur-md z-30 shrink-0 select-none">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="p-1.5 hover:bg-surface-container-high rounded-lg text-outline transition-colors"
+            className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white/80 transition-colors"
+            title="Toggle file sidebar"
           >
-            <Sidebar size={18} />
+            {showSidebar ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
           </button>
-          <div className="h-4 w-px bg-outline-variant/30"></div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-surface-container border border-outline-variant/10 rounded-xl">
-            <FileText size={14} className="text-primary" />
-            <span className="text-xs font-bold tracking-tight">
-              {activeFile}
+          <div className="h-4 w-px bg-white/10" />
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg">
+            <FileText size={12} className="text-[#6c5ce7]" />
+            <span className="text-xs font-medium text-white/70">{activeFile}</span>
+          </div>
+          {lastSaved && (
+            <span className="text-[10px] text-white/30 hidden sm:inline-flex items-center gap-1">
+              <CheckCircle2 size={10} className="text-green-400" />
+              Saved {lastSaved.toLocaleTimeString()}
             </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button className="p-1.5 hover:bg-surface-container-high rounded-lg text-outline transition-colors">
-              <History size={16} />
-            </button>
-            <button className="p-1.5 hover:bg-surface-container-high rounded-lg text-outline transition-colors">
-              <Search size={16} />
-            </button>
-          </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Validation indicator */}
+          {validationErrors.length > 0 && (
+            <button
+              onClick={() => setShowValidation(!showValidation)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-medium"
+            >
+              <AlertTriangle size={12} />
+              {validationErrors.length} issue{validationErrors.length > 1 ? "s" : ""}
+            </button>
+          )}
+
+          {/* AI Assistant toggle */}
           <button
             onClick={() => setShowAi(!showAi)}
             className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-xl font-bold text-xs transition-all border",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all border",
               showAi
-                ? "bg-primary/20 border-primary text-primary"
-                : "bg-surface-container border-outline-variant/10 text-on-surface-variant hover:border-primary/30",
+                ? "bg-[#6c5ce7]/20 border-[#6c5ce7]/40 text-[#6c5ce7]"
+                : "bg-white/5 border-white/10 text-white/50 hover:text-white/80 hover:border-white/20",
             )}
           >
             <Sparkles size={14} className={isLoading ? "animate-spin" : ""} />
-            AI Assistant
+            AI
           </button>
 
-          <button
-            onClick={handleOptimizeATS}
-            disabled={isOptimizing}
-            className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-xl font-bold text-xs transition-all border",
-              "bg-tertiary/10 border-tertiary/30 text-tertiary hover:bg-tertiary/20",
-            )}
-          >
-            <Bot size={14} className={isOptimizing ? "animate-spin" : ""} />
-            {isOptimizing ? "Optimizing..." : "Optimize for ATS"}
-          </button>
-          <div className="h-4 w-px bg-outline-variant/30"></div>
+          {/* Recompile */}
           <button
             onClick={() => handleCompile()}
             disabled={isCompiling}
-            className="flex items-center gap-2 px-5 py-2 primary-gradient text-on-primary-fixed rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white rounded-lg text-[11px] font-semibold transition-all disabled:opacity-50 shadow-lg shadow-[#6c5ce7]/20"
           >
-            <Play size={14} fill="currentColor" />
+            {isCompiling ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Play size={14} fill="currentColor" />
+            )}
             {isCompiling ? "Compiling..." : "Recompile"}
           </button>
+
+          {/* Save */}
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="p-2 glass border border-outline-variant/20 rounded-xl text-outline hover:text-primary transition-all flex items-center gap-2 px-3"
+            className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white/80 transition-all"
+            title="Save (Ctrl+S)"
           >
-            <Save size={18} className={isSaving ? "animate-pulse" : ""} />
-            <span className="text-[10px] font-black uppercase tracking-tight">
-              Save
-            </span>
+            <Save size={16} className={isSaving ? "animate-pulse" : ""} />
           </button>
-          <button className="p-2 glass border border-outline-variant/20 rounded-xl text-outline hover:text-primary transition-all">
-            <Download size={18} />
+
+          {/* Download PDF */}
+          <button
+            onClick={handleDownload}
+            className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white/80 transition-all"
+            title="Download PDF"
+          >
+            <Download size={16} />
+          </button>
+
+          {/* Toggle preview */}
+          <button
+            onClick={() => setShowPdfPreview(!showPdfPreview)}
+            className={cn(
+              "p-1.5 rounded-lg transition-all hidden lg:inline-flex",
+              showPdfPreview
+                ? "bg-[#6c5ce7]/10 text-[#6c5ce7]"
+                : "text-white/40 hover:text-white/80 hover:bg-white/5",
+            )}
+            title="Toggle preview"
+          >
+            <SplitSquareHorizontal size={16} />
           </button>
         </div>
       </header>
 
-      {/* ── Main Workspace Area ──────────────────────────────── */}
-      <div className="flex-grow flex overflow-hidden relative">
-        {/* Left Drawer (File Tree) */}
+      {/* ── Main Workspace ────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* ── Left File Sidebar ───────────────────────────── */}
         <AnimatePresence>
           {showSidebar && (
             <motion.aside
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
+              animate={{ width: 220, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
-              className="border-r border-outline-variant/15 bg-surface-container-low flex flex-col shrink-0"
+              className="border-r border-white/5 bg-[#16162a] flex flex-col shrink-0 overflow-hidden"
             >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-8 px-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-outline">
-                    Project Files
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/30">
+                    Files
                   </h3>
-                  <button className="p-1 text-primary hover:bg-primary/5 rounded">
-                    <Plus size={16} />
+                  <button className="p-1 hover:bg-white/5 rounded text-white/30 hover:text-white/60">
+                    <Plus size={14} />
                   </button>
                 </div>
-                <div className="space-y-1">
-                  {[
-                    { name: "main.tex", active: true },
-                    { name: "references.bib", active: false },
-                    { name: "resume.cls", active: false },
-                    { name: "images/", isFolder: true },
-                  ].map((file) => (
+                <div className="space-y-0.5">
+                  {files.map((file) => (
                     <div
                       key={file.name}
                       onClick={() => !file.isFolder && setActiveFile(file.name)}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-2.5 rounded-2xl cursor-pointer transition-all border border-transparent",
-                        file.active || file.name === activeFile
-                          ? "bg-primary/10 text-primary border-primary/20"
-                          : "text-on-surface-variant hover:bg-surface-container",
+                        "flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all text-sm",
+                        file.name === activeFile
+                          ? "bg-[#6c5ce7]/10 text-[#6c5ce7] border border-[#6c5ce7]/20"
+                          : "text-white/50 hover:bg-white/5 hover:text-white/80",
                       )}
                     >
                       {file.isFolder ? (
-                        <Folder size={16} />
+                        <Folder size={14} className="shrink-0" />
                       ) : (
-                        <FileText size={16} />
+                        <FileText size={14} className="shrink-0" />
                       )}
-                      <span className="text-sm font-semibold tracking-tight">
-                        {file.name}
-                      </span>
-                      {(file.active || file.name === activeFile) && (
-                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="text-xs truncate">{file.name}</span>
+                      {file.name === activeFile && (
+                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#6c5ce7]" />
                       )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="mt-auto p-6 border-t border-outline-variant/10">
-                <div className="glass bg-surface-container-high p-4 rounded-2xl border border-outline-variant/20">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Layout size={16} className="text-tertiary" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-outline">
-                      Document Info
+              {/* Document stats */}
+              <div className="mt-auto p-4 border-t border-white/5">
+                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Layout size={12} className="text-[#fd79a8]" />
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-white/30">
+                      Document
                     </span>
                   </div>
-                  <div className="text-[11px] font-medium text-on-surface-variant leading-relaxed">
-                    Lines: {latex.split("\n").length}
-                    <br />
-                    Words: {latex.trim() ? latex.trim().split(/\s+/).length : 0}
-                    <br />
-                    Chars: {latex.length}
+                  <div className="text-[10px] text-white/40 space-y-0.5 font-medium">
+                    <div>Lines: {latex.split("\n").length}</div>
+                    <div>Chars: {latex.length}</div>
+                    <div>Words: {latex.trim() ? latex.trim().split(/\s+/).length : 0}</div>
                   </div>
                 </div>
               </div>
@@ -353,342 +540,297 @@ export default function LatexEditorPage() {
           )}
         </AnimatePresence>
 
-        {/* Right Drawer (Optimization Panel) */}
-        <AnimatePresence>
-          {showOptimizationPanel && (
-            <motion.aside
-              initial={{ x: -400, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -400, opacity: 0 }}
-              className="absolute left-72 top-14 bottom-0 w-[400px] border-r border-outline-variant/15 bg-surface/95 backdrop-blur-3xl z-40 overflow-hidden shadow-2xl"
-            >
-              <div className="p-8 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="text-sm font-black tracking-tight skew-x-[-2deg]">
-                      ATS Optimization
-                    </h3>
-                    <p className="text-[10px] font-bold text-tertiary uppercase tracking-widest mt-1">
-                      Suggested Bullet Improvements
-                    </p>
+        {/* ── Editor Pane ─────────────────────────────────── */}
+        <section className={cn(
+          "flex flex-col min-w-0 transition-all duration-300",
+          showPdfPreview ? "flex-1 lg:w-1/2" : "flex-1",
+        )}>
+          {/* Validation errors bar */}
+          <AnimatePresence>
+            {showValidation && validationErrors.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="bg-amber-500/5 border-b border-amber-500/10 overflow-hidden"
+              >
+                <div className="p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      Validation Issues
+                    </span>
+                    <button
+                      onClick={() => setShowValidation(false)}
+                      className="text-white/30 hover:text-white/60"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setShowOptimizationPanel(false)}
-                    className="text-outline hover:text-on-surface transition-colors p-2"
-                  >
-                    <X size={18} />
-                  </button>
+                  {validationErrors.slice(0, 5).map((err, i) => (
+                    <div key={i} className="flex items-start gap-2 text-[11px]">
+                      <span className="text-amber-400 font-mono shrink-0">L{err.line}</span>
+                      <span className="text-white/60">{err.message}</span>
+                    </div>
+                  ))}
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                <div className="flex-grow overflow-auto custom-scrollbar space-y-6 pr-2">
-                  {optimizationData?.bulletPointImprovements.map(
-                    (imp: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="glass bg-surface-container-high p-5 rounded-3xl border border-outline-variant/10 group hover:border-tertiary/30 transition-all"
-                      >
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-5 h-5 rounded-lg bg-tertiary/20 flex items-center justify-center text-tertiary text-[10px] font-bold">
-                            {idx + 1}
-                          </div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-outline">
-                            Refinement Strategy
-                          </span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div>
-                            <div className="text-[9px] font-bold text-error/60 uppercase tracking-widest mb-1">
-                              Original
-                            </div>
-                            <div className="text-xs text-on-surface-variant italic opacity-60 leading-relaxed font-medium">
-                              "{imp.original}"
-                            </div>
-                          </div>
-
-                          <div className="h-px bg-outline-variant/10"></div>
-
-                          <div>
-                            <div className="text-[9px] font-bold text-success uppercase tracking-widest mb-1">
-                              Optimized
-                            </div>
-                            <div className="text-xs text-on-surface font-semibold leading-relaxed">
-                              "{imp.improved}"
-                            </div>
-                          </div>
-
-                          <div className="bg-tertiary/5 p-3 rounded-2xl border border-tertiary/10">
-                            <p className="text-[10px] text-tertiary font-medium leading-relaxed">
-                              <span className="font-black">RATIONALE:</span>{" "}
-                              {imp.reason}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
-
-                <div className="pt-6 mt-auto">
-                  <button
-                    onClick={() => {
-                      const optimizedLatex = optimizationData.optimizedLatex;
-                      setLatex(optimizedLatex);
-                      setPdfUrl(null);
-                      handleCompile(optimizedLatex);
-                    }}
-                    className="w-full py-4 bg-tertiary/20 border border-tertiary/30 text-tertiary rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-tertiary hover:text-on-tertiary transition-all"
-                  >
-                    Re-Apply Full Optimization
-                  </button>
-                </div>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* Middle Area (Editor) */}
-        <section className="flex-grow flex flex-col min-w-0 bg-[#263238] shadow-[inset_0_0_80px_rgba(0,0,0,0.2)]">
-          <div className="flex-grow overflow-auto custom-scrollbar">
+          {/* CodeMirror editor */}
+          <div className="flex-1 overflow-hidden bg-[#1e1e2e]">
             <CodeMirror
               value={latex}
               height="100%"
               theme={materialDark}
-              onChange={(value) => {
-                setLatex(value);
-                setPdfUrl(null);
-              }}
-              className="text-sm selection:bg-primary/30"
+              onChange={handleLatexChange}
+              className="text-sm"
               basicSetup={{
                 lineNumbers: true,
                 foldGutter: true,
                 dropCursor: true,
                 allowMultipleSelections: true,
                 indentOnInput: true,
+                bracketMatching: true,
+                closeBrackets: true,
+                autocompletion: true,
+                highlightActiveLine: true,
+                highlightSelectionMatches: true,
               }}
             />
           </div>
 
-          {/* AI Assistance Popover */}
-          <AnimatePresence>
-            {showAi && (
-              <motion.div
-                initial={{ y: 200, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 200, opacity: 0 }}
-                className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[600px] max-w-[90%] z-40"
-              >
-                <div className="glass bg-surface-container-highest/90 border border-primary/30 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl overflow-hidden">
-                  <div className="p-2 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-primary/5">
-                    <div className="flex items-center gap-3 py-3">
-                      <div className="w-8 h-8 rounded-xl primary-gradient flex items-center justify-center text-on-primary-fixed shadow-lg">
-                        <Bot size={16} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-black tracking-tight skew-x-[-2deg]">
-                          AI Writing Assistant
-                        </div>
-                        <div className="text-[9px] font-bold text-primary uppercase tracking-[0.2em] opacity-80">
-                          Connected to Vercel AI SDK
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowAi(false)}
-                      className="text-outline hover:text-on-surface transition-colors p-2"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-
-                  <div className="max-h-64 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                    {messages.length === 1 && (
-                      <div className="text-center py-8 text-on-surface-variant italic font-light opacity-60">
-                        Ask me to generate a section, fix errors, or suggest
-                        improvements...
-                      </div>
-                    )}
-                    {messages.slice(1).map((m: any) => (
-                      <div
-                        key={m.id}
-                        className={cn(
-                          "flex gap-4",
-                          m.role === "user" ? "flex-row-reverse" : "",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "max-w-[80%] p-4 rounded-3xl text-sm leading-relaxed",
-                            m.role === "user"
-                              ? "bg-primary text-on-primary shadow-lg shadow-primary/10 rounded-tr-sm"
-                              : "bg-surface-container-high border border-outline-variant/20 rounded-tl-sm text-on-surface-variant",
-                          )}
-                        >
-                          {m.role === "assistant" ? (
-                            <div className="prose prose-invert max-w-none prose-sm leading-relaxed">
-                              <Latex>{m.content}</Latex>
-                            </div>
-                          ) : (
-                            m.content
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {isLoading && (
-                      <div className="flex gap-4">
-                        <div className="bg-surface-container-high border border-outline-variant/20 p-4 rounded-3xl rounded-tl-sm animate-pulse">
-                          <div className="flex gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-bounce"></span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-bounce delay-75"></span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary/50 animate-bounce delay-150"></span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <form
-                    onSubmit={handleSubmit}
-                    className="p-4 bg-surface-container-low/50 border-t border-outline-variant/10"
-                  >
-                    <div className="relative">
-                      <input
-                        value={input}
-                        onChange={handleInputChange}
-                        placeholder="Draft a 'Technical Skills' section..."
-                        className="w-full bg-surface-container border border-outline-variant/20 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:border-primary/50 transition-all placeholder:text-outline/40 font-medium"
-                      />
-                      <button
-                        type="submit"
-                        className="absolute right-2 top-2 bottom-2 w-10 h-10 primary-gradient rounded-xl flex items-center justify-center text-on-primary shadow-lg hover:scale-105 active:scale-95 transition-all"
-                      >
-                        <Send size={18} />
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Status bar */}
+          <div className="h-7 bg-[#1a1a2e] border-t border-white/5 flex items-center justify-between px-4 text-[10px] text-white/30">
+            <div className="flex items-center gap-4">
+              <span>Ln {latex.split("\n").length}</span>
+              <span>UTF-8</span>
+              <span>LaTeX</span>
+            </div>
+            <div className="flex items-center gap-3">
+              {isSaving && <span className="text-[#6c5ce7]">Saving...</span>}
+              {lastSaved && !isSaving && (
+                <span className="text-green-400/60">Saved</span>
+              )}
+              <button onClick={handleSave} className="hover:text-white/60 transition-colors">
+                <Undo2 size={12} />
+              </button>
+              <button className="hover:text-white/60 transition-colors">
+                <Redo2 size={12} />
+              </button>
+            </div>
+          </div>
         </section>
 
-        {/* Right Area (Preview) */}
-        <section className="flex-grow flex flex-col bg-surface border-l border-outline-variant/20 relative">
-          {/* Preview Tab Header */}
-          <div className="h-10 px-4 border-b border-outline-variant/10 bg-surface-container-high flex items-center gap-2">
-            <div className="px-3 py-1 bg-surface rounded-t-lg border-x border-t border-outline-variant/10 text-[10px] font-bold text-primary flex items-center gap-2">
-              <Play size={10} />
-              PDF PREVIEW
-            </div>
-            <div className="h-4 w-px bg-outline-variant/20 mx-2"></div>
-            <button className="text-[10px] font-bold text-outline hover:text-on-surface transition-colors flex items-center gap-1">
-              LOGS
-            </button>
-          </div>
-
-          {/* Compilation Indicator */}
-          <AnimatePresence>
-            {isCompiling && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-surface/60 backdrop-blur-sm"
-              >
-                <div className="w-16 h-16 rounded-3xl bg-primary/20 flex items-center justify-center relative">
-                  <div className="absolute inset-0 border-2 border-primary rounded-3xl animate-ping opacity-25"></div>
-                  <Sparkles size={32} className="text-primary animate-pulse" />
+        {/* ── Preview Pane ────────────────────────────────── */}
+        <AnimatePresence>
+          {showPdfPreview && (
+            <motion.section
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "50%", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="border-l border-white/5 bg-[#1a1a2e] flex flex-col overflow-hidden hidden lg:flex"
+            >
+              {/* Preview header */}
+              <div className="h-10 px-4 border-b border-white/5 bg-white/[0.02] flex items-center gap-3 shrink-0">
+                <div className="px-3 py-1 bg-white/5 rounded-md text-[10px] font-medium text-[#6c5ce7] flex items-center gap-1.5 border border-white/5">
+                  <Play size={10} />
+                  PREVIEW
                 </div>
-                <div className="mt-6 text-center">
-                  <div className="text-sm font-black tracking-widest text-primary animate-pulse">
-                    GENERATING ARTIFACTS
-                  </div>
-                  <div className="text-[10px] font-bold text-outline uppercase tracking-widest mt-2">
-                    {activeFile} render in progress
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Preview Scrollable */}
-          <div
-            className={cn(
-              "flex-grow overflow-auto p-12 bg-surface-container-low transition-all duration-700",
-              isCompiling
-                ? "scale-[0.98] blur-sm grayscale-[0.5]"
-                : "scale-100",
-            )}
-          >
-            {pdfUrl ? (
-              <iframe
-                title="Compiled PDF preview"
-                src={pdfUrl}
-                className="mx-auto h-[calc(100vh-12rem)] w-[210mm] rounded-sm border border-outline-variant/10 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.1)]"
-              />
-            ) : (
-              <div className="mx-auto flex min-h-[297mm] w-[210mm] flex-col justify-between bg-white p-[25mm] text-black shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-sm border border-outline-variant/10 transform-gpu origin-top">
-                <div>
-                  <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-4">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500">PDF preview</p>
-                      <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Compile to render the document</h2>
-                    </div>
-                    <div className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                      Draft mode
-                    </div>
-                  </div>
-                  <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-6 text-slate-700">
-                    {latex}
-                  </pre>
+                {compileError && (
+                  <span className="text-[10px] text-red-400 flex items-center gap-1">
+                    <AlertTriangle size={10} />
+                    Error
+                  </span>
+                )}
+                <div className="ml-auto flex items-center gap-1">
+                  <button className="p-1 hover:bg-white/5 rounded text-white/30 hover:text-white/60">
+                    <ZoomOut size={14} />
+                  </button>
+                  <span className="text-[10px] text-white/30">100%</span>
+                  <button className="p-1 hover:bg-white/5 rounded text-white/30 hover:text-white/60">
+                    <ZoomIn size={14} />
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Preview zoom controls */}
-          <div className="absolute bottom-6 right-6 flex items-center gap-2 glass p-2 rounded-2xl border border-outline-variant/10 z-10 shadow-xl">
-            <button className="w-8 h-8 flex items-center justify-center text-outline hover:text-primary transition-colors">
-              <Settings size={16} />
-            </button>
-            <div className="h-4 w-px bg-outline-variant/30"></div>
-            <span className="text-[10px] font-black tracking-widest px-2 opacity-60 uppercase">
-              100% (FIT)
-            </span>
-            <div className="h-4 w-px bg-outline-variant/30"></div>
-            <button className="w-8 h-8 flex items-center justify-center text-outline hover:text-primary transition-colors">
-              <ExternalLink size={16} />
-            </button>
-          </div>
-        </section>
+              {/* Preview content */}
+              <div className="flex-1 overflow-auto bg-[#2c2c2c] flex items-start justify-center p-4">
+                {isCompiling ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-4">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-2xl bg-[#6c5ce7]/10 flex items-center justify-center">
+                        <Loader2 size={28} className="text-[#6c5ce7] animate-spin" />
+                      </div>
+                      <div className="absolute inset-0 border-2 border-[#6c5ce7]/30 rounded-2xl animate-ping opacity-20" />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs font-medium text-[#6c5ce7] animate-pulse">
+                        Compiling...
+                      </div>
+                      <div className="text-[10px] text-white/30 mt-1">Generating PDF</div>
+                    </div>
+                  </div>
+                ) : compileError ? (
+                  <div className="w-full max-w-[210mm] bg-[#1e1e2e] rounded-lg border border-red-500/20 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <AlertTriangle size={16} className="text-red-400" />
+                      <h3 className="text-sm font-semibold text-red-400">Compilation Error</h3>
+                    </div>
+                    <pre className="text-xs text-red-300/80 whitespace-pre-wrap font-mono leading-relaxed">
+                      {compileError}
+                    </pre>
+                    <p className="text-[10px] text-white/30 mt-4">
+                      Check your LaTeX syntax and try again.
+                    </p>
+                  </div>
+                ) : pdfUrl ? (
+                  <iframe
+                    title="PDF Preview"
+                    src={pdfUrl}
+                    className="w-[210mm] min-h-[297mm] rounded-sm bg-white shadow-2xl"
+                    style={{ border: "none" }}
+                  />
+                ) : (
+                  <div className="w-[210mm] min-h-[297mm] bg-white rounded-sm shadow-2xl p-[25mm] text-black">
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="w-16 h-16 rounded-full bg-[#6c5ce7]/10 flex items-center justify-center mb-6">
+                        <FileText size={32} className="text-[#6c5ce7]" />
+                      </div>
+                      <h2 className="text-xl font-bold text-gray-800 mb-2">Ready to Preview</h2>
+                      <p className="text-sm text-gray-500 max-w-sm">
+                        Click <strong className="text-[#6c5ce7]">Recompile</strong> or press{" "}
+                        <kbd className="px-2 py-0.5 bg-gray-100 rounded text-xs font-mono">
+                          Ctrl+Enter
+                        </kbd>{" "}
+                        to generate your PDF preview.
+                      </p>
+                      <button
+                        onClick={() => handleCompile()}
+                        className="mt-6 px-6 py-2.5 bg-[#6c5ce7] hover:bg-[#5a4bd1] text-white rounded-lg text-sm font-semibold transition-all shadow-lg"
+                      >
+                        Compile PDF
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ── AI Assistant Panel (Overlay) ─────────────────── */}
+        <AnimatePresence>
+          {showAi && (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              className="absolute bottom-0 left-0 right-0 z-40 h-[40vh] min-h-[300px]"
+            >
+              <div className="h-full bg-[#1e1e2e]/95 backdrop-blur-2xl border-t border-[#6c5ce7]/20 shadow-2xl flex flex-col rounded-t-2xl overflow-hidden">
+                {/* Header */}
+                <div className="px-6 py-3 border-b border-white/5 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-[#6c5ce7]/20 flex items-center justify-center">
+                      <Bot size={14} className="text-[#6c5ce7]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-white/90">AI Writing Assistant</div>
+                      <div className="text-[9px] text-white/30">Ask me to write or fix LaTeX</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAi(false)}
+                    className="p-1.5 hover:bg-white/5 rounded-lg text-white/30 hover:text-white/60"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {messages.length === 1 && (
+                    <div className="text-center py-8 text-white/30 italic text-xs">
+                      Ask me to generate a section, fix errors, or suggest improvements...
+                    </div>
+                  )}
+                  {messages.slice(1).map((m: any) => (
+                    <div key={m.id} className={cn("flex gap-3", m.role === "user" ? "flex-row-reverse" : "")}>
+                      <div
+                        className={cn(
+                          "max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed",
+                          m.role === "user"
+                            ? "bg-[#6c5ce7] text-white rounded-tr-sm"
+                            : "bg-white/5 border border-white/5 text-white/70 rounded-tl-sm",
+                        )}
+                      >
+                        {(m as any).content}
+                      </div>
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex gap-3">
+                      <div className="bg-white/5 border border-white/5 px-4 py-3 rounded-2xl rounded-tl-sm">
+                        <div className="flex gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#6c5ce7]/50 animate-bounce" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#6c5ce7]/50 animate-bounce delay-75" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#6c5ce7]/50 animate-bounce delay-150" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input */}
+                <form
+                  onSubmit={handleSubmit}
+                  className="px-4 py-3 border-t border-white/5 shrink-0"
+                >
+                  <div className="relative">
+                    <input
+                      value={input}
+                      onChange={handleInputChange}
+                      placeholder="Ask AI to write or fix LaTeX..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-4 pr-11 text-xs focus:outline-none focus:border-[#6c5ce7]/50 transition-all placeholder:text-white/20"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#6c5ce7] hover:bg-[#5a4bd1] rounded-lg flex items-center justify-center text-white transition-all"
+                    >
+                      <Send size={14} />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
+      {/* ── Styles ────────────────────────────────────────── */}
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(108,71,255,0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(108,71,255,0.2);
-        }
-        
         .cm-editor {
           height: 100% !important;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace !important;
+          font-size: 13px !important;
         }
         .cm-scroller {
-           scrollbar-width: thin;
-           scrollbar-color: rgba(108,71,255,0.1) transparent;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(108,92,231,0.15) transparent;
         }
+        .cm-scroller::-webkit-scrollbar { width: 6px; }
+        .cm-scroller::-webkit-scrollbar-track { background: transparent; }
+        .cm-scroller::-webkit-scrollbar-thumb { background: rgba(108,92,231,0.15); border-radius: 3px; }
+        .cm-scroller::-webkit-scrollbar-thumb:hover { background: rgba(108,92,231,0.3); }
+        .cm-gutters { background: #1a1a2e !important; border-right: 1px solid rgba(255,255,255,0.05) !important; }
+        .cm-activeLineGutter { background: rgba(108,92,231,0.1) !important; }
+        .cm-selectionBackground { background: rgba(108,92,231,0.2) !important; }
+        .cm-focused .cm-selectionBackground { background: rgba(108,92,231,0.3) !important; }
+        .cm-cursor { border-left-color: #6c5ce7 !important; }
+        .cm-matchingBracket { background: rgba(108,92,231,0.2) !important; outline: 1px solid rgba(108,92,231,0.4) !important; }
+        iframe { border: none; }
       `}</style>
     </div>
-    </PageShell>
   );
 }

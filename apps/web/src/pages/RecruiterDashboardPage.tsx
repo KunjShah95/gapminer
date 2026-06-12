@@ -347,10 +347,10 @@ export default function RecruiterDashboardPage() {
       </div>
 
       {/* ── Main Operations View ────────────────────────────── */}
-      <div className="flex-grow flex gap-8 overflow-hidden items-stretch">
+      <div className="flex-grow flex flex-col gap-8 overflow-hidden items-stretch lg:flex-row">
         <Card padding="lg" className="flex flex-grow flex-col overflow-hidden">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex gap-1 rounded-xl border border-outline-variant/15 bg-surface-container-low p-1">
+            <div className="flex gap-1 rounded-xl border border-outline-variant/15 bg-surface-container-low p-1 overflow-x-auto">
               {[
                 { id: "ranking", label: "Talent Ranking" },
                 { id: "jobs", label: "Managed Jobs" },
@@ -361,7 +361,7 @@ export default function RecruiterDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab(t.id)}
                   className={cn(
-                    "rounded-lg px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all",
+                    "rounded-lg px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all shrink-0",
                     activeTab === t.id
                       ? "primary-gradient text-on-primary-fixed shadow-lg shadow-primary/20"
                       : "text-on-surface-variant hover:text-on-surface",
@@ -382,7 +382,8 @@ export default function RecruiterDashboardPage() {
 
           <div className="flex-grow overflow-y-auto custom-scrollbar pr-4 -mr-4">
             {activeTab === "ranking" && (
-              <table className="w-full text-left border-separate border-spacing-y-3">
+              <div className="overflow-x-auto">
+              <table className="w-full text-left border-separate border-spacing-y-3 min-w-[600px]">
                 <thead>
                   <tr className="h-10">
                     <th className="text-[10px] font-black uppercase tracking-widest text-outline pl-4 opacity-50">
@@ -485,6 +486,7 @@ export default function RecruiterDashboardPage() {
                   </AnimatePresence>
                 </tbody>
               </table>
+              </div>
             )}
             {activeTab === "jobs" && (
               <div className="grid grid-cols-1 gap-4">
@@ -781,7 +783,7 @@ export default function RecruiterDashboardPage() {
               </div>
 
               <form onSubmit={createJob} className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input name="title" label="Position Title" required placeholder="e.g. Senior Rust Engineer" />
                   <Input name="company" label="Company" required placeholder="e.g. Acme Intelligence" />
                 </div>
@@ -900,10 +902,9 @@ export default function RecruiterDashboardPage() {
                             </Button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
+                      ))}              </tbody>
+                    </table>
+                  ) : (
                   <div className="py-20 text-center">
                     <Users size={48} className="mx-auto text-outline/20 mb-4" />
                     <p className="text-sm font-black text-outline uppercase tracking-widest">No applicants yet</p>

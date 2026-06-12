@@ -71,21 +71,14 @@ export async function initDb() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
-        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        CREATE TABLE IF NOT EXISTS notifications (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL REFERENCES users(id),
-          token TEXT UNIQUE NOT NULL,
-          expires_at TIMESTAMPTZ NOT NULL,
-          used_at TIMESTAMPTZ,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        );
-
-        CREATE TABLE IF NOT EXISTS email_verification_tokens (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL REFERENCES users(id),
-          token TEXT UNIQUE NOT NULL,
-          expires_at TIMESTAMPTZ NOT NULL,
-          used_at TIMESTAMPTZ,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'system',
+          read BOOLEAN NOT NULL DEFAULT FALSE,
+          link TEXT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
 
@@ -258,10 +251,69 @@ export async function initDb() {
           was_matched_count INTEGER NOT NULL DEFAULT 0,
           UNIQUE(user_id, skill_name)
         );
+
+        -- Developer Portal Tables
+        CREATE TABLE IF NOT EXISTS api_keys (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          key_hash TEXT UNIQUE NOT NULL,
+          key_prefix TEXT NOT NULL,
+          name TEXT NOT NULL,
+          permissions TEXT NOT NULL DEFAULT 'read',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          last_used_at TIMESTAMPTZ,
+          revoked_at TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+        CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+
+        CREATE TABLE IF NOT EXISTS api_key_usage (
+          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          api_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
+          endpoint TEXT NOT NULL,
+          method TEXT NOT NULL,
+          status_code INTEGER,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_api_key_usage_user_id ON api_key_usage(user_id);
+        CREATE INDEX IF NOT EXISTS idx_api_key_usage_created ON api_key_usage(created_at);
+
+        -- Cover Letter v2 Tables
+        CREATE TABLE IF NOT EXISTS cover_letter_templates (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          content TEXT NOT NULL,
+          tone TEXT NOT NULL DEFAULT 'professional',
+          target_role TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_cl_templates_user_id ON cover_letter_templates(user_id);
+
+        CREATE TABLE IF NOT EXISTS cover_letter_variants (
+          id TEXT PRIMARY KEY,
+          template_id TEXT NOT NULL REFERENCES cover_letter_templates(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          variant_name TEXT NOT NULL,
+          content TEXT NOT NULL,
+          tone TEXT NOT NULL,
+          job_url TEXT,
+          company_name TEXT,
+          job_title TEXT,
+          status TEXT NOT NULL DEFAULT 'draft',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_cl_variants_user_id ON cover_letter_variants(user_id);
+        CREATE INDEX IF NOT EXISTS idx_cl_variants_template ON cover_letter_variants(template_id);
       `);
 
       await client.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE resumes ADD COLUMN IF NOT EXISTS parsing_status TEXT NOT NULL DEFAULT 'pending';
+        ALTER TABLE resumes ADD COLUMN IF NOT EXISTS parsed_text TEXT;
+        CREATE INDEX IF NOT EXISTS idx_resumes_parsing_status ON resumes(parsing_status);
         ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_secret TEXT;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ;

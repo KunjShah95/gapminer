@@ -91,6 +91,11 @@ export const config = {
   // SERP API (for job searches)
   SERP_API_KEY: process.env.SERP_API_KEY || "",
 
+  // Adzuna (for job listings + salary data)
+  ADZUNA_APP_ID: process.env.ADZUNA_APP_ID || "",
+  ADZUNA_API_KEY: process.env.ADZUNA_API_KEY || "",
+  ADZUNA_COUNTRY: process.env.ADZUNA_COUNTRY || "gb",
+
   // OpenAI (for Whisper and GPT-4)
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
 
@@ -125,7 +130,10 @@ export const config = {
   STRIPE_PRICE_TEAMS_MONTHLY: process.env.STRIPE_PRICE_TEAMS_MONTHLY || "",
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:3000",
 
-  // SMTP (Email)
+  // Resend (Primary Email Provider)
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+
+  // SMTP (Email fallback)
   SMTP_HOST: process.env.SMTP_HOST || "",
   SMTP_PORT: process.env.SMTP_PORT || "587",
   SMTP_SECURE: process.env.SMTP_SECURE || "false",

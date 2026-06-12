@@ -1,5 +1,5 @@
 import express from 'express';
-import { scrapeJobDescription, searchJobListings, type JobDescriptionResult } from '../../../services/scraper.js';
+import { scrapeJobDescription, searchJobListings, searchGoogleJobs, type JobDescriptionResult } from '../../../services/scraper.js';
 import { requireAuth } from '../../../core/security.js';
 
 const router = express.Router();
@@ -38,6 +38,23 @@ router.post('/search', requireAuth, async (req, res) => {
     res.json({ results });
   } catch (err: any) {
     console.error('Search error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/google-jobs', requireAuth, async (req, res) => {
+  try {
+    const { query, limit } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const results = await searchGoogleJobs(query, limit || 10);
+
+    res.json({ results, source: 'google_jobs' });
+  } catch (err: any) {
+    console.error('Google Jobs search error:', err);
     res.status(500).json({ error: err.message });
   }
 });

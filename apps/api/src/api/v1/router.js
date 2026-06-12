@@ -16,7 +16,7 @@ import latexRouter from "./endpoints/latex.js";
 import coverLetterRouter from "./endpoints/coverLetter.js";
 import skillsTrendRouter from "./endpoints/skillsTrend.js";
 import recruiterRouter from "./endpoints/recruiter.js";
-
+import paymentsRouter from "./endpoints/payments.js";
 import transformerRouter from "./endpoints/transformers.js";
 import jobTrackerRouter from "./endpoints/jobTracker.js";
 import progressRouter from "./endpoints/progress.js";
@@ -27,6 +27,10 @@ import negotiationRoleplayRouter from "./endpoints/negotiationRoleplay.js";
 import recommendationsRouter from "./endpoints/recommendations.js";
 import aiModelsRouter from "./endpoints/aiModels.js";
 import careerRouter from "./endpoints/career.js";
+import notificationsRouter from "./endpoints/notifications.js";
+import adminRouter from "./endpoints/admin.js";
+import publicRouter from "./endpoints/public.js";
+import developerRouter from "./endpoints/developer.js";
 
 const router = Router();
 
@@ -47,7 +51,7 @@ router.use("/latex", latexRouter);
 router.use("/cover-letter", coverLetterRouter);
 router.use("/skills-trend", skillsTrendRouter);
 router.use("/recruiter", recruiterRouter);
-router.use("/payments", (await import("./endpoints/payments.js")).default);
+router.use("/payments", paymentsRouter);
 router.use("/transformers", transformerRouter);
 router.use("/jobs", jobTrackerRouter);
 router.use("/progress", progressRouter);
@@ -58,5 +62,9 @@ router.use("/negotiation-roleplay", negotiationRoleplayRouter);
 router.use("/recommendations", recommendationsRouter);
 router.use("/ai-models", aiModelsRouter);
 router.use("/career", careerRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/admin", adminRouter);
+router.use("/public", publicRouter);
+router.use("/developer", developerRouter);
 
 export default router;

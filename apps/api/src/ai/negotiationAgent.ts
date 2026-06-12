@@ -2,6 +2,7 @@ import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { z } from "zod";
 import { prisma } from "../core/database.js";
 import { getLlm } from "./gateway/agentHelper.js";
+import { searchJobs, extractSalaryRange } from "../services/jobBoardApi.js";
 
 const SalaryLookupSchema = z.object({
   benchmarks: z.array(z.object({
@@ -110,6 +111,31 @@ export async function lookupSalaryBenchmarks(
         location: location,
         yearsExperience: expBucket,
       }];
+    }
+  }
+
+  if (benchmarks.length === 0) {
+    const liveJobs = await searchJobs(roleTitle, "", 1);
+    if (liveJobs.length > 0) {
+      const range = extractSalaryRange(liveJobs);
+      if (range.sampleSize > 0) {
+        const expMult = yearsExperience < 3 ? 0.8 : yearsExperience < 5 ? 1.0 : yearsExperience < 10 ? 1.25 : 1.5;
+        const adjMedian = Math.round(range.median * expMult);
+        return [{
+          tier: "mid",
+          roleTitle,
+          location,
+          minSalary: Math.round(adjMedian * 0.8),
+          medianSalary: adjMedian,
+          maxSalary: Math.round(adjMedian * 1.3),
+          totalCompMin: Math.round(adjMedian * 0.9),
+          totalCompMedian: Math.round(adjMedian * 1.15),
+          totalCompMax: Math.round(adjMedian * 1.5),
+          yearsExperience: expBucket,
+          sampleSize: range.sampleSize,
+          dataSource: "adzuna",
+        }];
+      }
     }
   }
 
@@ -248,5 +274,32 @@ export async function getSalaryDataForRole(
     take: 5,
   });
 
-  return fallback;
+  if (fallback.length > 0) {
+    return fallback;
+  }
+
+  const liveJobs = await searchJobs(roleTitle, "", 1);
+  if (liveJobs.length > 0) {
+    const range = extractSalaryRange(liveJobs);
+    if (range.sampleSize > 0) {
+      const expMult = yearsExperience < 3 ? 0.8 : yearsExperience < 5 ? 1.0 : yearsExperience < 10 ? 1.25 : 1.5;
+      const adjMedian = Math.round(range.median * expMult);
+      return [{
+        tier: "mid",
+        roleTitle,
+        location,
+        minSalary: Math.round(adjMedian * 0.8),
+        medianSalary: adjMedian,
+        maxSalary: Math.round(adjMedian * 1.3),
+        totalCompMin: Math.round(adjMedian * 0.9),
+        totalCompMedian: Math.round(adjMedian * 1.15),
+        totalCompMax: Math.round(adjMedian * 1.5),
+        yearsExperience: expBucket,
+        sampleSize: range.sampleSize,
+        dataSource: "adzuna",
+      }];
+    }
+  }
+
+  return [];
 }

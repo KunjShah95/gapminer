@@ -266,9 +266,10 @@ export default function JobTrackerPage() {
         description="Track your job applications through the entire pipeline"
         icon={<Briefcase size={22} />}
         actions={
-          <Button onClick={() => setShowForm(true)}>
-            <Plus size={18} />
-            Add Application
+          <Button onClick={() => setShowForm(true)} className="text-xs sm:text-sm">
+            <Plus size={16} className="sm:size-[18px]" />
+            <span className="hidden sm:inline">Add Application</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         }
       />
@@ -415,7 +416,7 @@ export default function JobTrackerPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-3 pt-16 sm:items-center sm:p-4 backdrop-blur-sm"
             onClick={() => {
               setShowForm(false);
               setEditingJob(null);
@@ -425,7 +426,7 @@ export default function JobTrackerPage() {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              className="glass-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-6"
+              className="glass-card max-h-[85vh] w-full max-w-lg overflow-y-auto p-5 sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
@@ -444,7 +445,7 @@ export default function JobTrackerPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Company *"
                     type="text"
@@ -480,7 +481,7 @@ export default function JobTrackerPage() {
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Salary"
                     type="number"

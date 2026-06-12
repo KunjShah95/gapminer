@@ -10,6 +10,7 @@ export interface User {
   analysesLimit: number;
   twoFactorEnabled?: boolean;
   isVerified?: boolean;
+  role?: string;
 }
 
 // ─── Resume ───────────────────────────────────────────────────
@@ -272,4 +273,107 @@ export interface ChatResponse {
     outputTokens: number;
     totalTokens: number;
   };
+}
+
+// ─── Developer Portal ─────────────────────────────────────────
+export interface ApiKey {
+  id: string;
+  name: string;
+  maskedKey: string;
+  permissions: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+export interface ApiKeyUsage {
+  activeKeys: number;
+  totalRequests: number;
+  activeDays: number;
+  last30Days: number;
+}
+
+// ─── Public API ───────────────────────────────────────────────
+export interface PublicSkillData {
+  name: string;
+  category: string;
+  demandScore: number;
+  trend: "emerging" | "stable" | "declining";
+  source: string;
+}
+
+export interface SharedAnalysis {
+  analysis: {
+    id: string;
+    overallScore: number;
+    resumeStrength: number;
+    atsScore: number;
+    seniority: string;
+    createdAt: string;
+  };
+  user: {
+    name: string;
+    avatar?: string;
+  };
+  skillGaps: Array<{
+    skill: string;
+    category: string;
+    status: string;
+    severity: string;
+    marketDemand?: number;
+    score: number;
+  }>;
+}
+
+// ─── Resume Heatmap ───────────────────────────────────────────
+export interface HeatmapZone {
+  section: string;
+  label: string;
+  yStart: number;
+  yEnd: number;
+  attentionScore: number;
+  color: string;
+  keywordDensity: number;
+  keywordHits: number;
+  issues: Array<{
+    type: "parsing" | "keyword_gap" | "formatting" | "density";
+    severity: "high" | "medium" | "low";
+    message: string;
+  }>;
+}
+
+export interface HeatmapResult {
+  zones: HeatmapZone[];
+  overallAttentionScore: number;
+  coldZoneCount: number;
+  hotZoneCount: number;
+  summary: string;
+}
+
+// ─── Cover Letter v2 ──────────────────────────────────────────
+export interface CoverLetterTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  content: string;
+  tone: "professional" | "enthusiastic" | "casual";
+  targetRole?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoverLetterVariant {
+  id: string;
+  templateId: string;
+  variantName: string;
+  content: string;
+  tone: string;
+  companyName?: string;
+  jobTitle?: string;
+  status: "draft" | "sent" | "rejected" | "interview";
+  createdAt: string;
+}
+
+export interface TailorResult {
+  variants: CoverLetterVariant[];
+  highlights: string[];
 }

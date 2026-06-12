@@ -1,5 +1,6 @@
 // Email service for sending transactional emails
-// Supports password reset, 2FA, account verification
+// Supports: Resend (preferred), SMTP (fallback), Console (dev fallback)
+// Password reset, 2FA, account verification
 
 import nodemailer from "nodemailer";
 import { config } from "./config.js";
@@ -14,11 +15,41 @@ export function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+// ─── Resend (primary provider) ────────────────────────────────
+
+async function sendViaResend({ to, subject, html, text }) {
+  if (!config.RESEND_API_KEY) return null;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${config.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `GapMiner <${config.SMTP_FROM || "noreply@gapminer.com"}>`,
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => "");
+    throw new Error(`Resend API error (${response.status}): ${errBody}`);
+  }
+
+  const data = await response.json();
+  return { messageId: data.id };
+}
+
+// ─── SMTP (secondary provider) ────────────────────────────────
 const hasSmtpConfig = Boolean(
   config.SMTP_HOST && config.SMTP_USER && config.SMTP_PASS,
 );
 
-const transporter = hasSmtpConfig
+const smtpTransporter = hasSmtpConfig
   ? nodemailer.createTransport({
       host: config.SMTP_HOST,
       port: parseInt(config.SMTP_PORT || "587", 10),
@@ -33,10 +64,31 @@ const transporter = hasSmtpConfig
 const fromEmail = config.SMTP_FROM || "noreply@gapminer.com";
 
 async function sendOrLog(message) {
-  if (transporter) {
-    return transporter.sendMail(message);
+  // 1. Try Resend first (best deliverability, no SMTP config needed)
+  if (config.RESEND_API_KEY) {
+    try {
+      return await sendViaResend(message);
+    } catch (err) {
+      console.warn("[email] Resend failed, trying SMTP:", err.message);
+    }
   }
 
+  // 2. Fallback to SMTP
+  if (smtpTransporter) {
+    try {
+      return await smtpTransporter.sendMail({
+        from: `GapMiner <${fromEmail}>`,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+      });
+    } catch (err) {
+      console.warn("[email] SMTP failed, logging to console:", err.message);
+    }
+  }
+
+  // 3. Dev fallback: log to console
   const link =
     message?.html?.match(/https?:\/\/[^"'\s<]+/)?.[0] || message?.text || "";
   console.log(`[email:fallback] ${message.subject} -> ${message.to}`);
@@ -50,7 +102,6 @@ export async function sendPasswordResetEmail(email, resetToken) {
   const resetUrl = `${config.FRONTEND_URL || "http://localhost:3000"}/auth?mode=reset&token=${resetToken}`;
 
   return sendOrLog({
-    from: `GapMiner <${fromEmail}>`,
     to: email,
     subject: "Reset your GapMiner password",
     html: `
@@ -74,7 +125,6 @@ export async function sendVerificationEmail(email, verificationToken) {
   const verifyUrl = `${config.FRONTEND_URL || "http://localhost:3000"}/auth/verify-email?token=${verificationToken}`;
 
   return sendOrLog({
-    from: `GapMiner <${fromEmail}>`,
     to: email,
     subject: "Verify your GapMiner email",
     html: `
@@ -95,7 +145,6 @@ export async function sendVerificationEmail(email, verificationToken) {
 
 export async function sendTwoFactorCodeEmail(email, code) {
   return sendOrLog({
-    from: `GapMiner <${fromEmail}>`,
     to: email,
     subject: "Your GapMiner 2FA code",
     html: `
@@ -115,7 +164,6 @@ export async function sendTwoFactorCodeEmail(email, code) {
 
 export async function sendPasswordChangedEmail(email) {
   return sendOrLog({
-    from: `GapMiner <${fromEmail}>`,
     to: email,
     subject: "Your GapMiner password has been changed",
     html: `
@@ -131,4 +179,4 @@ export async function sendPasswordChangedEmail(email) {
   });
 }
 
-export default transporter;
+export default smtpTransporter;

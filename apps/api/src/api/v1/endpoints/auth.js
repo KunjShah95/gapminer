@@ -38,6 +38,7 @@ function serializeUser(user) {
     targetRole: user.target_role ?? user.targetRole ?? null,
     topSkills: user.top_skills ?? user.topSkills ?? null,
     linkedInUrl: user.linked_in_url ?? user.linkedInUrl ?? null,
+    role: user.role ?? "USER",
   };
 }
 

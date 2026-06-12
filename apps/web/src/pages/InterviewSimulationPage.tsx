@@ -332,7 +332,7 @@ export default function InterviewSimulationPage() {
         </section>
 
         {/* Right Side: Transcript & Real-time Feedback */}
-        <aside className="w-[400px] flex flex-col gap-6 shrink-0 z-10">
+        <aside className="w-full max-w-[400px] flex flex-col gap-6 shrink-0 z-10 lg:w-[400px]">
           <div className="flex-grow flex flex-col border border-white/5 bg-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
             <div className="p-8 border-b border-white/5 flex items-center justify-between">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">

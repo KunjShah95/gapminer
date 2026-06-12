@@ -179,6 +179,51 @@ export async function searchJobListings(
   }
 }
 
+export async function searchGoogleJobs(
+  query: string,
+  limit: number = 10,
+): Promise<JobDescriptionResult[]> {
+  if (!config.SERP_API_KEY) {
+    console.warn("SERP_API_KEY not configured");
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://serpapi.com/search.json?engine=google_jobs&q=${encodeURIComponent(query)}&hl=en&api_key=${config.SERP_API_KEY}`,
+    );
+
+    if (!response.ok) {
+      console.error("Google Jobs SERP API error:", response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const results: JobDescriptionResult[] = [];
+
+    if (data.jobs_results) {
+      for (const job of data.jobs_results.slice(0, limit)) {
+        results.push({
+          title: job.title || "Unknown Title",
+          company: job.company_name || "Unknown Company",
+          location: job.location || "Not Specified",
+          description: job.description || job.snippet || "",
+          requirements: job.requirements || [],
+          benefits: job.benefits || [],
+          salary: job.salary || undefined,
+          url: job.related_links?.[0]?.link || job.detected_extensions?.posted_at || "",
+          source: "serp",
+        });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Google Jobs search error:", error);
+    return [];
+  }
+}
+
 async function fallbackScrape(
   url: string,
 ): Promise<JobDescriptionResult | null> {

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import PublicLayout from "@/components/public/PublicLayout";
 import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
@@ -26,12 +27,15 @@ import NegotiationRoleplayPage from "@/pages/NegotiationRoleplayPage";
 import RecommendationsPage from "@/pages/RecommendationsPage";
 import MarketDemandPage from "@/pages/MarketDemandPage";
 import CareerPathPage from "@/pages/CareerPathPage";
+import ChatPage from "@/pages/ChatPage";
+import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import DeveloperPortalPage from "@/pages/DeveloperPortalPage";
 import AppLayout from "@/layouts/AppLayout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/auth" replace />;
-  return <>{children}</>;
+  return <ErrorBoundary>{children}</ErrorBoundary>;
 }
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
@@ -233,6 +237,30 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <CareerPathPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dev"
+          element={
+            <ProtectedRoute>
+              <DeveloperPortalPage />
             </ProtectedRoute>
           }
         />

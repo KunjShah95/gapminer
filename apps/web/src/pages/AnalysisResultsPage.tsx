@@ -13,6 +13,9 @@ import {
   Users,
   Zap,
   BarChart2,
+  Thermometer,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   PolarAngleAxis,
@@ -31,6 +34,7 @@ import {
   Button,
   Badge,
 } from "@/components/ui";
+import ResumeHeatmap from "@/components/ats/ResumeHeatmap";
 import { cn } from "@/lib/utils";
 
 type AnalysisResults = {
@@ -393,6 +397,26 @@ export default function AnalysisResultsPage() {
             </Button>
           </div>
         </Card>
+
+        {/* Resume Heatmap Section */}
+        <div className="mt-6">
+          <details className="group">
+            <summary className="flex cursor-pointer items-center gap-3 rounded-xl bg-surface-container-low p-4 transition-all hover:bg-surface-container-high">
+              <Thermometer className="h-5 w-5 text-primary" />
+              <span className="font-bold text-on-surface">Resume Attention Heatmap</span>
+              <span className="ml-auto text-xs text-on-surface-variant">
+                <ChevronDown className="h-4 w-4 group-open:hidden" />
+                <ChevronUp className="hidden h-4 w-4 group-open:block" />
+              </span>
+            </summary>
+            <div className="mt-4">
+              <ResumeHeatmap
+                resumeText={results.resumeData || ""}
+                jdKeywords={[...results.missingSkills, ...results.matchedSkills]}
+              />
+            </div>
+          </details>
+        </div>
       </PageShell>
     </ProtectedRoute>
   );

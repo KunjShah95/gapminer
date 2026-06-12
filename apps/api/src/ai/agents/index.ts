@@ -6,3 +6,6 @@ export { benchStrengthAgentNode } from "./bench.js";
 export { interviewEvaluationAgentNode } from "./eval.js";
 export { insightAgentNode } from "./insights.js";
 export { atsOptimizationAgentNode } from "./ats.js";
+export { coverLetterAgentNode } from "./coverLetter.js";
+export { marketTrendAgentNode } from "./marketTrend.js";
+export { skillProficiencyAgentNode } from "./skillProficiency.js";

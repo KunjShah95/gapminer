@@ -18,6 +18,9 @@ import {
   BarChart3,
   Info,
   Loader2,
+  DollarSign,
+  Briefcase,
+  Radio,
 } from "lucide-react";
 import { getAuthToken } from "@/lib/authFetch";
 import DataSourceBadge from "@/components/market/DataSourceBadge";
@@ -42,6 +45,11 @@ type TrendRow = {
   demandScore: number;
   growthRate?: number;
   source?: string;
+  liveJobCount?: number;
+  salaryMin?: number;
+  salaryMedian?: number;
+  salaryMax?: number;
+  dataSource?: string;
 };
 
 const CHART_GRID = "rgba(148, 163, 184, 0.12)";
@@ -52,6 +60,12 @@ function normalizeTrendFilter(t: TrendRow): "emerging" | "stable" | "declining" 
   if (dir.includes("emerging") || dir === "emerging") return "emerging";
   if (dir.includes("declining") || dir === "declining") return "declining";
   return "stable";
+}
+
+function formatSalary(n: number): string {
+  if (!n || n === 0) return "";
+  if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
+  return `$${n}`;
 }
 
 export default function MarketDemandPage() {
@@ -122,11 +136,20 @@ export default function MarketDemandPage() {
           demandScore: s.demandScore,
           growthRate: s.growthRate,
           source: s.source,
+          liveJobCount: s.liveJobCount ?? 0,
+          salaryMin: s.salaryMin ?? 0,
+          salaryMedian: s.salaryMedian ?? 0,
+          salaryMax: s.salaryMax ?? 0,
+          dataSource: s.dataSource,
         }));
         setTrends(rows);
         setDataSource(data.dataSource || "catalog+database");
+
+        const hasLive = rows.some(r => r.liveJobCount > 0);
         setDisclaimer(
-          "Scores use the curated skill catalog and your taxonomy — not live job-board feeds.",
+          hasLive
+            ? "Live job posting counts from Adzuna — updated every 6 hours."
+            : "Scores use the curated skill catalog and taxonomy — not live job-board feeds.",
         );
         return;
       }
@@ -172,6 +195,8 @@ export default function MarketDemandPage() {
         )
       : 0;
 
+  const totalLiveJobs = trends.reduce((sum, t) => sum + (t.liveJobCount || 0), 0);
+
   const chartData = trends
     .sort((a, b) => b.demandScore - a.demandScore)
     .slice(0, 10)
@@ -184,7 +209,7 @@ export default function MarketDemandPage() {
     <PageShell maxWidth="2xl">
       <PageHeader
         title="Market Demand Dashboard"
-        description="Skill demand from catalog, taxonomy, and embedding signals"
+        description="Skill demand from catalog, taxonomy, embedding signals, and live job boards"
         icon={<Globe size={22} />}
         actions={
           <Button
@@ -224,7 +249,7 @@ export default function MarketDemandPage() {
         </Card>
       )}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
         <StatCard label="Avg demand" value={`${avgDemand}%`} icon={<BarChart3 size={18} />} />
         <StatCard
           label="Hot (70%+)"
@@ -243,6 +268,12 @@ export default function MarketDemandPage() {
           value={decliningSkills.length}
           sub="Cooling demand"
           icon={<ArrowDownRight size={18} />}
+        />
+        <StatCard
+          label="Live job postings"
+          value={totalLiveJobs.toLocaleString()}
+          sub="From Adzuna"
+          icon={<Radio size={18} />}
         />
       </div>
 
@@ -297,20 +328,36 @@ export default function MarketDemandPage() {
           {hotSkills.length > 0 ? (
             <div className="space-y-3">
               {hotSkills.slice(0, 8).map((skill) => (
-                <div key={skill.skill} className="flex items-center gap-3">
-                  <span className="w-24 truncate text-sm font-medium text-on-surface">
-                    {skill.skill}
-                  </span>
-                  <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-container-high">
-                    <div
-                      className="h-full rounded-full primary-gradient"
-                      style={{ width: `${skill.demandScore}%` }}
-                    />
+                <div key={skill.skill} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <span className="w-24 truncate text-sm font-medium text-on-surface">
+                      {skill.skill}
+                    </span>
+                    <div className="h-3 flex-1 overflow-hidden rounded-full bg-surface-container-high">
+                      <div
+                        className="h-full rounded-full primary-gradient"
+                        style={{ width: `${skill.demandScore}%` }}
+                      />
+                    </div>
+                    <span className="w-10 text-right text-sm font-bold text-on-surface">
+                      {skill.demandScore}%
+                    </span>
+                    <DataSourceBadge source={skill.source} />
                   </div>
-                  <span className="w-10 text-right text-sm font-bold text-on-surface">
-                    {skill.demandScore}%
-                  </span>
-                  <DataSourceBadge source={skill.source} />
+                  {skill.liveJobCount > 0 && (
+                    <div className="flex items-center gap-4 pl-28 text-xs text-on-surface-variant">
+                      <span className="flex items-center gap-1">
+                        <Briefcase size={12} />
+                        {skill.liveJobCount} live jobs
+                      </span>
+                      {skill.salaryMedian > 0 && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign size={12} />
+                          {formatSalary(skill.salaryMedian)} median
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -330,13 +377,29 @@ export default function MarketDemandPage() {
             {emergingSkills.map((skill) => (
               <div
                 key={skill.skill}
-                className="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3"
+                className="flex flex-col gap-1 rounded-xl border border-primary/20 bg-primary/5 p-3"
               >
-                <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
-                <div className="flex items-center gap-2">
-                  <DataSourceBadge source={skill.source} />
-                  <span className="text-sm font-bold text-primary">{skill.demandScore}%</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
+                  <div className="flex items-center gap-2">
+                    <DataSourceBadge source={skill.source} />
+                    <span className="text-sm font-bold text-primary">{skill.demandScore}%</span>
+                  </div>
                 </div>
+                {skill.liveJobCount > 0 && (
+                  <div className="flex items-center gap-4 text-xs text-on-surface-variant">
+                    <span className="flex items-center gap-1">
+                      <Briefcase size={12} />
+                      {skill.liveJobCount} live jobs
+                    </span>
+                    {skill.salaryMedian > 0 && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign size={12} />
+                        {formatSalary(skill.salaryMedian)} median
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {emergingSkills.length === 0 && (
@@ -354,13 +417,29 @@ export default function MarketDemandPage() {
             {decliningSkills.map((skill) => (
               <div
                 key={skill.skill}
-                className="flex items-center justify-between rounded-xl border border-error/20 bg-error/5 p-3"
+                className="flex flex-col gap-1 rounded-xl border border-error/20 bg-error/5 p-3"
               >
-                <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
-                <div className="flex items-center gap-2">
-                  <DataSourceBadge source={skill.source} />
-                  <span className="text-sm font-bold text-error">{skill.demandScore}%</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-on-surface">{skill.skill}</span>
+                  <div className="flex items-center gap-2">
+                    <DataSourceBadge source={skill.source} />
+                    <span className="text-sm font-bold text-error">{skill.demandScore}%</span>
+                  </div>
                 </div>
+                {skill.liveJobCount > 0 && (
+                  <div className="flex items-center gap-4 text-xs text-on-surface-variant">
+                    <span className="flex items-center gap-1">
+                      <Briefcase size={12} />
+                      {skill.liveJobCount} live jobs
+                    </span>
+                    {skill.salaryMedian > 0 && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign size={12} />
+                        {formatSalary(skill.salaryMedian)} median
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {decliningSkills.length === 0 && (

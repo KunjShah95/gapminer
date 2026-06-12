@@ -216,6 +216,6 @@ export async function buildModel(cfg: ProviderConfig): Promise<BaseChatModel> {
     case "openai-compatible":
       return buildOpenAICompatible(cfg);
     default:
-      throw new Error(`[gateway] Unknown provider: ${(cfg as any).provider}`);
+      throw new Error(`[gateway] Unknown provider: ${(cfg as Record<string, any>).provider}`);
   }
 }

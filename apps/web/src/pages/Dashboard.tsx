@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
-import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import OnboardingChecklist from "@/components/onboarding/OnboardingChecklist";
 import {
   Clock,
@@ -93,8 +92,7 @@ export default function Dashboard() {
   const { user } = useAuthStore();
   const [analyses, setAnalyses] = useState<DashboardAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
-  const { wizardCompleted, completeStep } = useOnboardingStore();
-  const showWizard = !wizardCompleted && !loading && analyses.length === 0;
+  const { completeStep } = useOnboardingStore();
 
   useEffect(() => {
     async function fetchAnalyses() {
@@ -135,7 +133,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <OnboardingWizard open={showWizard} />
       <PageShell>
         <PageHeader
           icon={<LayoutDashboard size={22} />}
@@ -324,8 +321,8 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {loading ? (
                   <div className="h-16 animate-pulse rounded-xl bg-surface-container" />
-                ) : (analyses[0] as any)?.top_gaps?.length > 0 ? (
-                  (analyses[0] as any).top_gaps.map((gap: any, i: number) => (
+                ) : analyses.length > 0 && (analyses[0] as Record<string, any>)?.top_gaps?.length > 0 ? (
+                  (analyses[0] as Record<string, any>).top_gaps.map((gap: Record<string, any>, i: number) => (
                     <div key={i} className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <div
