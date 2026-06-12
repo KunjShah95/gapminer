@@ -241,7 +241,8 @@ export default function JobTrackerPage() {
   const filteredJobs = jobs.filter(
     (job) =>
       job.company.toLowerCase().includes(search.toLowerCase()) ||
-      job.role.toLowerCase().includes(search.toLowerCase()),
+      job.role.toLowerCase().includes(search.toLowerCase()) ||
+      (job.notes || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const groupedJobs = STATUSES.reduce(

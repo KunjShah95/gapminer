@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import OnboardingChecklist from "@/components/onboarding/OnboardingChecklist";
@@ -14,14 +14,33 @@ import {
   History as HistoryIcon,
   Award,
   LayoutDashboard,
+  TrendingUp,
+  BarChart3,
+  Search,
+  ChevronRight,
+  BookOpen,
+  Briefcase,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import {
   PageShell,
   PageHeader,
   Card,
   Badge,
   StatCard,
+  EmptyState,
+  Button,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +49,8 @@ interface DashboardAnalysis {
   status: string;
   overall_score: number;
   created_at: string;
+  job_title?: string;
+  company?: string;
 }
 
 function ScoreCircle({ score }: { score: number | undefined }) {
@@ -93,6 +114,73 @@ export default function Dashboard() {
   const [analyses, setAnalyses] = useState<DashboardAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const { completeStep } = useOnboardingStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
+  const [dateFilter, setDateFilter] = useState(searchParams.get("days") || "all");
+  const [textFilter, setTextFilter] = useState(searchParams.get("q") || "");
+
+  const filteredAnalyses = useMemo(() => {
+    return analyses.filter((a) => {
+      if (statusFilter !== "all" && a.status !== statusFilter) return false;
+      if (dateFilter !== "all") {
+        const days = parseInt(dateFilter);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        if (new Date(a.created_at) < cutoff) return false;
+      }
+      if (textFilter) {
+        const q = textFilter.toLowerCase();
+        const title = (a.job_title || "").toLowerCase();
+        const company = (a.company || "").toLowerCase();
+        if (!title.includes(q) && !company.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [analyses, statusFilter, dateFilter, textFilter]);
+
+  const handleFilterChange = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value && value !== "all") {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    setSearchParams(params, { replace: true });
+    if (key === "status") setStatusFilter(value);
+    if (key === "days") setDateFilter(value);
+    if (key === "q") setTextFilter(value);
+  };
+
+  const getWeekData = (items: DashboardAnalysis[]) => {
+    const weeks: { name: string; count: number }[] = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() - i * 7 + 1);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      const label = weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const count = items.filter((a) => {
+        const d = new Date(a.created_at);
+        return d >= weekStart && d < weekEnd;
+      }).length;
+      weeks.push({ name: label, count });
+    }
+    return weeks;
+  };
+
+  const skillGrowthData = useMemo(() => {
+    return [...analyses]
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .map((a) => ({
+        date: new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        score: a.overall_score ?? 0,
+      }));
+  }, [analyses]);
+
+  const weekData = useMemo(() => getWeekData(analyses), [analyses]);
 
   useEffect(() => {
     async function fetchAnalyses() {
@@ -173,6 +261,136 @@ export default function Dashboard() {
           />
         </div>
 
+        <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card padding="lg">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+              <TrendingUp className="text-primary" size={20} />
+              Skill Growth
+            </h3>
+            {skillGrowthData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <TrendingUp size={32} className="mb-2 text-outline" />
+                <p className="text-sm text-on-surface-variant">No skill data yet</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={skillGrowthData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#48474d" strokeOpacity={0.2} />
+                  <XAxis dataKey="date" stroke="#76747b" fontSize={11} tickLine={false} />
+                  <YAxis domain={[0, 100]} stroke="#76747b" fontSize={11} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#1f1f26",
+                      border: "1px solid rgba(72,71,77,0.3)",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{ color: "#f9f5fd" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="score"
+                    stroke="#3B5BDB"
+                    strokeWidth={2}
+                    dot={{ fill: "#3B5BDB", r: 4 }}
+                    name="Proficiency"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+          <Card padding="lg">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-on-surface">
+              <BarChart3 className="text-primary" size={20} />
+              Analysis History
+            </h3>
+            {weekData.length === 0 || weekData.every((w) => w.count === 0) ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <BarChart3 size={32} className="mb-2 text-outline" />
+                <p className="text-sm text-on-surface-variant">No analysis data yet</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={weekData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#48474d" strokeOpacity={0.2} />
+                  <XAxis dataKey="name" stroke="#76747b" fontSize={11} tickLine={false} />
+                  <YAxis allowDecimals={false} stroke="#76747b" fontSize={11} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#1f1f26",
+                      border: "1px solid rgba(72,71,77,0.3)",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                    }}
+                    itemStyle={{ color: "#f9f5fd" }}
+                  />
+                  <Bar dataKey="count" fill="#3B5BDB" radius={[4, 4, 0, 0]} name="Analyses" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </div>
+
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Link to="/analyze" className="group block">
+            <Card padding="md" hover className="relative h-full">
+              <div className="flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Plus size={20} />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="mt-1 text-outline transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                />
+              </div>
+              <h4 className="mt-4 font-bold text-on-surface group-hover:text-primary transition-colors">
+                New Analysis
+              </h4>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                Upload a resume or job description for AI-powered gap analysis
+              </p>
+            </Card>
+          </Link>
+          <Link to="/roadmap" className="group block">
+            <Card padding="md" hover className="relative h-full">
+              <div className="flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary/10 text-tertiary">
+                  <BookOpen size={20} />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="mt-1 text-outline transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                />
+              </div>
+              <h4 className="mt-4 font-bold text-on-surface group-hover:text-primary transition-colors">
+                View Roadmap
+              </h4>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                Explore your personalized learning roadmap and track progress
+              </p>
+            </Card>
+          </Link>
+          <Link to="/resume-builder" className="group block">
+            <Card padding="md" hover className="relative h-full">
+              <div className="flex items-start justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <FileText size={20} />
+                </div>
+                <ChevronRight
+                  size={18}
+                  className="mt-1 text-outline transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                />
+              </div>
+              <h4 className="mt-4 font-bold text-on-surface group-hover:text-primary transition-colors">
+                Resume Builder
+              </h4>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                Build and optimize your resume with ATS-friendly templates
+              </p>
+            </Card>
+          </Link>
+        </div>
+
         <Card padding="lg" className="mb-8 relative overflow-hidden">
           <div className="pointer-events-none absolute -right-20 top-0 h-full w-64 primary-gradient opacity-10 blur-[80px]" />
           <div className="relative z-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
@@ -212,19 +430,56 @@ export default function Dashboard() {
               </Link>
             </div>
 
+            <div className="flex flex-wrap items-center gap-3 px-1">
+              <div className="relative flex-1 min-w-[160px]">
+                <Search
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline"
+                  size={16}
+                />
+                <input
+                  type="text"
+                  value={textFilter}
+                  onChange={(e) => handleFilterChange("q", e.target.value)}
+                  placeholder="Search by title or company..."
+                  className="gm-input py-2 pl-9 pr-3 text-xs"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="gm-input w-auto py-2 text-xs"
+              >
+                <option value="all">All Status</option>
+                <option value="complete">Completed</option>
+                <option value="processing">Processing</option>
+                <option value="failed">Failed</option>
+              </select>
+              <select
+                value={dateFilter}
+                onChange={(e) => handleFilterChange("days", e.target.value)}
+                className="gm-input w-auto py-2 text-xs"
+              >
+                <option value="all">All Time</option>
+                <option value="7">Last 7 Days</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+              </select>
+            </div>
+
             {loading ? (
               <Card padding="lg" className="text-center">
                 <p className="animate-pulse text-on-surface-variant">Loading analyses...</p>
               </Card>
-            ) : analyses.length === 0 ? (
-              <Card padding="lg" className="text-center">
-                <p className="mb-4 text-on-surface-variant">No analyses yet</p>
-                <Link to="/analyze" className="text-sm font-bold text-primary hover:underline">
-                  Start your first analysis
-                </Link>
-              </Card>
+            ) : filteredAnalyses.length === 0 ? (
+              <EmptyState
+                icon={<HistoryIcon size={24} />}
+                title="No analyses yet"
+                description="Start your first analysis to see your history and track your progress over time."
+                action="Start Analysis"
+                onAction={() => window.location.href = "/analyze"}
+              />
             ) : (
-              analyses.map((analysis) => (
+              filteredAnalyses.map((analysis) => (
                 <Card key={analysis.id} padding="md" hover className="group">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex min-w-0 items-center gap-4">
@@ -341,9 +596,12 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="py-2 text-center text-xs text-on-surface-variant">
-                    No gaps identified yet.
-                  </p>
+                  <div className="py-4 text-center">
+                    <Target size={24} className="mx-auto mb-2 text-outline" />
+                    <p className="text-xs text-on-surface-variant">
+                      No gaps identified yet. Run an analysis to discover skill gaps.
+                    </p>
+                  </div>
                 )}
               </div>
               {analyses.length > 0 && (
