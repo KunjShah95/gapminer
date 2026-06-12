@@ -200,7 +200,7 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             <div className="flex items-center justify-between px-1">
               <h3 className="flex items-center gap-2 text-lg font-bold text-on-surface">

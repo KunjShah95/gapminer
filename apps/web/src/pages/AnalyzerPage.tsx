@@ -466,7 +466,7 @@ export default function AnalyzerPage() {
         badge="Analysis Engine"
       />
 
-      <div className="grid items-start gap-8 lg:grid-cols-5">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5">
         <div className="space-y-6 lg:col-span-3">
           <Card padding="lg">
             <div className="mb-6 flex items-center gap-4">
