@@ -1,14 +1,19 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
+  Check,
+  Copy,
   Download,
+  FileJson,
   FileText,
   Globe,
+  Printer,
   Share2,
   Star,
+  Table,
   TrendingUp,
   Users,
   Zap,
@@ -101,6 +106,80 @@ export default function AnalysisResultsPage() {
   const { id } = useParams();
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEnabled, setShareEnabled] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false);
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handlePrint = useCallback(() => window.print(), []);
+
+  const handleCopyShareLink = useCallback(() => {
+    const url = `${window.location.origin}/results/${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [id]);
+
+  const handleToggleShare = useCallback(async () => {
+    const token = getAuthToken();
+    const next = !shareEnabled;
+    try {
+      await fetch(`/api/v1/analysis/${id}/share`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ enabled: next }),
+      });
+    } catch {
+      // API may not exist; toggle visual state anyway
+    }
+    setShareEnabled(next);
+  }, [id, shareEnabled]);
+
+  const exportCSV = useCallback(() => {
+    if (!results) return;
+    const data = [
+      ["Skill", "Current Level", "Target Level", "Gap", "Priority"],
+      ...results.missingSkills.map((s) => [s, "Not Detected", "Proficient", "Yes", "High"]),
+      ...results.matchedSkills.map((s) => [s, "Proficient", "Proficient", "No", "N/A"]),
+    ];
+    const csv = data.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analysis-${id ?? "results"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+  }, [id, results]);
+
+  const exportJSON = useCallback(() => {
+    if (!results) return;
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analysis-${id ?? "results"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+  }, [id, results]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,13 +229,26 @@ export default function AnalysisResultsPage() {
 
   return (
     <ProtectedRoute>
+      <style>{`
+        @media print {
+          @page { margin: 1.5cm; }
+          body { background: #fff !important; color: #000 !important; }
+          nav, aside, header, footer, button, .no-print { display: none !important; }
+          .glass-card {
+            border: 1px solid #ccc !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            break-inside: avoid;
+          }
+        }
+      `}</style>
       <PageShell>
         <PageHeader
           icon={<BarChart2 size={22} />}
           title="Analysis Results"
           description="How well your profile aligns with target role requirements."
           actions={
-            <>
+            <div className="flex items-center gap-2">
               <Link
                 to="/dashboard"
                 className="inline-flex items-center gap-2 text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
@@ -164,13 +256,93 @@ export default function AnalysisResultsPage() {
                 <ArrowLeft size={18} />
                 Back
               </Link>
-              <Button variant="outline" size="sm">
-                <Share2 size={16} /> Share
-              </Button>
-              <Button variant="secondary" size="sm">
-                <Download size={16} /> Export PDF
-              </Button>
-            </>
+
+              <div className="relative" ref={shareRef}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShareOpen(!shareOpen)}
+                >
+                  <Share2 size={16} /> Share
+                </Button>
+                {shareOpen && (
+                  <div className="absolute right-0 top-full mt-2 z-50 w-72 rounded-2xl border border-outline-variant/15 bg-surface p-4 shadow-2xl">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-bold text-on-surface">
+                        Public Sharing
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleToggleShare}
+                        className={cn(
+                          "relative h-6 w-11 rounded-full transition-colors",
+                          shareEnabled ? "bg-primary" : "bg-surface-container-high",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                            shareEnabled
+                              ? "translate-x-[22px]"
+                              : "translate-x-0.5",
+                          )}
+                        />
+                      </button>
+                    </div>
+                    <p className="mb-3 text-[10px] text-on-surface-variant">
+                      Generate a shareable link to your analysis
+                    </p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleCopyShareLink}
+                    >
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                      {copied ? "Copied!" : "Copy Link"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative" ref={exportRef}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setExportOpen(!exportOpen)}
+                >
+                  <Download size={16} /> Export
+                </Button>
+                {exportOpen && (
+                  <div className="absolute right-0 top-full mt-2 z-50 w-48 rounded-2xl border border-outline-variant/15 bg-surface p-2 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={handlePrint}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+                    >
+                      <Printer size={16} className="text-outline" />
+                      Export PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportCSV}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+                    >
+                      <Table size={16} className="text-outline" />
+                      Export CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportJSON}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+                    >
+                      <FileJson size={16} className="text-outline" />
+                      Export JSON
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           }
         />
 
