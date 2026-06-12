@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy } from "react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PublicLayout from "@/components/public/PublicLayout";
