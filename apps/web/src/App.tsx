@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PublicLayout from "@/components/public/PublicLayout";
@@ -7,29 +7,30 @@ import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
 import FeaturesPage from "@/pages/FeaturesPage";
 import AuthPage from "@/pages/AuthPage";
-import Dashboard from "@/pages/Dashboard";
-import AnalysisResultsPage from "@/pages/AnalysisResultsPage";
-import AnalyzerPage from "@/pages/AnalyzerPage";
-import RoadmapPage from "@/pages/RoadmapPage";
-import ProfilePage from "@/pages/ProfilePage";
-import PricingPage from "@/pages/PricingPage";
-import LatexEditorPage from "@/pages/LatexEditorPage";
-import InterviewSimulationPage from "@/pages/InterviewSimulationPage";
-import RecruiterDashboardPage from "@/pages/RecruiterDashboardPage";
-import NegotiationCompanionPage from "@/pages/NegotiationCompanionPage";
-import { CoverLetterPage } from "@/pages/CoverLetterPage";
-import JobTrackerPage from "@/pages/JobTrackerPage";
-import SkillProgressPage from "@/pages/SkillProgressPage";
-import LinkedInOptimizerPage from "@/pages/LinkedInOptimizerPage";
-import ResumeVersionsPage from "@/pages/ResumeVersionsPage";
-import BenchmarkPage from "@/pages/BenchmarkPage";
-import NegotiationRoleplayPage from "@/pages/NegotiationRoleplayPage";
-import RecommendationsPage from "@/pages/RecommendationsPage";
-import MarketDemandPage from "@/pages/MarketDemandPage";
-import CareerPathPage from "@/pages/CareerPathPage";
-import ChatPage from "@/pages/ChatPage";
-import AdminDashboardPage from "@/pages/AdminDashboardPage";
-import DeveloperPortalPage from "@/pages/DeveloperPortalPage";
+import SuspensePage from "@/components/SuspensePage";
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const AnalysisResultsPage = lazy(() => import("@/pages/AnalysisResultsPage"));
+const AnalyzerPage = lazy(() => import("@/pages/AnalyzerPage"));
+const RoadmapPage = lazy(() => import("@/pages/RoadmapPage"));
+const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const PricingPage = lazy(() => import("@/pages/PricingPage"));
+const LatexEditorPage = lazy(() => import("@/pages/LatexEditorPage"));
+const InterviewSimulationPage = lazy(() => import("@/pages/InterviewSimulationPage"));
+const RecruiterDashboardPage = lazy(() => import("@/pages/RecruiterDashboardPage"));
+const NegotiationCompanionPage = lazy(() => import("@/pages/NegotiationCompanionPage"));
+const CoverLetterPage = lazy(() => import("@/pages/CoverLetterPage"));
+const JobTrackerPage = lazy(() => import("@/pages/JobTrackerPage"));
+const SkillProgressPage = lazy(() => import("@/pages/SkillProgressPage"));
+const LinkedInOptimizerPage = lazy(() => import("@/pages/LinkedInOptimizerPage"));
+const ResumeVersionsPage = lazy(() => import("@/pages/ResumeVersionsPage"));
+const BenchmarkPage = lazy(() => import("@/pages/BenchmarkPage"));
+const NegotiationRoleplayPage = lazy(() => import("@/pages/NegotiationRoleplayPage"));
+const RecommendationsPage = lazy(() => import("@/pages/RecommendationsPage"));
+const MarketDemandPage = lazy(() => import("@/pages/MarketDemandPage"));
+const CareerPathPage = lazy(() => import("@/pages/CareerPathPage"));
+const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const AdminDashboardPage = lazy(() => import("@/pages/AdminDashboardPage"));
+const DeveloperPortalPage = lazy(() => import("@/pages/DeveloperPortalPage"));
 import AppLayout from "@/layouts/AppLayout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -79,7 +80,7 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/features" element={<FeaturesPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/pricing" element={<SuspensePage><PricingPage /></SuspensePage>} />
       </Route>
 
       {/* Auth */}
@@ -92,7 +93,7 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <SuspensePage><Dashboard /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -100,7 +101,7 @@ function AppRoutes() {
           path="/analyze"
           element={
             <ProtectedRoute>
-              <AnalyzerPage />
+              <SuspensePage><AnalyzerPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -108,7 +109,7 @@ function AppRoutes() {
           path="/latex/:id?"
           element={
             <ProtectedRoute>
-              <LatexEditorPage />
+              <SuspensePage><LatexEditorPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -116,7 +117,7 @@ function AppRoutes() {
           path="/results/:id"
           element={
             <ProtectedRoute>
-              <AnalysisResultsPage />
+              <SuspensePage><AnalysisResultsPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -124,7 +125,7 @@ function AppRoutes() {
           path="/roadmap/:id"
           element={
             <ProtectedRoute>
-              <RoadmapPage />
+              <SuspensePage><RoadmapPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -132,7 +133,7 @@ function AppRoutes() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <ProfilePage />
+              <SuspensePage><ProfilePage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -140,7 +141,7 @@ function AppRoutes() {
           path="/interview"
           element={
             <ProtectedRoute>
-              <InterviewSimulationPage />
+              <SuspensePage><InterviewSimulationPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -148,7 +149,7 @@ function AppRoutes() {
           path="/recruiter"
           element={
             <ProtectedRoute>
-              <RecruiterDashboardPage />
+              <SuspensePage><RecruiterDashboardPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -156,7 +157,7 @@ function AppRoutes() {
           path="/negotiate"
           element={
             <ProtectedRoute>
-              <NegotiationCompanionPage />
+              <SuspensePage><NegotiationCompanionPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -164,7 +165,7 @@ function AppRoutes() {
           path="/cover-letter"
           element={
             <ProtectedRoute>
-              <CoverLetterPage />
+              <SuspensePage><CoverLetterPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -172,7 +173,7 @@ function AppRoutes() {
           path="/jobs"
           element={
             <ProtectedRoute>
-              <JobTrackerPage />
+              <SuspensePage><JobTrackerPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -180,7 +181,7 @@ function AppRoutes() {
           path="/progress"
           element={
             <ProtectedRoute>
-              <SkillProgressPage />
+              <SuspensePage><SkillProgressPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -188,7 +189,7 @@ function AppRoutes() {
           path="/linkedin"
           element={
             <ProtectedRoute>
-              <LinkedInOptimizerPage />
+              <SuspensePage><LinkedInOptimizerPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -196,7 +197,7 @@ function AppRoutes() {
           path="/resume-versions"
           element={
             <ProtectedRoute>
-              <ResumeVersionsPage />
+              <SuspensePage><ResumeVersionsPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -204,7 +205,7 @@ function AppRoutes() {
           path="/benchmark"
           element={
             <ProtectedRoute>
-              <BenchmarkPage />
+              <SuspensePage><BenchmarkPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -212,7 +213,7 @@ function AppRoutes() {
           path="/negotiation-roleplay"
           element={
             <ProtectedRoute>
-              <NegotiationRoleplayPage />
+              <SuspensePage><NegotiationRoleplayPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -220,7 +221,7 @@ function AppRoutes() {
           path="/recommendations"
           element={
             <ProtectedRoute>
-              <RecommendationsPage />
+              <SuspensePage><RecommendationsPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -228,7 +229,7 @@ function AppRoutes() {
           path="/market-demand"
           element={
             <ProtectedRoute>
-              <MarketDemandPage />
+              <SuspensePage><MarketDemandPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -236,7 +237,7 @@ function AppRoutes() {
           path="/career-path"
           element={
             <ProtectedRoute>
-              <CareerPathPage />
+              <SuspensePage><CareerPathPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -244,7 +245,7 @@ function AppRoutes() {
           path="/chat"
           element={
             <ProtectedRoute>
-              <ChatPage />
+              <SuspensePage><ChatPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -252,7 +253,7 @@ function AppRoutes() {
           path="/admin"
           element={
             <ProtectedRoute>
-              <AdminDashboardPage />
+              <SuspensePage><AdminDashboardPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
@@ -260,7 +261,7 @@ function AppRoutes() {
           path="/dev"
           element={
             <ProtectedRoute>
-              <DeveloperPortalPage />
+              <SuspensePage><DeveloperPortalPage /></SuspensePage>
             </ProtectedRoute>
           }
         />
