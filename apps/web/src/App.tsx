@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState, lazy } from "react";
 import { useAuthStore, initializeAuth } from "@/stores/authStore";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { AnalysisErrorFallback, ChatErrorFallback } from "@/components/ErrorFallbacks";
 import PublicLayout from "@/components/public/PublicLayout";
 import LandingPage from "@/pages/LandingPage";
 import AboutPage from "@/pages/AboutPage";
@@ -117,7 +118,9 @@ function AppRoutes() {
           path="/results/:id"
           element={
             <ProtectedRoute>
-              <SuspensePage><AnalysisResultsPage /></SuspensePage>
+              <ErrorBoundary fallback={<AnalysisErrorFallback />}>
+                <SuspensePage><AnalysisResultsPage /></SuspensePage>
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -245,7 +248,9 @@ function AppRoutes() {
           path="/chat"
           element={
             <ProtectedRoute>
-              <SuspensePage><ChatPage /></SuspensePage>
+              <ErrorBoundary fallback={<ChatErrorFallback />}>
+                <SuspensePage><ChatPage /></SuspensePage>
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
