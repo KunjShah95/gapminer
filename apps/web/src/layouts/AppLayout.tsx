@@ -3,6 +3,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import {
   LayoutDashboard,
   Search,
@@ -33,7 +35,7 @@ import {
   Shield,
   Key,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 const NAV_SECTIONS = [
@@ -297,6 +299,23 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [analysesCount, setAnalysesCount] = useState(-1);
   const [loading, setLoading] = useState(true);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  useHotkeys({
+    "?": useCallback(() => setShortcutsOpen((v) => !v), []),
+    "/": useCallback(() => {
+      const searchInput = document.querySelector<HTMLInputElement>(
+        'input[type="search"], input[type="text"][placeholder*="search" i], input[type="text"][placeholder*="Search" i]',
+      );
+      searchInput?.focus();
+    }, []),
+    "g+d": useCallback(() => navigate("/dashboard"), [navigate]),
+    "g+a": useCallback(() => navigate("/analyze"), [navigate]),
+    "g+r": useCallback(() => navigate("/roadmap"), [navigate]),
+    "g+j": useCallback(() => navigate("/jobs"), [navigate]),
+    "g+c": useCallback(() => navigate("/chat"), [navigate]),
+  });
 
   // Check if user has any analyses to determine if wizard should show
   useEffect(() => {
@@ -329,6 +348,7 @@ export default function AppLayout() {
   return (
     <>
       <OnboardingWizard open={showWizard} />
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <div className="flex min-h-screen bg-surface font-body text-on-surface">
       <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r border-outline-variant/10 bg-surface-container-low lg:flex">
         <SidebarContent />
